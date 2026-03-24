@@ -17,7 +17,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let email: string | undefined;
   try {
     const user = await privyServer.getUser(claims.userId);
-    email = user.email?.address;
+    // email-method login → user.email.address
+    // Google OAuth login → user.google.email
+    // Discord OAuth login → user.discord.email
+    email =
+      user.email?.address ??
+      user.google?.email ??
+      user.discord?.email ??
+      undefined;
   } catch {
     redirect("/");
   }

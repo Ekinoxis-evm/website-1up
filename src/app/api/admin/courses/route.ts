@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { verifyToken, privyServer } from "@/lib/privy";
+import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
-  const user = await privyServer.getUser(claims.userId).catch(() => null);
-  return isAdmin(user?.email?.address);
+  return isAdmin(await resolveUserEmail(claims.userId));
 }
 
 export async function POST(req: NextRequest) {

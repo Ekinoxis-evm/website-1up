@@ -29,3 +29,18 @@ export async function verifyCookieToken(token: string | undefined) {
     return null;
   }
 }
+
+/**
+ * Resolve the best available email for a Privy user.
+ * Covers email-method logins, Google OAuth, and Discord OAuth.
+ */
+export async function resolveUserEmail(userId: string): Promise<string | undefined> {
+  const user = await privyServer.getUser(userId).catch(() => null);
+  if (!user) return undefined;
+  return (
+    user.email?.address ??
+    user.google?.email ??
+    user.discord?.email ??
+    undefined
+  );
+}
