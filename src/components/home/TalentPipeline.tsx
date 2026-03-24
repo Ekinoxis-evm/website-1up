@@ -27,7 +27,8 @@ const STAGES = [
     desc: "Representación oficial 1UP en los escenarios más grandes del mundo.",
     cta: "COMPETIR", href: "/team",
     border: "border-white", hover: "hover:bg-white", icon: "emoji_events",
-    ctaColor: "text-white group-hover:text-background",
+    ctaColor: "text-white group-hover:text-black",
+    hoverText: "group-hover:text-black",
   },
 ];
 
@@ -42,19 +43,19 @@ export function TalentPipeline() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {STAGES.map(({ num, title, desc, cta, href, border, hover, icon, ctaColor }) => (
+        {STAGES.map(({ num, title, desc, cta, href, border, hover, icon, ctaColor, hoverText }) => (
           <Link
             key={num}
             href={href}
             className={`bg-surface-container p-8 border-l-8 ${border} group ${hover} transition-all cursor-pointer`}
           >
-            <span className="font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 group-hover:text-white transition-all">
+            <span className={`font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 ${hoverText ?? "group-hover:text-white"} transition-all`}>
               {num}
             </span>
-            <h3 className="font-headline text-2xl font-black mb-4 group-hover:text-white transition-colors">
+            <h3 className={`font-headline text-2xl font-black mb-4 ${hoverText ?? "group-hover:text-white"} transition-colors`}>
               {title}
             </h3>
-            <p className="text-on-surface-variant mb-6 group-hover:text-white/80 transition-colors font-body text-sm">
+            <p className={`text-on-surface-variant mb-6 ${hoverText ? "group-hover:text-black/70" : "group-hover:text-white/80"} transition-colors font-body text-sm`}>
               {desc}
             </p>
             <span className={`font-headline font-bold flex items-center gap-2 ${ctaColor} transition-colors`}>
