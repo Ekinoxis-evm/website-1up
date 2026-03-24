@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import type { Value as PhoneValue } from "react-phone-number-input";
 import type { GameCategory, Game } from "@/types/database.types";
 
 interface Props {
@@ -11,6 +14,7 @@ interface Props {
 
 export function RecruitmentForm({ categories, games, extended = false }: Props) {
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [phone, setPhone] = useState<PhoneValue>();
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
   const filteredGames = selectedCategory
@@ -27,12 +31,13 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
       const res = await fetch("/api/recruitment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, source: extended ? "team" : "home" }),
+        body: JSON.stringify({ ...data, phone, source: extended ? "team" : "home" }),
       });
       if (!res.ok) throw new Error();
       setStatus("ok");
       form.reset();
       setSelectedCategory("");
+      setPhone(undefined);
     } catch {
       setStatus("error");
     }
@@ -76,9 +81,13 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
                 name="email" required placeholder="EMAIL" type="email"
                 className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
               />
-              <input
-                name="phone" required placeholder="TELÉFONO" type="tel"
-                className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
+              <PhoneInput
+                international
+                defaultCountry="CO"
+                value={phone}
+                onChange={setPhone}
+                placeholder="TELÉFONO"
+                className="phone-input-1up"
               />
             </div>
 
