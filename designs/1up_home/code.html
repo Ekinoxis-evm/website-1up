@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .skew-fix { transform: skewX(-10deg); }
+        .skew-content { transform: skewX(10deg); }
+        .glitch-border {
+            box-shadow: 4px 0px 0px 0px #ff4d80, -4px 0px 0px 0px #0897ff;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-container": "#0897ff",
+                        "secondary": "#a1c9ff",
+                        "primary-fixed": "#ffd9de",
+                        "surface-tint": "#ffb2bf",
+                        "outline": "#ad878d",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-container": "#7c9c00",
+                        "surface-dim": "#0b1326",
+                        "background": "#0b1326",
+                        "tertiary-fixed-dim": "#abd600",
+                        "on-background": "#dae2fd",
+                        "on-primary-container": "#5a0022",
+                        "primary": "#ffb2bf",
+                        "inverse-primary": "#bc004f",
+                        "on-surface": "#dae2fd",
+                        "on-secondary": "#00325a",
+                        "surface-container-high": "#222a3d",
+                        "surface-container": "#171f33",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary": "#abd600",
+                        "surface": "#0b1326",
+                        "primary-container": "#ff4d80",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container-low": "#131b2e",
+                        "on-primary": "#660028",
+                        "outline-variant": "#5d3f44",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-white">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 bg-opacity-90 backdrop-blur-xl bg-[#0b1326] dark:bg-[#0b1326]">
+<div class="flex items-center gap-8">
+<span class="text-3xl font-black text-[#ffb2bf] italic tracking-tighter font-['Space_Grotesk']">1UP</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-['Space_Grotesk'] font-bold uppercase tracking-tighter text-[#ffb2bf] border-b-4 border-[#ff4d80] pb-1" href="#">Home</a>
+<a class="font-['Space_Grotesk'] font-bold uppercase tracking-tighter text-[#dae2fd] hover:text-[#a1c9ff] transition-colors" href="#">Tower</a>
+<a class="font-['Space_Grotesk'] font-bold uppercase tracking-tighter text-[#dae2fd] hover:text-[#a1c9ff] transition-colors" href="#">Team</a>
+<a class="font-['Space_Grotesk'] font-bold uppercase tracking-tighter text-[#dae2fd] hover:text-[#a1c9ff] transition-colors" href="#">Academia</a>
+<a class="font-['Space_Grotesk'] font-bold uppercase tracking-tighter text-[#dae2fd] hover:text-[#a1c9ff] transition-colors" href="#">Recreativo</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary-container text-white px-6 py-2 font-['Space_Grotesk'] font-black skew-x-[-10deg] hover:bg-primary transition-all active:scale-95">
+<span class="block skew-x-[10deg]">JOIN NOW</span>
+</button>
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="person">person</span>
+</div>
+</header>
+<!-- Hero Section -->
+<section class="relative min-h-[921px] flex flex-col justify-center px-6 md:px-24 overflow-hidden border-b-[16px] border-primary-container">
+<div class="absolute inset-0 z-0">
+<img alt="High-tech pro-gaming arena" class="w-full h-full object-cover opacity-30 grayscale contrast-125" data-alt="Cinematic interior of a futuristic esports arena with neon pink and blue lighting, high-end gaming setups, and a dark architectural atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUUhOt4TbYLkK_4JJdy7qsW72c7lMj38LibjVpIo4otNxyOi4QrnpiCDy-bXponxQ2t06K0XLBWbN0Nup6vrx8TdiwN_rRP-P6AXIJ_1Xz0pMFBdtQ-rtZblz4svnJFCJuvzPL35fYdy-M0Tqf5m-kVr3UIYDMiHwLHmHqggb70crZ-DFcJg6jLYYVW-m4m7cGY5eXkgX0OTGLr2QBngQQ77X2hE1fQyxEKyJBjh6T2wAqaQb6WZ0yIlK_-Z9NK68-_u44i8tk1E5D"/>
+<div class="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent"></div>
+</div>
+<div class="relative z-10 max-w-4xl">
+<div class="inline-block bg-secondary-container px-4 py-1 mb-6 skew-x-[-15deg]">
+<span class="text-white font-black italic skew-x-[15deg] block text-sm tracking-widest">COLOMBIA E-SPORTS HUB</span>
+</div>
+<h1 class="font-headline font-black text-6xl md:text-8xl leading-none tracking-tighter mb-8 text-on-background">
+                EL PRIMER ESPACIO <span class="text-primary italic">EQUIPADO</span> PARA PRO-PLAYERS
+            </h1>
+<p class="font-body text-xl md:text-2xl text-secondary max-w-2xl mb-12 border-l-4 border-primary pl-6">
+                El primer espacio equipado en Colombia para jugadores profesionales de e-sport. Infraestructura de élite para el máximo rendimiento.
+            </p>
+<div class="flex flex-wrap gap-6">
+<a class="bg-primary-container text-white text-xl font-black px-10 py-5 skew-x-[-10deg] hover:shadow-[8px_8px_0px_0px_#0897ff] transition-all" href="/gaming-tower">
+<span class="block skew-x-[10deg]">CONOCE LA TORRE</span>
+</a>
+</div>
+</div></section>
+<!-- Talent Pipeline (Funnel) -->
+<section class="py-24 px-6 bg-surface-container-lowest">
+<div class="mb-16">
+<h2 class="font-headline text-5xl font-black uppercase tracking-tighter">Talent <span class="text-secondary">Pipeline</span></h2>
+<div class="h-2 w-32 bg-tertiary mt-2"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<!-- Stage 1 -->
+<div class="bg-surface-container p-8 border-l-8 border-secondary group hover:bg-secondary-container transition-all cursor-pointer">
+<span class="font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 group-hover:text-white">01</span>
+<h3 class="font-headline text-2xl font-black mb-4">RECREATIVO</h3>
+<p class="text-on-surface-variant mb-6 group-hover:text-white">Espacio abierto para la comunidad. Juega, conecta y disfruta de equipos pro.</p>
+<a class="text-secondary font-bold group-hover:text-white flex items-center gap-2" href="#">
+                    EXPLORAR <span class="material-symbols-outlined">arrow_forward</span>
+</a>
+</div>
+<!-- Stage 2 -->
+<div class="bg-surface-container p-8 border-l-8 border-primary group hover:bg-primary-container transition-all cursor-pointer">
+<span class="font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 group-hover:text-white">02</span>
+<h3 class="font-headline text-2xl font-black mb-4">ACADEMIA</h3>
+<p class="text-on-surface-variant mb-6 group-hover:text-white">Entrenamiento técnico y táctico guiado por coaches certificados.</p>
+<a class="text-primary font-bold group-hover:text-white flex items-center gap-2" href="#">
+                    APRENDER <span class="material-symbols-outlined">school</span>
+</a>
+</div>
+<!-- Stage 3 -->
+<div class="bg-surface-container p-8 border-l-8 border-tertiary group hover:bg-tertiary transition-all cursor-pointer">
+<span class="font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 group-hover:text-on-tertiary-fixed">03</span>
+<h3 class="font-headline text-2xl font-black mb-4 group-hover:text-on-tertiary-fixed">TRAINING</h3>
+<p class="text-on-surface-variant mb-6 group-hover:text-on-tertiary-fixed">Bootcamps intensivos y preparación para el circuito competitivo.</p>
+<a class="text-tertiary font-bold group-hover:text-on-tertiary-fixed flex items-center gap-2" href="#">
+                    ENTRENAR <span class="material-symbols-outlined">fitness_center</span>
+</a>
+</div>
+<!-- Stage 4 -->
+<div class="bg-surface-container-highest p-8 border-l-8 border-white group hover:bg-white transition-all cursor-pointer">
+<span class="font-headline font-black text-6xl opacity-10 block mb-4 group-hover:opacity-100 group-hover:text-background">04</span>
+<h3 class="font-headline text-2xl font-black mb-4 group-hover:text-background">TORNEOS MUNDIALES</h3>
+<p class="text-on-surface-variant mb-6 group-hover:text-background">Representación oficial 1UP en los escenarios más grandes del mundo.</p>
+<a class="text-white font-bold group-hover:text-background flex items-center gap-2" href="#">
+                    COMPETIR <span class="material-symbols-outlined">trophy</span>
+</a>
+</div>
+</div>
+</section>
+<!-- Games Gallery (Bento Grid) -->
+<section class="py-24 px-6 bg-background">
+<h2 class="font-headline text-4xl font-black mb-12 text-center tracking-widest uppercase">Select your <span class="text-primary">Discipline</span></h2>
+<div class="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-auto md:h-[800px]">
+<!-- Fighting Games -->
+<div class="md:col-span-2 md:row-span-2 relative group overflow-hidden bg-surface-container">
+<img alt="Fighting Games" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" data-alt="Stylized close-up of a high-end arcade fight stick with glowing neon pink buttons and intense moody shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1_9zzEpzqV8fGUFCqdZiX9h5L66PfZRdrUHVwonsnuRjmxi4JNv_t6rOcpGdCDz5FtQtgYixqXDMrszn7AgtqgDuKYr8K69lVEQqvccwutYlCbvKdB2pojeqm2zLxGf6rkXW7h5hFQcg5fn6pkvqOWY7ryLzbc-85IPz3UjJ3kuim0yE16h5eRuDOyirGhTIRwiSGImvMWBBpvZJvQt9X-TnG2Z5flU8TefF9Zf4rkInZB9iAXhFpPGGk7HGAaACk9Gs4pUsx7YUG"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 p-8">
+<span class="bg-primary text-background font-black px-3 py-1 text-xs uppercase mb-2 inline-block">FIGHTING</span>
+<h3 class="text-4xl font-headline font-black text-white">FATAL FURY / SF6 / SMASH</h3>
+</div>
+</div>
+<!-- FPS -->
+<div class="md:col-span-2 md:row-span-1 relative group overflow-hidden bg-surface-container">
+<img alt="FPS Games" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" data-alt="Intense POV of a professional gaming setup with mechanical keyboard and RGB lighting, focused on a tactical FPS tournament environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmnO9Kz-fHLHtBLqjbLeKDRb7Ic6nsxp2SHOPgKtFbICi1CH6ElhnWVYZVorZHxrBCo48DlKfeYd_1uLXA8-e6RAUevBvXF-28JPp4OP2_zHFLLhF1b8Xuh-oyyaOimCyYS6xHmJ6_BdqKAuesJ8HN4jJPGiGYTU_UKEN1RixwepgAjJLuM8Amzn3riEutHl2rE2lGOU2gbxV6WLo80vc35zya5jxPQqAzF0whpgY5iI0rFeW5adr88CcR7opvbLo4NaM-WZ5-WPnG"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 p-8">
+<span class="bg-secondary-container text-white font-black px-3 py-1 text-xs uppercase mb-2 inline-block">FPS</span>
+<h3 class="text-3xl font-headline font-black text-white">CALL OF DUTY</h3>
+</div>
+</div>
+<!-- Dancing -->
+<div class="md:col-span-1 md:row-span-1 relative group overflow-hidden bg-surface-container">
+<img alt="Dancing Games" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" data-alt="Dynamic silhouettes of people dancing in front of a glowing digital screen with vibrant neon light streaks" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaePH8yscCvtJtBcmRohn9elCjizMccHxk24CaU6zgnH57vEJNgUePUxwt4g5ohC6ayB8BXT6sLvgsMqlWTZFZ8rVUM5IFpFoX9JlOhx_dEx8m7Sp11Xpp-ABzChyM3OQqlFxe5TjvmYoUs91rJloghuhRJ8rplSzvZg2Jvb_vtnlzyUo0NvYwnL5yOYRhNaM29NBkup0YqqBsAQJuJ4KCfhv0iOR8JzQKFyyu9Ujk1d5FPoR7Puy-XaHiXdhxvwexxFcULQJM-Wzw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<span class="bg-tertiary text-on-tertiary font-black px-3 py-1 text-xs uppercase mb-2 inline-block">RHYTHM</span>
+<h3 class="text-xl font-headline font-black text-white">JUST DANCE</h3>
+</div>
+</div>
+<!-- TCG -->
+<div class="md:col-span-1 md:row-span-1 relative group overflow-hidden bg-surface-container">
+<img alt="TCG Games" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" data-alt="Macro shot of rare trading cards laid out on a dark mat with sharp aesthetic lighting highlighting holographic details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiwSRo3Wy9U6p4RpOH6nU8aGtx57zEBl9qaWpp4dg49D0oEbo-3kRzCYfUJqtC37tJ0VXIutgvRgtlTdtMrGfoA460vfWr47iXiOVYrfQNIb7NtMTvMgTQB_PxYWTO9QLd7fENQUv28IiZ3emcqm6qe6_hNOx02j9AmdHsQpcEf2E-QTKFq7egrUv5iMwydTi4XpuztgTI_lh3e21B0wlUMCZqkpNZpOolbVVPcDDHtj88lhXIbm93DJ0CFofn7jGuoymnQLMbgYNV"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<span class="bg-white text-background font-black px-3 py-1 text-xs uppercase mb-2 inline-block">TCG</span>
+<h3 class="text-xl font-headline font-black text-white">POKÉMON / MAGIC</h3>
+</div>
+</div>
+</div>
+</section>
+<!-- Recruitment Form -->
+<section class="py-24 px-6 bg-surface-container-low flex flex-col items-center">
+<div class="max-w-4xl w-full bg-surface-container p-12 relative border-r-8 border-b-8 border-primary-container">
+<div class="absolute -top-6 -left-6 bg-primary text-on-primary font-black px-8 py-3 skew-x-[-15deg]">
+<span class="skew-x-[15deg] block uppercase tracking-tighter">RECRUITMENT OPEN</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<h2 class="font-headline text-5xl font-black mb-6 leading-none">JOIN THE <span class="text-primary italic">TEAM</span></h2>
+<p class="text-secondary text-lg mb-8">¿Tienes lo necesario para ser profesional? Déjanos tus datos y nuestro staff de reclutamiento se pondrá en contacto.</p>
+<div class="space-y-4">
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-bold">EQUIPAMIENTO DE ÉLITE</span>
+</div>
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-bold">COACHING PROFESIONAL</span>
+</div>
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-bold">EXPOSICIÓN GLOBAL</span>
+</div>
+</div>
+</div>
+<form class="space-y-4">
+<input class="w-full bg-surface-container-lowest border-none text-white p-4 focus:ring-2 focus:ring-secondary placeholder:text-surface-variant font-headline font-bold" placeholder="NAME" type="text"/>
+<div class="grid grid-cols-2 gap-4">
+<input class="w-full bg-surface-container-lowest border-none text-white p-4 focus:ring-2 focus:ring-secondary placeholder:text-surface-variant font-headline font-bold" placeholder="EMAIL" type="email"/>
+<input class="w-full bg-surface-container-lowest border-none text-white p-4 focus:ring-2 focus:ring-secondary placeholder:text-surface-variant font-headline font-bold" placeholder="PHONE" type="tel"/>
+</div>
+<select class="w-full bg-surface-container-lowest border-none text-white p-4 focus:ring-2 focus:ring-secondary font-headline font-bold appearance-none">
+<option>CATEGORY</option>
+<option>RECREATIVO</option>
+<option>ACADEMIA</option>
+<option>TRAINING</option>
+</select>
+<select class="w-full bg-surface-container-lowest border-none text-white p-4 focus:ring-2 focus:ring-secondary font-headline font-bold appearance-none">
+<option>PRIMARY GAME</option>
+<option>FIGHTING GAMES</option>
+<option>FPS (COD)</option>
+<option>RHYTHM GAMES</option>
+<option>TCG</option>
+</select>
+<button class="w-full bg-secondary-container text-white py-4 font-black text-xl hover:bg-primary transition-colors skew-x-[-5deg]" type="submit">
+<span class="block skew-x-[5deg]">SEND INTEL</span>
+</button>
+</form>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-8 bg-[#0b1326] dark:bg-[#0b1326] border-t-8 border-[#ff4d80]">
+<div class="flex flex-col items-center md:items-start gap-2">
+<span class="text-lg font-bold text-[#ffb2bf] font-['Space_Grotesk']">1UP GAMING TOWER</span>
+<span class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500">© 2024 1UP GAMING TOWER COLOMBIA</span>
+</div>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">Instagram</a>
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">TikTok</a>
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">Kick</a>
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">YouTube</a>
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">Admin Login</a>
+<a class="font-['Inter'] text-xs tracking-widest uppercase text-slate-500 hover:text-[#a1c9ff] hover:skew-x-[-2deg] transition-transform" href="#">Terms</a>
+</div>
+<div class="text-[#abd600] font-black tracking-widest text-xs">
+            LEVEL UP COLOMBIA
+        </div>
+</footer>
+<!-- SideNavBar (Mobile Bottom Nav Equivalent for Mobile) -->
+<div class="md:hidden fixed bottom-0 left-0 w-full bg-[#0b1326] border-t-4 border-primary-container z-50 flex justify-around p-2">
+<a class="flex flex-col items-center text-primary" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[10px] font-bold">HOME</span>
+</a>
+<a class="flex flex-col items-center text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="domain">domain</span>
+<span class="text-[10px] font-bold">TOWER</span>
+</a>
+<a class="flex flex-col items-center text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="text-[10px] font-bold">TEAM</span>
+</a>
+<a class="flex flex-col items-center text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="text-[10px] font-bold">ACADEMIA</span>
+</a>
+</div>
+</body></html>

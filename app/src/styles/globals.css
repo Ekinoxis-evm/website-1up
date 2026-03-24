@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-background text-on-background font-body;
+  }
+  ::selection {
+    @apply bg-primary-container text-white;
+  }
+}
+
+@layer components {
+  /* Skewed element pattern — outer skews, inner counter-skews text */
+  .skew-fix     { transform: skewX(-10deg); }
+  .skew-content { transform: skewX(10deg); }
+
+  /* Neo-brutalist offset shadow (never soft grey) */
+  .neo-shadow-pink  { box-shadow: 8px 8px 0px 0px #ff4d80; }
+  .neo-shadow-blue  { box-shadow: 8px 8px 0px 0px #0897ff; }
+  .neo-shadow-green { box-shadow: 8px 8px 0px 0px #abd600; }
+
+  /* Glassmorphism — for nav and floating panels */
+  .glass-panel {
+    background: rgba(11, 19, 38, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Glitch border accent */
+  .glitch-border {
+    box-shadow: 4px 0px 0px 0px #ff4d80, -4px 0px 0px 0px #0897ff;
+  }
+
+  /* Text glow for hero headlines */
+  .text-glow-pink {
+    text-shadow: 0 0 20px rgba(255, 77, 128, 0.5);
+  }
+  .text-glow-blue {
+    text-shadow: 0 0 20px rgba(8, 151, 255, 0.5);
+  }
+
+  /* Stepped progress bar segment */
+  .streak-segment {
+    @apply h-full bg-primary-container;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+}
