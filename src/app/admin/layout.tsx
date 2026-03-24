@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/");
   }
 
-  if (!isAdmin(email)) redirect("/");
+  if (!await isAdmin(email)) redirect("/");
 
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">

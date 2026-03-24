@@ -9,6 +9,7 @@ import { useWallets } from "@privy-io/react-auth";
 const NAV_LINKS = [
   { href: "/",             label: "Home"      },
   { href: "/gaming-tower", label: "Tower"     },
+  { href: "/juegos",       label: "Juegos"    },
   { href: "/team",         label: "Team"      },
   { href: "/academia",     label: "Academia"  },
   { href: "/recreativo",   label: "Recreativo"},

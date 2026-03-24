@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 
 const PUBLIC_TABS = [
-  { href: "/",             icon: "home",   label: "HOME"     },
-  { href: "/gaming-tower", icon: "domain", label: "TOWER"    },
-  { href: "/team",         icon: "groups", label: "TEAM"     },
-  { href: "/academia",     icon: "school", label: "ACADEMIA" },
+  { href: "/",             icon: "home",            label: "HOME"    },
+  { href: "/gaming-tower", icon: "domain",          label: "TOWER"   },
+  { href: "/juegos",       icon: "videogame_asset", label: "JUEGOS"  },
+  { href: "/team",         icon: "groups",          label: "TEAM"    },
+  { href: "/academia",     icon: "school",          label: "ACADEMIA"},
 ];
 
 export function MobileBottomNav() {

@@ -4,17 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { Player } from "@/types/database.types";
+import { ImageUpload } from "./ImageUpload";
 
 interface Props { players: Player[] }
 
 type FormState = {
   gamertag: string; realName: string; role: string;
+  photoUrl: string;
   instagramUrl: string; tiktokUrl: string; kickUrl: string; youtubeUrl: string;
   sortOrder: string; isActive: boolean;
 };
 
 const EMPTY: FormState = {
   gamertag: "", realName: "", role: "",
+  photoUrl: "",
   instagramUrl: "", tiktokUrl: "", kickUrl: "", youtubeUrl: "",
   sortOrder: "0", isActive: true,
 };
@@ -34,7 +37,13 @@ export function AdminPlayersClient({ players }: Props) {
 
   function openEdit(p: Player) {
     setEditing(p);
-    setForm({ gamertag: p.gamertag, realName: p.real_name, role: p.role ?? "", instagramUrl: p.instagram_url ?? "", tiktokUrl: p.tiktok_url ?? "", kickUrl: p.kick_url ?? "", youtubeUrl: p.youtube_url ?? "", sortOrder: String(p.sort_order ?? 0), isActive: p.is_active ?? true });
+    setForm({
+      gamertag: p.gamertag, realName: p.real_name, role: p.role ?? "",
+      photoUrl: p.photo_url ?? "",
+      instagramUrl: p.instagram_url ?? "", tiktokUrl: p.tiktok_url ?? "",
+      kickUrl: p.kick_url ?? "", youtubeUrl: p.youtube_url ?? "",
+      sortOrder: String(p.sort_order ?? 0), isActive: p.is_active ?? true,
+    });
     setOpen(true);
   }
 
@@ -94,6 +103,18 @@ export function AdminPlayersClient({ players }: Props) {
         <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-surface-container border-4 border-primary-container p-8 w-full max-w-lg my-8">
             <h2 className="font-headline font-black text-xl mb-6 uppercase">{editing ? "EDITAR JUGADOR" : "NUEVO JUGADOR"}</h2>
+
+            <div className="mb-4">
+              <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Foto del Jugador</p>
+              <ImageUpload
+                currentUrl={form.photoUrl || null}
+                folder="players"
+                aspectRatio="square"
+                onUploaded={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
+                getAccessToken={getAccessToken}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               {([["gamertag","Gamertag"],["realName","Nombre Real"],["role","Rol"],["instagramUrl","Instagram URL"],["tiktokUrl","TikTok URL"],["kickUrl","Kick URL"],["youtubeUrl","YouTube URL"],["sortOrder","Orden"]] as [keyof FormState, string][]).map(([k,lbl]) => (
                 <input key={k} value={form[k] as string} onChange={F(k)} placeholder={lbl} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold col-span-1" />

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
-  return isAdmin(await resolveUserEmail(claims.userId));
+  return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     gamertag:      body.gamertag,
     real_name:     body.realName,
     role:          body.role || null,
+    photo_url:     body.photoUrl || null,
     instagram_url: body.instagramUrl || null,
     tiktok_url:    body.tiktokUrl || null,
     kick_url:      body.kickUrl || null,
@@ -35,6 +36,7 @@ export async function PUT(req: NextRequest) {
     gamertag:      body.gamertag,
     real_name:     body.realName,
     role:          body.role || null,
+    photo_url:     body.photoUrl || null,
     instagram_url: body.instagramUrl || null,
     tiktok_url:    body.tiktokUrl || null,
     kick_url:      body.kickUrl || null,

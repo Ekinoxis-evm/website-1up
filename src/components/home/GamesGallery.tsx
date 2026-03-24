@@ -36,7 +36,7 @@ export function GamesGallery({ categories, games }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 md:h-[640px]">
         {categoriesWithGames.map((cat, i) => {
           const firstGame = cat.games[0];
-          const img = (firstGame?.image_url) || CATEGORY_IMAGES[cat.slug] || CATEGORY_IMAGES.fighting;
+          const img = cat.image_url || firstGame?.image_url || CATEGORY_IMAGES[cat.slug] || CATEGORY_IMAGES.fighting;
           const meta = CATEGORY_LABELS[cat.slug] ?? { label: cat.name.toUpperCase(), bg: "bg-primary text-background" };
           const gameNames = cat.games.map((g) => g.name).join(" / ");
 

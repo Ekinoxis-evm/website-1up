@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
-  return isAdmin(await resolveUserEmail(claims.userId));
+  return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     price_cop:      body.priceCop || null,
     duration_hours: body.durationHours || null,
     payment_link:   body.paymentLink || null,
+    image_url:      body.imageUrl || null,
     sort_order:     body.sortOrder ?? 0,
   }).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
@@ -36,6 +37,7 @@ export async function PUT(req: NextRequest) {
     price_cop:      body.priceCop || null,
     duration_hours: body.durationHours || null,
     payment_link:   body.paymentLink || null,
+    image_url:      body.imageUrl || null,
     sort_order:     body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");

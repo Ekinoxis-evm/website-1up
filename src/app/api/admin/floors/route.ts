@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
-  return isAdmin(await resolveUserEmail(claims.userId));
+  return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
 export async function POST(req: NextRequest) {

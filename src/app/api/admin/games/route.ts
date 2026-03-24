@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
-  return isAdmin(await resolveUserEmail(claims.userId));
+  return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
 export async function POST(req: NextRequest) {
@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
   const { data } = await supabaseAdmin.from("games").insert({
     name:        body.name,
     category_id: body.categoryId,
+    image_url:   body.imageUrl || null,
     sort_order:  body.sortOrder ?? 0,
   }).select().single();
-  revalidatePath("/"); revalidatePath("/admin/games");
+  revalidatePath("/"); revalidatePath("/juegos"); revalidatePath("/admin/games");
   return NextResponse.json(data);
 }
 
@@ -28,9 +29,10 @@ export async function PUT(req: NextRequest) {
   const { data } = await supabaseAdmin.from("games").update({
     name:        body.name,
     category_id: body.categoryId,
+    image_url:   body.imageUrl || null,
     sort_order:  body.sortOrder,
   }).eq("id", body.id).select().single();
-  revalidatePath("/"); revalidatePath("/admin/games");
+  revalidatePath("/"); revalidatePath("/juegos"); revalidatePath("/admin/games");
   return NextResponse.json(data);
 }
 

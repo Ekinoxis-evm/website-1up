@@ -7,6 +7,7 @@ export const gameCategories = pgTable("game_categories", {
   id:        serial("id").primaryKey(),
   name:      varchar("name",  { length: 100 }).notNull(),
   slug:      varchar("slug",  { length: 100 }).notNull().unique(),
+  imageUrl:  text("image_url"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });

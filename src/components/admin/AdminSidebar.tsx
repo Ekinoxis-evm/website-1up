@@ -9,6 +9,7 @@ const MODULES = [
   { href: "/admin/pass-benefits",icon: "card_membership",     label: "Pass Benefits"  },
   { href: "/admin/floors",       icon: "domain",              label: "Pisos"          },
   { href: "/admin/submissions",  icon: "inbox",               label: "Solicitudes"    },
+  { href: "/admin/users",        icon: "admin_panel_settings", label: "Admins"         },
 ];
 
 export function AdminSidebar() {

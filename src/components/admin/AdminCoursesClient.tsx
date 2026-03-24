@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
+import { ImageUpload } from "./ImageUpload";
 
 interface Props { courses: Course[] }
-const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", paymentLink: "", sortOrder: "0" };
+const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", paymentLink: "", imageUrl: "", sortOrder: "0" };
 
 export function AdminCoursesClient({ courses }: Props) {
   const router = useRouter();
@@ -24,14 +25,24 @@ export function AdminCoursesClient({ courses }: Props) {
 
   function openEdit(c: Course) {
     setEditing(c);
-    setForm({ name: c.name, category: c.category, description: c.description ?? "", priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4), paymentLink: c.payment_link ?? "", sortOrder: String(c.sort_order ?? 0) });
+    setForm({
+      name: c.name, category: c.category, description: c.description ?? "",
+      priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4),
+      paymentLink: c.payment_link ?? "", imageUrl: c.image_url ?? "", sortOrder: String(c.sort_order ?? 0),
+    });
     setOpen(true);
   }
 
   async function handleSave() {
     setLoading(true);
     const method = editing ? "PUT" : "POST";
-    const body = { ...form, priceCop: form.priceCop ? Number(form.priceCop) : null, durationHours: Number(form.durationHours), sortOrder: Number(form.sortOrder), ...(editing ? { id: editing.id } : {}) };
+    const body = {
+      ...form,
+      priceCop: form.priceCop ? Number(form.priceCop) : null,
+      durationHours: Number(form.durationHours),
+      sortOrder: Number(form.sortOrder),
+      ...(editing ? { id: editing.id } : {}),
+    };
     await fetch("/api/admin/courses", { method, headers: await authHeaders(), body: JSON.stringify(body) });
     setOpen(false); setLoading(false); router.refresh();
   }
@@ -56,13 +67,22 @@ export function AdminCoursesClient({ courses }: Props) {
 
       <table className="w-full text-sm">
         <thead><tr className="bg-surface-container-highest">
-          {["Curso","Categoría","Precio","Duración","Acciones"].map((h) => (
+          {["Imagen","Curso","Categoría","Precio","Duración","Acciones"].map((h) => (
             <th key={h} className="text-left font-headline font-black text-xs uppercase tracking-widest text-outline px-4 py-3">{h}</th>
           ))}
         </tr></thead>
         <tbody>
           {courses.map((c, i) => (
             <tr key={c.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"}`}>
+              <td className="px-4 py-3">
+                <div className="w-14 h-10 bg-surface-container-high overflow-hidden flex items-center justify-center">
+                  {c.image_url
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                    : <span className="material-symbols-outlined text-sm text-outline">image</span>
+                  }
+                </div>
+              </td>
               <td className="px-4 py-3 font-headline font-bold text-on-background">{c.name}</td>
               <td className="px-4 py-3"><span className="bg-surface-container-highest font-headline font-black text-[10px] px-2 py-1 text-on-surface-variant uppercase">{c.category}</span></td>
               <td className="px-4 py-3 font-body text-primary">{formatCop(c.price_cop)}</td>
@@ -73,14 +93,26 @@ export function AdminCoursesClient({ courses }: Props) {
               </td>
             </tr>
           ))}
-          {courses.length === 0 && <tr><td colSpan={5} className="px-4 py-12 text-center text-outline font-body">Sin cursos aún.</td></tr>}
+          {courses.length === 0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-outline font-body">Sin cursos aún.</td></tr>}
         </tbody>
       </table>
 
       {open && (
-        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container border-4 border-tertiary p-8 w-full max-w-lg">
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-surface-container border-4 border-tertiary p-8 w-full max-w-lg my-8">
             <h2 className="font-headline font-black text-xl mb-6 uppercase">{editing ? "EDITAR CURSO" : "NUEVO CURSO"}</h2>
+
+            <div className="mb-4">
+              <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Imagen del Curso</p>
+              <ImageUpload
+                currentUrl={form.imageUrl || null}
+                folder="courses"
+                aspectRatio="video"
+                onUploaded={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                getAccessToken={getAccessToken}
+              />
+            </div>
+
             <div className="space-y-3">
               <input value={form.name} onChange={(e) => setForm({...form,name:e.target.value})} placeholder="Nombre del curso" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               <select value={form.category} onChange={(e) => setForm({...form,category:e.target.value})} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold appearance-none">

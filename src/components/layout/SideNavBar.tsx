@@ -5,11 +5,12 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
-  { href: "/",             icon: "home",          label: "Home"       },
-  { href: "/gaming-tower", icon: "domain",        label: "Gaming Tower"},
-  { href: "/team",         icon: "groups",        label: "Team 1UP"   },
-  { href: "/academia",     icon: "school",        label: "Academia"   },
-  { href: "/recreativo",   icon: "sports_esports",label: "Recreativo" },
+  { href: "/",             icon: "home",           label: "Home"       },
+  { href: "/gaming-tower", icon: "domain",         label: "Gaming Tower"},
+  { href: "/juegos",       icon: "videogame_asset", label: "Juegos"     },
+  { href: "/team",         icon: "groups",         label: "Team 1UP"   },
+  { href: "/academia",     icon: "school",         label: "Academia"   },
+  { href: "/recreativo",   icon: "sports_esports", label: "Recreativo" },
 ];
 
 export function SideNavBar() {
