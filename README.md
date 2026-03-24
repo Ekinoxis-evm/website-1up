@@ -1,6 +1,6 @@
 # 1UP Gaming Tower — Website
 
-Production website for **1UP Gaming Tower** (`1upesports.org`), Colombia's first professional esports hub.
+Production website for **1UP Gaming Tower** (`1up.ekinoxis.xyz`), Colombia's first professional esports hub.
 Built and maintained by **Ekinoxis**.
 
 ---
@@ -9,12 +9,13 @@ Built and maintained by **Ekinoxis**.
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 16 (App Router, TypeScript) |
+| Framework | Next.js 16 (App Router, TypeScript, Turbopack) |
 | Styling | Tailwind CSS v3 — Neo-Brutalist design system |
 | Auth | Privy (`@privy-io/react-auth` + `@privy-io/server-auth`) |
 | Database | Supabase (`@supabase/supabase-js`) |
+| ORM | Drizzle ORM (`drizzle-orm` + `postgres`) |
 | File Storage | Vercel Blob |
-| Runtime | Node.js 24, Turbopack |
+| Runtime | Node.js 24 |
 
 ---
 
@@ -23,23 +24,23 @@ Built and maintained by **Ekinoxis**.
 ```
 src/
   app/
-    (main)/          # Home (/) + Recreativo — no SideNavBar
+    (main)/          # Home (/) + Recreativo + Perfil — no SideNavBar
     (sidebar)/       # Gaming Tower, Team, Academia — with SideNavBar
     admin/           # Protected admin panel (Privy + ADMIN_EMAILS check)
     api/
       recruitment/   # Public form submission endpoint
       admin/         # Protected CRUD endpoints
   components/
-    home/            # Home page components
+    home/            # Home page components (HeroHome, TalentPipeline, RecruitmentForm…)
     tower/           # Gaming Tower components
     team/            # Team page components
     academia/        # Academia components
-    recreativo/      # Recreativo components
+    perfil/          # Profile page (WalletTab, SettingsTab — requires Privy auth)
     admin/           # Admin panel components
     providers/       # PrivyClientProvider
-  db/                # Seed scripts
+  db/                # Drizzle schema + seed scripts
   lib/               # supabase.ts client(s)
-  types/             # database.types.ts (generated)
+  types/             # database.types.ts (generated from Supabase)
   styles/            # Global styles
 ```
 
@@ -100,11 +101,12 @@ npm run dev
 
 | Route | Layout | Description |
 |-------|--------|-------------|
-| `/` | No sidebar | Home page |
+| `/` | No sidebar | Home page — Hero, Talent Pipeline, Games, Recruitment |
 | `/gaming-tower` | SideNavBar | 6-floor breakdown |
-| `/team` | SideNavBar | Pro roster |
+| `/team` | SideNavBar | Pro roster + Hall of Fame + Recruitment |
 | `/academia` | SideNavBar | Course catalog |
 | `/recreativo` | No sidebar | Recreativo section |
+| `/perfil` | No sidebar | User profile — wallet + settings (Privy auth required) |
 | `/admin/*` | Admin sidebar | Protected admin panel |
 
 ---
@@ -130,6 +132,10 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
+
+### Recruitment form fields
+
+`name` · `email` · `phone` (E.164 international format) · `category_id` · `game_id` · `gamertag` · `message` · `source` (`"home"` | `"team"`)
 
 ---
 
