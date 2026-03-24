@@ -9,10 +9,10 @@ import type { GameCategory, Game } from "@/types/database.types";
 interface Props {
   categories: GameCategory[];
   games: Game[];
-  extended?: boolean;
+  source?: "home" | "team";
 }
 
-export function RecruitmentForm({ categories, games, extended = false }: Props) {
+export function RecruitmentForm({ categories, games, source = "home" }: Props) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [phone, setPhone] = useState<PhoneValue>();
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
@@ -31,7 +31,7 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
       const res = await fetch("/api/recruitment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, phone, source: extended ? "team" : "home" }),
+        body: JSON.stringify({ ...data, phone, source }),
       });
       if (!res.ok) throw new Error();
       setStatus("ok");
@@ -76,27 +76,22 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
               name="name" required placeholder="NOMBRE" type="text"
               className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
             />
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                name="email" required placeholder="EMAIL" type="email"
-                className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
-              />
-              <PhoneInput
-                international
-                defaultCountry="CO"
-                value={phone}
-                onChange={setPhone}
-                placeholder="TELÉFONO"
-                className="phone-input-1up"
-              />
-            </div>
-
-            {extended && (
-              <input
-                name="gamertag" placeholder="GAMERTAG" type="text"
-                className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
-              />
-            )}
+            <input
+              name="email" required placeholder="EMAIL" type="email"
+              className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
+            />
+            <PhoneInput
+              international
+              defaultCountry="CO"
+              value={phone}
+              onChange={setPhone}
+              placeholder="TELÉFONO"
+              className="phone-input-1up"
+            />
+            <input
+              name="gamertag" placeholder="GAMERTAG" type="text"
+              className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline"
+            />
 
             <select
               name="categoryId"
@@ -120,12 +115,10 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
               ))}
             </select>
 
-            {extended && (
-              <textarea
-                name="message" placeholder="¿POR QUÉ 1UP?" rows={3}
-                className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline resize-none"
-              />
-            )}
+            <textarea
+              name="message" placeholder="¿POR QUÉ 1UP?" rows={3}
+              className="w-full bg-surface-container-lowest border-none text-on-background p-4 focus:ring-2 focus:ring-secondary font-headline font-bold placeholder:text-outline resize-none"
+            />
 
             {status === "ok" && (
               <p className="text-tertiary font-headline font-bold text-sm">✓ ¡Solicitud enviada! Nos pondremos en contacto.</p>

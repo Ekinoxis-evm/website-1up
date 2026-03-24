@@ -24,7 +24,7 @@ export default async function TeamPage() {
       <HeroTeam />
       <PlayerGrid players={allPlayers ?? []} />
       <HallOfFame competitions={allCompetitions ?? []} />
-      <RecruitmentForm categories={allCategories ?? []} games={allGames ?? []} extended />
+      <RecruitmentForm categories={allCategories ?? []} games={allGames ?? []} source="team" />
     </>
   );
 }
