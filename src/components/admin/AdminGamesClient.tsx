@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Game, GameCategory } from "@/db/schema";
+import type { Game, GameCategory } from "@/types/database.types";
 
 interface Props { games: Game[]; categories: GameCategory[] }
 
@@ -21,7 +21,7 @@ export function AdminGamesClient({ games, categories }: Props) {
   }
 
   function openCreate() { setEditing(null); setForm({ name: "", categoryId: "", sortOrder: "0" }); setOpen(true); }
-  function openEdit(g: Game) { setEditing(g); setForm({ name: g.name, categoryId: String(g.categoryId), sortOrder: String(g.sortOrder ?? 0) }); setOpen(true); }
+  function openEdit(g: Game) { setEditing(g); setForm({ name: g.name, categoryId: String(g.category_id), sortOrder: String(g.sort_order ?? 0) }); setOpen(true); }
 
   async function handleSave() {
     setLoading(true);
@@ -65,8 +65,8 @@ export function AdminGamesClient({ games, categories }: Props) {
           {games.map((g, i) => (
             <tr key={g.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"}`}>
               <td className="px-4 py-3 font-headline font-bold text-on-background">{g.name}</td>
-              <td className="px-4 py-3 font-body text-on-surface-variant">{catName(g.categoryId)}</td>
-              <td className="px-4 py-3 font-body text-outline">{g.sortOrder}</td>
+              <td className="px-4 py-3 font-body text-on-surface-variant">{catName(g.category_id)}</td>
+              <td className="px-4 py-3 font-body text-outline">{g.sort_order}</td>
               <td className="px-4 py-3 flex gap-2">
                 <button onClick={() => openEdit(g)} className="text-secondary hover:text-secondary-container font-headline font-bold text-xs uppercase">Editar</button>
                 <button onClick={() => handleDelete(g.id)} className="text-error hover:text-primary-container font-headline font-bold text-xs uppercase">Eliminar</button>

@@ -1,11 +1,10 @@
-import { db } from "@/db";
-import { competitions, players } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { AdminCompetitionsClient } from "@/components/admin/AdminCompetitionsClient";
 
 export default async function AdminCompetitionsPage() {
-  const [allComps, allPlayers] = await Promise.all([
-    db.select().from(competitions).orderBy(competitions.year),
-    db.select().from(players).orderBy(players.sortOrder),
+  const [{ data: allComps }, { data: allPlayers }] = await Promise.all([
+    supabase.from("competitions").select("*").order("year"),
+    supabase.from("players").select("*").order("sort_order"),
   ]);
-  return <AdminCompetitionsClient competitions={allComps} players={allPlayers} />;
+  return <AdminCompetitionsClient competitions={allComps ?? []} players={allPlayers ?? []} />;
 }

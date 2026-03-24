@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Course } from "@/db/schema";
+import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
 
 interface Props { courses: Course[] }
@@ -24,7 +24,7 @@ export function AdminCoursesClient({ courses }: Props) {
 
   function openEdit(c: Course) {
     setEditing(c);
-    setForm({ name: c.name, category: c.category, description: c.description ?? "", priceCop: String(c.priceCop ?? ""), durationHours: String(c.durationHours ?? 4), paymentLink: c.paymentLink ?? "", sortOrder: String(c.sortOrder ?? 0) });
+    setForm({ name: c.name, category: c.category, description: c.description ?? "", priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4), paymentLink: c.payment_link ?? "", sortOrder: String(c.sort_order ?? 0) });
     setOpen(true);
   }
 
@@ -65,8 +65,8 @@ export function AdminCoursesClient({ courses }: Props) {
             <tr key={c.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"}`}>
               <td className="px-4 py-3 font-headline font-bold text-on-background">{c.name}</td>
               <td className="px-4 py-3"><span className="bg-surface-container-highest font-headline font-black text-[10px] px-2 py-1 text-on-surface-variant uppercase">{c.category}</span></td>
-              <td className="px-4 py-3 font-body text-primary">{formatCop(c.priceCop)}</td>
-              <td className="px-4 py-3 font-body text-on-surface-variant">{c.durationHours}h</td>
+              <td className="px-4 py-3 font-body text-primary">{formatCop(c.price_cop)}</td>
+              <td className="px-4 py-3 font-body text-on-surface-variant">{c.duration_hours}h</td>
               <td className="px-4 py-3 flex gap-2">
                 <button onClick={() => openEdit(c)} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
                 <button onClick={() => handleDelete(c.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>

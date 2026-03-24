@@ -1,8 +1,7 @@
-import { db } from "@/db";
-import { floorInfo } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { AdminFloorsClient } from "@/components/admin/AdminFloorsClient";
 
 export default async function AdminFloorsPage() {
-  const floors = await db.select().from(floorInfo).orderBy(floorInfo.sortOrder);
-  return <AdminFloorsClient floors={floors} />;
+  const { data } = await supabase.from("floor_info").select("*").order("sort_order");
+  return <AdminFloorsClient floors={data ?? []} />;
 }

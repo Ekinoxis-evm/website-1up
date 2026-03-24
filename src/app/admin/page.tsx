@@ -1,6 +1,4 @@
-import { db } from "@/db";
-import { games, players, courses, recruitmentSubmissions } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
 const CARDS = [
@@ -11,18 +9,18 @@ const CARDS = [
 ];
 
 export default async function AdminDashboard() {
-  const [gamesCount, playersCount, coursesCount, submissionsCount] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(games),
-    db.select({ count: sql<number>`count(*)` }).from(players),
-    db.select({ count: sql<number>`count(*)` }).from(courses),
-    db.select({ count: sql<number>`count(*)` }).from(recruitmentSubmissions),
-  ]).catch(() => [[{ count: 0 }], [{ count: 0 }], [{ count: 0 }], [{ count: 0 }]]);
+  const [games, players, courses, submissions] = await Promise.all([
+    supabase.from("games").select("id", { count: "exact", head: true }),
+    supabase.from("players").select("id", { count: "exact", head: true }),
+    supabase.from("courses").select("id", { count: "exact", head: true }),
+    supabase.from("recruitment_submissions").select("id", { count: "exact", head: true }),
+  ]);
 
   const counts = [
-    Number(gamesCount[0]?.count ?? 0),
-    Number(playersCount[0]?.count ?? 0),
-    Number(coursesCount[0]?.count ?? 0),
-    Number(submissionsCount[0]?.count ?? 0),
+    games.count ?? 0,
+    players.count ?? 0,
+    courses.count ?? 0,
+    submissions.count ?? 0,
   ];
 
   return (
@@ -48,12 +46,12 @@ export default async function AdminDashboard() {
         <h2 className="font-headline font-black text-sm uppercase tracking-widest text-on-background mb-4">ACCESOS RÁPIDOS</h2>
         <div className="flex flex-wrap gap-3">
           {[
-            { href: "/admin/players",       label: "+ Jugador"       },
-            { href: "/admin/courses",        label: "+ Curso"         },
-            { href: "/admin/competitions",   label: "+ Competición"   },
-            { href: "/admin/games",          label: "+ Juego"         },
-            { href: "/admin/pass-benefits",  label: "+ Beneficio Pass"},
-            { href: "/admin/floors",         label: "+ Piso"          },
+            { href: "/admin/players",       label: "+ Jugador"        },
+            { href: "/admin/courses",        label: "+ Curso"          },
+            { href: "/admin/competitions",   label: "+ Competición"    },
+            { href: "/admin/games",          label: "+ Juego"          },
+            { href: "/admin/pass-benefits",  label: "+ Beneficio Pass" },
+            { href: "/admin/floors",         label: "+ Piso"           },
           ].map(({ href, label }) => (
             <Link
               key={href}

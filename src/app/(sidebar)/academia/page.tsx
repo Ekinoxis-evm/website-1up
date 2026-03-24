@@ -1,5 +1,4 @@
-import { db } from "@/db";
-import { courses } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { HeroAcademia } from "@/components/academia/HeroAcademia";
 import { CourseCatalog } from "@/components/academia/CourseCatalog";
 import { LearningPath } from "@/components/academia/LearningPath";
@@ -7,14 +6,16 @@ import { LearningPath } from "@/components/academia/LearningPath";
 export const metadata = { title: "Academia — 1UP Gaming Tower" };
 
 export default async function AcademiaPage() {
-  const allCourses = await db.select().from(courses)
-    .orderBy(courses.category, courses.sortOrder)
-    .catch(() => []);
+  const { data: allCourses } = await supabase
+    .from("courses")
+    .select("*")
+    .order("category")
+    .order("sort_order");
 
   return (
     <>
       <HeroAcademia />
-      <CourseCatalog courses={allCourses} />
+      <CourseCatalog courses={allCourses ?? []} />
       <LearningPath />
     </>
   );

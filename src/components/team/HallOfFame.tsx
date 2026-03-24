@@ -1,4 +1,4 @@
-import type { Competition } from "@/db/schema";
+import type { Competition } from "@/types/database.types";
 
 interface Props { competitions: Competition[] }
 
@@ -38,7 +38,7 @@ export function HallOfFame({ competitions }: Props) {
               return (
                 <tr key={c.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"} hover:bg-surface-container-high transition-colors`}>
                   <td className="px-6 py-4 font-headline font-black text-on-background uppercase">
-                    {c.tournamentName}
+                    {c.tournament_name}
                   </td>
                   <td className="px-6 py-4 font-body text-on-surface-variant text-sm">
                     {c.city ? `${c.city}, ` : ""}{c.country}

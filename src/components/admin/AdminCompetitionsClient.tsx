@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Competition, Player } from "@/db/schema";
+import type { Competition, Player } from "@/types/database.types";
 
 interface Props { competitions: Competition[]; players: Player[] }
 const EMPTY = { tournamentName: "", country: "", city: "", year: String(new Date().getFullYear()), result: "", playerId: "" };
@@ -23,7 +23,7 @@ export function AdminCompetitionsClient({ competitions, players }: Props) {
 
   function openEdit(c: Competition) {
     setEditing(c);
-    setForm({ tournamentName: c.tournamentName, country: c.country, city: c.city ?? "", year: String(c.year), result: c.result, playerId: String(c.playerId ?? "") });
+    setForm({ tournamentName: c.tournament_name, country: c.country, city: c.city ?? "", year: String(c.year), result: c.result, playerId: String(c.player_id ?? "") });
     setOpen(true);
   }
 
@@ -62,11 +62,11 @@ export function AdminCompetitionsClient({ competitions, players }: Props) {
         <tbody>
           {competitions.map((c, i) => (
             <tr key={c.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"}`}>
-              <td className="px-4 py-3 font-headline font-bold text-on-background">{c.tournamentName}</td>
+              <td className="px-4 py-3 font-headline font-bold text-on-background">{c.tournament_name}</td>
               <td className="px-4 py-3 font-body text-on-surface-variant">{c.country}</td>
               <td className="px-4 py-3 font-body text-on-surface-variant">{c.year}</td>
               <td className="px-4 py-3"><span className="bg-primary-container text-white font-headline font-black text-[10px] px-2 py-1 uppercase">{c.result}</span></td>
-              <td className="px-4 py-3 font-body text-on-surface-variant">{playerName(c.playerId ?? null)}</td>
+              <td className="px-4 py-3 font-body text-on-surface-variant">{playerName(c.player_id ?? null)}</td>
               <td className="px-4 py-3 flex gap-2">
                 <button onClick={() => openEdit(c)} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
                 <button onClick={() => handleDelete(c.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>

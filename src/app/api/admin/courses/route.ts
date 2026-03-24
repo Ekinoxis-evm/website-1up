@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { courses } from "@/db/schema";
-import { verifyToken } from "@/lib/privy";
+import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken, privyServer } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
-import { privyServer } from "@/lib/privy";
 import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
@@ -17,23 +14,39 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.insert(courses).values({ name: body.name, category: body.category, description: body.description || null, priceCop: body.priceCop || null, durationHours: body.durationHours || null, paymentLink: body.paymentLink || null, sortOrder: body.sortOrder ?? 0 }).returning();
+  const { data } = await supabaseAdmin.from("courses").insert({
+    name:           body.name,
+    category:       body.category,
+    description:    body.description || null,
+    price_cop:      body.priceCop || null,
+    duration_hours: body.durationHours || null,
+    payment_link:   body.paymentLink || null,
+    sort_order:     body.sortOrder ?? 0,
+  }).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.update(courses).set({ name: body.name, category: body.category, description: body.description || null, priceCop: body.priceCop || null, durationHours: body.durationHours || null, paymentLink: body.paymentLink || null, sortOrder: body.sortOrder ?? 0 }).where(eq(courses.id, body.id)).returning();
+  const { data } = await supabaseAdmin.from("courses").update({
+    name:           body.name,
+    category:       body.category,
+    description:    body.description || null,
+    price_cop:      body.priceCop || null,
+    duration_hours: body.durationHours || null,
+    payment_link:   body.paymentLink || null,
+    sort_order:     body.sortOrder ?? 0,
+  }).eq("id", body.id).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await db.delete(courses).where(eq(courses.id, id));
+  await supabaseAdmin.from("courses").delete().eq("id", id);
   revalidatePath("/academia"); revalidatePath("/admin/courses");
   return NextResponse.json({ ok: true });
 }

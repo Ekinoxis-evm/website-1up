@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { passBenefits } from "@/db/schema";
-import { verifyToken } from "@/lib/privy";
+import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken, privyServer } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
-import { privyServer } from "@/lib/privy";
 import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
@@ -17,23 +14,31 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.insert(passBenefits).values({ title: body.title, description: body.description || null, sortOrder: body.sortOrder ?? 0 }).returning();
+  const { data } = await supabaseAdmin.from("pass_benefits").insert({
+    title:       body.title,
+    description: body.description || null,
+    sort_order:  body.sortOrder ?? 0,
+  }).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.update(passBenefits).set({ title: body.title, description: body.description || null, sortOrder: body.sortOrder ?? 0 }).where(eq(passBenefits.id, body.id)).returning();
+  const { data } = await supabaseAdmin.from("pass_benefits").update({
+    title:       body.title,
+    description: body.description || null,
+    sort_order:  body.sortOrder ?? 0,
+  }).eq("id", body.id).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await db.delete(passBenefits).where(eq(passBenefits.id, id));
+  await supabaseAdmin.from("pass_benefits").delete().eq("id", id);
   revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
   return NextResponse.json({ ok: true });
 }

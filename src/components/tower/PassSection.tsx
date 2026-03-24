@@ -1,4 +1,4 @@
-import type { PassBenefit } from "@/db/schema";
+import type { PassBenefit } from "@/types/database.types";
 
 interface Props { benefits: PassBenefit[] }
 

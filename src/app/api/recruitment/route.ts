@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { recruitmentSubmissions } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,15 +10,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    await db.insert(recruitmentSubmissions).values({
-      name:       String(name),
-      email:      String(email),
-      phone:      String(phone),
-      categoryId: categoryId ? Number(categoryId) : null,
-      gameId:     gameId     ? Number(gameId)     : null,
-      gamertag:   gamertag   ? String(gamertag)   : null,
-      message:    message    ? String(message)    : null,
-      source:     source     ? String(source)     : "home",
+    await supabaseAdmin.from("recruitment_submissions").insert({
+      name:        String(name),
+      email:       String(email),
+      phone:       String(phone),
+      category_id: categoryId ? Number(categoryId) : null,
+      game_id:     gameId     ? Number(gameId)     : null,
+      gamertag:    gamertag   ? String(gamertag)   : null,
+      message:     message    ? String(message)    : null,
+      source:      source     ? String(source)     : "home",
     });
 
     return NextResponse.json({ ok: true });

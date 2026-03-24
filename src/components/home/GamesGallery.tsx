@@ -1,4 +1,4 @@
-import type { GameCategory, Game } from "@/db/schema";
+import type { GameCategory, Game } from "@/types/database.types";
 
 interface Props {
   categories: GameCategory[];
@@ -23,7 +23,7 @@ const CATEGORY_LABELS: Record<string, { label: string; bg: string }> = {
 export function GamesGallery({ categories, games }: Props) {
   const categoriesWithGames = categories.map((cat) => ({
     ...cat,
-    games: games.filter((g) => g.categoryId === cat.id),
+    games: games.filter((g) => g.category_id === cat.id),
   }));
 
   // Layout: fighting (2-col 2-row), fps (2-col 1-row), dancing (1-col), tcg (1-col)
@@ -36,7 +36,7 @@ export function GamesGallery({ categories, games }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 md:h-[640px]">
         {categoriesWithGames.map((cat, i) => {
           const firstGame = cat.games[0];
-          const img = (firstGame?.imageUrl) || CATEGORY_IMAGES[cat.slug] || CATEGORY_IMAGES.fighting;
+          const img = (firstGame?.image_url) || CATEGORY_IMAGES[cat.slug] || CATEGORY_IMAGES.fighting;
           const meta = CATEGORY_LABELS[cat.slug] ?? { label: cat.name.toUpperCase(), bg: "bg-primary text-background" };
           const gameNames = cat.games.map((g) => g.name).join(" / ");
 

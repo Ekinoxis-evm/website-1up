@@ -1,8 +1,7 @@
-import { db } from "@/db";
-import { passBenefits } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { AdminPassBenefitsClient } from "@/components/admin/AdminPassBenefitsClient";
 
 export default async function AdminPassBenefitsPage() {
-  const benefits = await db.select().from(passBenefits).orderBy(passBenefits.sortOrder);
-  return <AdminPassBenefitsClient benefits={benefits} />;
+  const { data } = await supabase.from("pass_benefits").select("*").order("sort_order");
+  return <AdminPassBenefitsClient benefits={data ?? []} />;
 }

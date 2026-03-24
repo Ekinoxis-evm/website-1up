@@ -1,11 +1,10 @@
-import { db } from "@/db";
-import { games, gameCategories } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { AdminGamesClient } from "@/components/admin/AdminGamesClient";
 
 export default async function AdminGamesPage() {
-  const [allGames, allCategories] = await Promise.all([
-    db.select().from(games).orderBy(games.sortOrder),
-    db.select().from(gameCategories).orderBy(gameCategories.sortOrder),
+  const [{ data: allGames }, { data: allCategories }] = await Promise.all([
+    supabase.from("games").select("*").order("sort_order"),
+    supabase.from("game_categories").select("*").order("sort_order"),
   ]);
-  return <AdminGamesClient games={allGames} categories={allCategories} />;
+  return <AdminGamesClient games={allGames ?? []} categories={allCategories ?? []} />;
 }

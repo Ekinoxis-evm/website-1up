@@ -1,22 +1,21 @@
-import { db } from "@/db";
-import { games, gameCategories } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { HeroHome } from "@/components/home/HeroHome";
 import { TalentPipeline } from "@/components/home/TalentPipeline";
 import { GamesGallery } from "@/components/home/GamesGallery";
 import { RecruitmentForm } from "@/components/home/RecruitmentForm";
 
 export default async function HomePage() {
-  const [allCategories, allGames] = await Promise.all([
-    db.select().from(gameCategories).orderBy(gameCategories.sortOrder),
-    db.select().from(games).orderBy(games.sortOrder),
-  ]).catch(() => [[], []]);
+  const [{ data: allCategories }, { data: allGames }] = await Promise.all([
+    supabase.from("game_categories").select("*").order("sort_order"),
+    supabase.from("games").select("*").order("sort_order"),
+  ]);
 
   return (
     <>
       <HeroHome />
       <TalentPipeline />
-      <GamesGallery categories={allCategories} games={allGames} />
-      <RecruitmentForm categories={allCategories} games={allGames} />
+      <GamesGallery categories={allCategories ?? []} games={allGames ?? []} />
+      <RecruitmentForm categories={allCategories ?? []} games={allGames ?? []} />
     </>
   );
 }

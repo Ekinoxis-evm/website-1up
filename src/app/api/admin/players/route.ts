@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { players } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, privyServer } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
@@ -16,33 +14,43 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.insert(players).values({
-    gamertag: body.gamertag, realName: body.realName, role: body.role || null,
-    instagramUrl: body.instagramUrl || null, tiktokUrl: body.tiktokUrl || null,
-    kickUrl: body.kickUrl || null, youtubeUrl: body.youtubeUrl || null,
-    sortOrder: body.sortOrder ?? 0, isActive: body.isActive ?? true,
-  }).returning();
+  const { data } = await supabaseAdmin.from("players").insert({
+    gamertag:      body.gamertag,
+    real_name:     body.realName,
+    role:          body.role || null,
+    instagram_url: body.instagramUrl || null,
+    tiktok_url:    body.tiktokUrl || null,
+    kick_url:      body.kickUrl || null,
+    youtube_url:   body.youtubeUrl || null,
+    sort_order:    body.sortOrder ?? 0,
+    is_active:     body.isActive ?? true,
+  }).select().single();
   revalidatePath("/team"); revalidatePath("/admin/players");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.update(players).set({
-    gamertag: body.gamertag, realName: body.realName, role: body.role || null,
-    instagramUrl: body.instagramUrl || null, tiktokUrl: body.tiktokUrl || null,
-    kickUrl: body.kickUrl || null, youtubeUrl: body.youtubeUrl || null,
-    sortOrder: body.sortOrder ?? 0, isActive: body.isActive ?? true,
-  }).where(eq(players.id, body.id)).returning();
+  const { data } = await supabaseAdmin.from("players").update({
+    gamertag:      body.gamertag,
+    real_name:     body.realName,
+    role:          body.role || null,
+    instagram_url: body.instagramUrl || null,
+    tiktok_url:    body.tiktokUrl || null,
+    kick_url:      body.kickUrl || null,
+    youtube_url:   body.youtubeUrl || null,
+    sort_order:    body.sortOrder ?? 0,
+    is_active:     body.isActive ?? true,
+  }).eq("id", body.id).select().single();
   revalidatePath("/team"); revalidatePath("/admin/players");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await db.delete(players).where(eq(players.id, id));
+  await supabaseAdmin.from("players").delete().eq("id", id);
   revalidatePath("/team"); revalidatePath("/admin/players");
   return NextResponse.json({ ok: true });
 }

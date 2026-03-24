@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Player } from "@/db/schema";
+import type { Player } from "@/types/database.types";
 
 interface Props { players: Player[] }
 
@@ -34,7 +34,7 @@ export function AdminPlayersClient({ players }: Props) {
 
   function openEdit(p: Player) {
     setEditing(p);
-    setForm({ gamertag: p.gamertag, realName: p.realName, role: p.role ?? "", instagramUrl: p.instagramUrl ?? "", tiktokUrl: p.tiktokUrl ?? "", kickUrl: p.kickUrl ?? "", youtubeUrl: p.youtubeUrl ?? "", sortOrder: String(p.sortOrder ?? 0), isActive: p.isActive ?? true });
+    setForm({ gamertag: p.gamertag, realName: p.real_name, role: p.role ?? "", instagramUrl: p.instagram_url ?? "", tiktokUrl: p.tiktok_url ?? "", kickUrl: p.kick_url ?? "", youtubeUrl: p.youtube_url ?? "", sortOrder: String(p.sort_order ?? 0), isActive: p.is_active ?? true });
     setOpen(true);
   }
 
@@ -72,15 +72,15 @@ export function AdminPlayersClient({ players }: Props) {
         {players.map((p) => (
           <div key={p.id} className="bg-surface-container p-4 border-l-4 border-primary-container">
             <div className="w-full aspect-square bg-surface-container-high mb-3 flex items-center justify-center overflow-hidden">
-              {p.photoUrl ? (
+              {p.photo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.photoUrl} alt={p.gamertag} className="w-full h-full object-cover" />
+                <img src={p.photo_url} alt={p.gamertag} className="w-full h-full object-cover" />
               ) : (
                 <span className="material-symbols-outlined text-[3rem] text-surface-container-highest">person</span>
               )}
             </div>
             <div className="font-headline font-black text-on-background italic">{p.gamertag}</div>
-            <div className="font-body text-xs text-outline mt-1">{p.realName}</div>
+            <div className="font-body text-xs text-outline mt-1">{p.real_name}</div>
             {p.role && <span className="bg-primary-container text-white font-headline font-black text-[10px] px-2 py-0.5 uppercase mt-2 inline-block">{p.role}</span>}
             <div className="flex gap-2 mt-3">
               <button onClick={() => openEdit(p)} className="flex-1 text-secondary font-headline font-bold text-xs uppercase hover:text-secondary-container">Editar</button>

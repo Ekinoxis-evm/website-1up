@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { GameCategory, Game } from "@/db/schema";
+import type { GameCategory, Game } from "@/types/database.types";
 
 interface Props {
   categories: GameCategory[];
@@ -14,7 +14,7 @@ export function RecruitmentForm({ categories, games, extended = false }: Props) 
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
   const filteredGames = selectedCategory
-    ? games.filter((g) => g.categoryId === parseInt(selectedCategory))
+    ? games.filter((g) => g.category_id === parseInt(selectedCategory))
     : games;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

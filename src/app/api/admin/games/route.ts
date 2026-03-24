@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { games } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, privyServer } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
@@ -16,23 +14,31 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.insert(games).values({ name: body.name, categoryId: body.categoryId, sortOrder: body.sortOrder ?? 0 }).returning();
+  const { data } = await supabaseAdmin.from("games").insert({
+    name:        body.name,
+    category_id: body.categoryId,
+    sort_order:  body.sortOrder ?? 0,
+  }).select().single();
   revalidatePath("/"); revalidatePath("/admin/games");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.update(games).set({ name: body.name, categoryId: body.categoryId, sortOrder: body.sortOrder }).where(eq(games.id, body.id)).returning();
+  const { data } = await supabaseAdmin.from("games").update({
+    name:        body.name,
+    category_id: body.categoryId,
+    sort_order:  body.sortOrder,
+  }).eq("id", body.id).select().single();
   revalidatePath("/"); revalidatePath("/admin/games");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await db.delete(games).where(eq(games.id, id));
+  await supabaseAdmin.from("games").delete().eq("id", id);
   revalidatePath("/"); revalidatePath("/admin/games");
   return NextResponse.json({ ok: true });
 }

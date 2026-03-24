@@ -1,4 +1,4 @@
-import type { FloorInfo } from "@/db/schema";
+import type { FloorInfo } from "@/types/database.types";
 
 interface Props { floors: FloorInfo[] }
 
@@ -22,12 +22,12 @@ export function FloorBreakdown({ floors }: Props) {
 
       <div className="space-y-4">
         {floors.map((floor) => {
-          const badgeClass = ACCENT_BG[floor.accentColor ?? "primary-container"] ?? "bg-primary-container text-white";
+          const badgeClass = ACCENT_BG[floor.accent_color ?? "primary-container"] ?? "bg-primary-container text-white";
           return (
             <div key={floor.id} className="flex flex-col md:flex-row gap-0 bg-surface-container-low group hover:bg-surface-container-high transition-colors">
               {/* Floor badge */}
               <div className={`${badgeClass} flex items-center justify-center min-w-[100px] py-8 px-6 font-headline font-black text-3xl skew-fix`}>
-                <span className="block skew-content">{floor.floorLabel}</span>
+                <span className="block skew-content">{floor.floor_label}</span>
               </div>
               {/* Content */}
               <div className="flex-1 p-8 border-l-0 md:border-l-4 border-outline-variant/20">

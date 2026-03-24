@@ -1,9 +1,13 @@
-import { db } from "@/db";
-import { recruitmentSubmissions, gameCategories, games } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { supabase } from "@/lib/supabase";
+import type { Submission } from "@/types/database.types";
 
 export default async function AdminSubmissionsPage() {
-  const subs = await db.select().from(recruitmentSubmissions).orderBy(desc(recruitmentSubmissions.createdAt));
+  const { data: subs } = await supabase
+    .from("recruitment_submissions")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const allSubs: Submission[] = subs ?? [];
 
   return (
     <div>
@@ -12,7 +16,7 @@ export default async function AdminSubmissionsPage() {
           SOLICITUDES <span className="text-primary-container">RECRUITMENT</span>
         </h1>
         <div className="h-1 w-16 bg-primary-container mt-2" />
-        <p className="text-outline font-body text-sm mt-2">{subs.length} solicitudes recibidas</p>
+        <p className="text-outline font-body text-sm mt-2">{allSubs.length} solicitudes recibidas</p>
       </div>
 
       <div className="w-full overflow-x-auto">
@@ -25,7 +29,7 @@ export default async function AdminSubmissionsPage() {
             </tr>
           </thead>
           <tbody>
-            {subs.map((s, i) => (
+            {allSubs.map((s, i) => (
               <tr key={s.id} className={`${i % 2 === 0 ? "bg-surface-container" : "bg-surface-container-low"} hover:bg-surface-container-high transition-colors`}>
                 <td className="px-4 py-3 font-headline font-bold text-on-background">{s.name}</td>
                 <td className="px-4 py-3 font-body text-on-surface-variant">{s.email}</td>
@@ -37,11 +41,11 @@ export default async function AdminSubmissionsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 font-body text-outline text-xs">
-                  {s.createdAt?.toLocaleDateString("es-CO") ?? "—"}
+                  {s.created_at ? new Date(s.created_at).toLocaleDateString("es-CO") : "—"}
                 </td>
               </tr>
             ))}
-            {subs.length === 0 && (
+            {allSubs.length === 0 && (
               <tr><td colSpan={6} className="px-4 py-12 text-center text-outline font-body">Sin solicitudes aún.</td></tr>
             )}
           </tbody>

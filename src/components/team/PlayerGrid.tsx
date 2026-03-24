@@ -1,4 +1,4 @@
-import type { Player } from "@/db/schema";
+import type { Player } from "@/types/database.types";
 import { PlayerCard } from "./PlayerCard";
 
 interface Props { players: Player[] }

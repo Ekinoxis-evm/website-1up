@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { FloorInfo } from "@/db/schema";
+import type { FloorInfo } from "@/types/database.types";
 
 interface Props { floors: FloorInfo[] }
 const EMPTY = { floorLabel: "", title: "", description: "", accentColor: "primary-container", sortOrder: "0" };
@@ -52,7 +52,7 @@ export function AdminFloorsClient({ floors }: Props) {
         {floors.map((f) => (
           <div key={f.id} className="bg-surface-container flex items-start gap-0 group">
             <div className="bg-secondary-container min-w-[72px] flex items-center justify-center py-6 font-headline font-black text-2xl text-white skew-fix">
-              <span className="block skew-content">{f.floorLabel}</span>
+              <span className="block skew-content">{f.floor_label}</span>
             </div>
             <div className="flex-1 p-5 flex items-start justify-between gap-4">
               <div>
@@ -60,7 +60,7 @@ export function AdminFloorsClient({ floors }: Props) {
                 <div className="font-body text-sm text-on-surface-variant mt-1">{f.description}</div>
               </div>
               <div className="flex gap-3 shrink-0">
-                <button onClick={() => { setEditing(f); setForm({ floorLabel: f.floorLabel, title: f.title, description: f.description, accentColor: f.accentColor ?? "primary-container", sortOrder: String(f.sortOrder ?? 0) }); setOpen(true); }} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
+                <button onClick={() => { setEditing(f); setForm({ floorLabel: f.floor_label, title: f.title, description: f.description, accentColor: f.accent_color ?? "primary-container", sortOrder: String(f.sort_order ?? 0) }); setOpen(true); }} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
                 <button onClick={() => handleDelete(f.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>
               </div>
             </div>

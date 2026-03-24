@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { floorInfo } from "@/db/schema";
-import { verifyToken } from "@/lib/privy";
+import { supabaseAdmin } from "@/lib/supabase";
+import { verifyToken, privyServer } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
-import { privyServer } from "@/lib/privy";
 import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
@@ -17,23 +14,35 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.insert(floorInfo).values({ floorLabel: body.floorLabel, title: body.title, description: body.description, accentColor: body.accentColor || null, sortOrder: body.sortOrder ?? 0 }).returning();
+  const { data } = await supabaseAdmin.from("floor_info").insert({
+    floor_label:  body.floorLabel,
+    title:        body.title,
+    description:  body.description,
+    accent_color: body.accentColor || null,
+    sort_order:   body.sortOrder ?? 0,
+  }).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/floors");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const result = await db.update(floorInfo).set({ floorLabel: body.floorLabel, title: body.title, description: body.description, accentColor: body.accentColor || null, sortOrder: body.sortOrder ?? 0 }).where(eq(floorInfo.id, body.id)).returning();
+  const { data } = await supabaseAdmin.from("floor_info").update({
+    floor_label:  body.floorLabel,
+    title:        body.title,
+    description:  body.description,
+    accent_color: body.accentColor || null,
+    sort_order:   body.sortOrder ?? 0,
+  }).eq("id", body.id).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/floors");
-  return NextResponse.json(result[0]);
+  return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await db.delete(floorInfo).where(eq(floorInfo.id, id));
+  await supabaseAdmin.from("floor_info").delete().eq("id", id);
   revalidatePath("/gaming-tower"); revalidatePath("/admin/floors");
   return NextResponse.json({ ok: true });
 }

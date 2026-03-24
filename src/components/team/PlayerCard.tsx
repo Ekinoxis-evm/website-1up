@@ -1,4 +1,4 @@
-import type { Player } from "@/db/schema";
+import type { Player } from "@/types/database.types";
 
 interface Props { player: Player; index: number }
 
@@ -7,10 +7,10 @@ const ROLE_BG = ["bg-primary-container", "bg-secondary-container", "bg-tertiary"
 const ROLE_TEXT = ["text-white", "text-white", "text-background", "text-background"];
 
 const SOCIALS = [
-  { key: "instagramUrl" as const, icon: "photo_camera",   label: "IG"  },
-  { key: "tiktokUrl"   as const, icon: "music_note",      label: "TT"  },
-  { key: "kickUrl"     as const, icon: "live_tv",         label: "KCK" },
-  { key: "youtubeUrl"  as const, icon: "play_circle",     label: "YT"  },
+  { key: "instagram_url" as const, icon: "photo_camera",   label: "IG"  },
+  { key: "tiktok_url"   as const,  icon: "music_note",      label: "TT"  },
+  { key: "kick_url"     as const,  icon: "live_tv",         label: "KCK" },
+  { key: "youtube_url"  as const,  icon: "play_circle",     label: "YT"  },
 ];
 
 export function PlayerCard({ player, index }: Props) {
@@ -23,10 +23,10 @@ export function PlayerCard({ player, index }: Props) {
     <div className={`group relative bg-surface-container ${border} border-l-4 ${isOffset ? "md:mt-8" : ""} overflow-hidden`}>
       {/* Photo */}
       <div className="aspect-[3/4] bg-surface-container-high relative overflow-hidden">
-        {player.photoUrl ? (
+        {player.photo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={player.photoUrl}
+            src={player.photo_url}
             alt={player.gamertag}
             className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
           />
@@ -65,7 +65,7 @@ export function PlayerCard({ player, index }: Props) {
         <div className="font-headline font-black text-2xl italic text-on-background leading-tight">
           {player.gamertag}
         </div>
-        <div className="font-body text-sm text-on-surface-variant mt-1">{player.realName}</div>
+        <div className="font-body text-sm text-on-surface-variant mt-1">{player.real_name}</div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { PassBenefit } from "@/db/schema";
+import type { PassBenefit } from "@/types/database.types";
 
 interface Props { benefits: PassBenefit[] }
 const EMPTY = { title: "", description: "", sortOrder: "0" };
@@ -55,7 +55,7 @@ export function AdminPassBenefitsClient({ benefits }: Props) {
               {b.description && <div className="font-body text-sm text-on-surface-variant mt-1">{b.description}</div>}
             </div>
             <div className="flex gap-3 shrink-0">
-              <button onClick={() => { setEditing(b); setForm({ title: b.title, description: b.description ?? "", sortOrder: String(b.sortOrder ?? 0) }); setOpen(true); }} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
+              <button onClick={() => { setEditing(b); setForm({ title: b.title, description: b.description ?? "", sortOrder: String(b.sort_order ?? 0) }); setOpen(true); }} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
               <button onClick={() => handleDelete(b.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>
             </div>
           </div>

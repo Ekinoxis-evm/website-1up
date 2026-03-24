@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Course } from "@/db/schema";
+import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
 
 interface Props { courses: Course[] }
@@ -55,9 +55,9 @@ export function CourseCatalog({ courses }: Props) {
             <div key={course.id} className={`bg-surface-container border-t-4 ${style.border} group hover:bg-surface-container-high transition-colors`}>
               {/* Image */}
               <div className="aspect-video bg-surface-container-high relative overflow-hidden">
-                {course.imageUrl ? (
+                {course.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={course.imageUrl} alt={course.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                  <img src={course.image_url} alt={course.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="material-symbols-outlined text-[3rem] text-surface-container-highest">school</span>
@@ -68,9 +68,9 @@ export function CourseCatalog({ courses }: Props) {
                   {course.category}
                 </span>
                 {/* Duration */}
-                {course.durationHours && (
+                {course.duration_hours && (
                   <span className="absolute top-3 right-3 bg-surface-container-lowest/80 text-on-surface font-headline font-bold text-[10px] px-2 py-1 uppercase">
-                    {course.durationHours}H
+                    {course.duration_hours}H
                   </span>
                 )}
               </div>
@@ -88,12 +88,12 @@ export function CourseCatalog({ courses }: Props) {
 
                 <div className="flex items-center justify-between mt-4">
                   <div className="font-headline font-black text-primary text-lg">
-                    {formatCop(course.priceCop)}
+                    {formatCop(course.price_cop)}
                     <span className="text-xs text-outline font-body font-normal ml-1">/ persona</span>
                   </div>
-                  {course.paymentLink ? (
+                  {course.payment_link ? (
                     <a
-                      href={course.paymentLink}
+                      href={course.payment_link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-primary-container text-white font-headline font-black text-xs px-5 py-2 skew-fix hover:neo-shadow-pink transition-all"
