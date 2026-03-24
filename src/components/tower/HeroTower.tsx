@@ -10,7 +10,7 @@ export function HeroTower() {
       <div className="relative z-10">
         <div className="inline-block bg-secondary-container px-4 py-1 mb-4 skew-fix">
           <span className="text-white font-black italic skew-content block text-sm tracking-widest font-headline">
-            BOGOTÁ, COLOMBIA
+            CALI, COLOMBIA
           </span>
         </div>
         <h1 className="font-headline font-black text-7xl md:text-9xl leading-none tracking-tighter text-on-background">

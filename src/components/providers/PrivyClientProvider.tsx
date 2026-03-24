@@ -14,7 +14,7 @@ export function PrivyClientProvider({ children }: { children: React.ReactNode })
         },
         loginMethods: ["email", "google", "discord"],
         embeddedWallets: {
-          ethereum: { createOnLogin: "off" },
+          ethereum: { createOnLogin: "users-without-wallets" },
         },
       }}
     >

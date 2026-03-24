@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { useWallets } from "@privy-io/react-auth";
 
 const NAV_LINKS = [
   { href: "/",             label: "Home"      },
@@ -16,6 +17,8 @@ const NAV_LINKS = [
 export function TopAppBar() {
   const pathname = usePathname();
   const { login, logout, authenticated, ready } = usePrivy();
+  const { wallets } = useWallets();
+  const embeddedWallet = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
 
   return (
     <header className="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 glass-panel border-b border-outline-variant/20">
@@ -52,13 +55,48 @@ export function TopAppBar() {
       <div className="flex items-center gap-3">
         {ready && (
           authenticated ? (
-            <button
-              onClick={logout}
-              className="flex items-center gap-2 text-primary hover:text-primary-container transition-colors font-headline font-bold uppercase text-sm"
-            >
-              <span className="material-symbols-outlined text-xl">person</span>
-              <span className="hidden sm:block">Exit</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Wallet balance pill */}
+              {embeddedWallet && (
+                <Link
+                  href="/perfil"
+                  className="hidden sm:flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-primary/20 hover:border-primary/50 transition-colors"
+                >
+                  <span
+                    className="material-symbols-outlined text-primary text-sm"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    account_balance_wallet
+                  </span>
+                  <span className="font-headline font-bold text-primary text-xs">
+                    {`${embeddedWallet.address.slice(0, 6)}…${embeddedWallet.address.slice(-4)}`}
+                  </span>
+                </Link>
+              )}
+              {/* Profile icon */}
+              <Link
+                href="/perfil"
+                className={`flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors ${
+                  pathname === "/perfil" ? "text-primary" : "text-on-background/70 hover:text-primary"
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined text-xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  account_circle
+                </span>
+                <span className="hidden sm:block">Perfil</span>
+              </Link>
+              {/* Logout */}
+              <button
+                onClick={logout}
+                className="flex items-center gap-1 text-on-background/40 hover:text-error transition-colors font-headline font-bold uppercase text-xs"
+              >
+                <span className="material-symbols-outlined text-base">logout</span>
+                <span className="hidden sm:block">Exit</span>
+              </button>
+            </div>
           ) : (
             <button
               onClick={login}
