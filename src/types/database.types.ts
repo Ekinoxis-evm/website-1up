@@ -86,7 +86,6 @@ export type Database = {
           image_url: string | null
           is_active: boolean | null
           name: string
-          payment_link: string | null
           price_cop: number | null
           sort_order: number | null
         }
@@ -99,7 +98,6 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           name: string
-          payment_link?: string | null
           price_cop?: number | null
           sort_order?: number | null
         }
@@ -112,9 +110,156 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           name?: string
-          payment_link?: string | null
           price_cop?: number | null
           sort_order?: number | null
+        }
+        Relationships: []
+      }
+      discount_rules: {
+        Row: {
+          id: number
+          name: string
+          description: string | null
+          trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
+          discount_pct: number
+          applies_to: "courses" | "pass" | "all"
+          is_active: boolean | null
+          valid_from: string | null
+          valid_until: string | null
+          created_by: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          description?: string | null
+          trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
+          discount_pct: number
+          applies_to: "courses" | "pass" | "all"
+          is_active?: boolean | null
+          valid_from?: string | null
+          valid_until?: string | null
+          created_by?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          description?: string | null
+          trigger_type?: "comfenalco" | "promo_code" | "manual" | "auto"
+          discount_pct?: number
+          applies_to?: "courses" | "pass" | "all"
+          is_active?: boolean | null
+          valid_from?: string | null
+          valid_until?: string | null
+          created_by?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          id: number
+          user_profile_id: number
+          product_type: "course" | "pass"
+          course_id: number | null
+          original_price_cop: number
+          discount_rule_id: number | null
+          discount_pct_applied: number | null
+          final_price_cop: number
+          mp_preference_id: string | null
+          mp_payment_id: string | null
+          payment_status: "pending" | "approved" | "rejected" | "cancelled" | null
+          paid_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          user_profile_id: number
+          product_type: "course" | "pass"
+          course_id?: number | null
+          original_price_cop: number
+          discount_rule_id?: number | null
+          discount_pct_applied?: number | null
+          final_price_cop: number
+          mp_preference_id?: string | null
+          mp_payment_id?: string | null
+          payment_status?: "pending" | "approved" | "rejected" | "cancelled" | null
+          paid_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          user_profile_id?: number
+          product_type?: "course" | "pass"
+          course_id?: number | null
+          original_price_cop?: number
+          discount_rule_id?: number | null
+          discount_pct_applied?: number | null
+          final_price_cop?: number
+          mp_preference_id?: string | null
+          mp_payment_id?: string | null
+          payment_status?: "pending" | "approved" | "rejected" | "cancelled" | null
+          paid_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          id: number
+          privy_user_id: string
+          email: string | null
+          tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT" | null
+          numero_documento: string | null
+          comfenalco_afiliado: boolean | null
+          comfenalco_verified_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          privy_user_id: string
+          email?: string | null
+          tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
+          numero_documento?: string | null
+          comfenalco_afiliado?: boolean | null
+          comfenalco_verified_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          privy_user_id?: string
+          email?: string | null
+          tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
+          numero_documento?: string | null
+          comfenalco_afiliado?: boolean | null
+          comfenalco_verified_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -478,11 +623,14 @@ export const Constants = {
 } as const
 
 // Convenience type aliases — matches Supabase snake_case column names
-export type GameCategory = Database["public"]["Tables"]["game_categories"]["Row"];
-export type Game         = Database["public"]["Tables"]["games"]["Row"];
-export type Player       = Database["public"]["Tables"]["players"]["Row"];
-export type Competition  = Database["public"]["Tables"]["competitions"]["Row"];
-export type Course       = Database["public"]["Tables"]["courses"]["Row"];
-export type PassBenefit  = Database["public"]["Tables"]["pass_benefits"]["Row"];
-export type FloorInfo    = Database["public"]["Tables"]["floor_info"]["Row"];
-export type Submission   = Database["public"]["Tables"]["recruitment_submissions"]["Row"];
+export type GameCategory  = Database["public"]["Tables"]["game_categories"]["Row"];
+export type Game          = Database["public"]["Tables"]["games"]["Row"];
+export type Player        = Database["public"]["Tables"]["players"]["Row"];
+export type Competition   = Database["public"]["Tables"]["competitions"]["Row"];
+export type Course        = Database["public"]["Tables"]["courses"]["Row"];
+export type PassBenefit   = Database["public"]["Tables"]["pass_benefits"]["Row"];
+export type FloorInfo     = Database["public"]["Tables"]["floor_info"]["Row"];
+export type Submission    = Database["public"]["Tables"]["recruitment_submissions"]["Row"];
+export type UserProfile   = Database["public"]["Tables"]["user_profiles"]["Row"];
+export type DiscountRule  = Database["public"]["Tables"]["discount_rules"]["Row"];
+export type Enrollment    = Database["public"]["Tables"]["enrollments"]["Row"];

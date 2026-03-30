@@ -8,6 +8,8 @@ const MODULES = [
   { href: "/admin/courses",      icon: "school",              label: "Cursos"         },
   { href: "/admin/pass-benefits",icon: "card_membership",     label: "Pass Benefits"  },
   { href: "/admin/floors",       icon: "domain",              label: "Pisos"          },
+  { href: "/admin/discounts",    icon: "local_offer",         label: "Descuentos"     },
+  { href: "/admin/enrollments",  icon: "receipt_long",        label: "Inscripciones"  },
   { href: "/admin/submissions",  icon: "inbox",               label: "Solicitudes"    },
   { href: "/admin/users",        icon: "admin_panel_settings", label: "Admins"         },
 ];

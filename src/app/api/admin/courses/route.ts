@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     description:    body.description || null,
     price_cop:      body.priceCop || null,
     duration_hours: body.durationHours || null,
-    payment_link:   body.paymentLink || null,
     image_url:      body.imageUrl || null,
     sort_order:     body.sortOrder ?? 0,
   }).select().single();
@@ -36,7 +35,6 @@ export async function PUT(req: NextRequest) {
     description:    body.description || null,
     price_cop:      body.priceCop || null,
     duration_hours: body.durationHours || null,
-    payment_link:   body.paymentLink || null,
     image_url:      body.imageUrl || null,
     sort_order:     body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();

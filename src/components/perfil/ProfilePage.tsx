@@ -4,12 +4,14 @@ import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { WalletTab } from "./WalletTab";
 import { SettingsTab } from "./SettingsTab";
+import { IdentidadTab } from "./IdentidadTab";
 
-type Tab = "wallet" | "settings";
+type Tab = "wallet" | "identidad" | "settings";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "wallet",   label: "WALLET",  icon: "account_balance_wallet" },
-  { id: "settings", label: "AJUSTES", icon: "manage_accounts"        },
+  { id: "wallet",    label: "WALLET",   icon: "account_balance_wallet" },
+  { id: "identidad", label: "IDENTIDAD", icon: "badge"                 },
+  { id: "settings",  label: "AJUSTES",  icon: "manage_accounts"       },
 ];
 
 export function ProfilePage() {
@@ -75,7 +77,9 @@ export function ProfilePage() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-6 py-10 pb-24 md:pb-12">
-        {activeTab === "wallet" ? <WalletTab /> : <SettingsTab />}
+        {activeTab === "wallet"    && <WalletTab />}
+        {activeTab === "identidad" && <IdentidadTab />}
+        {activeTab === "settings"  && <SettingsTab />}
       </div>
     </div>
   );

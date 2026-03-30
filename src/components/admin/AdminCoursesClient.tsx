@@ -8,7 +8,7 @@ import { formatCop } from "@/lib/utils";
 import { ImageUpload } from "./ImageUpload";
 
 interface Props { courses: Course[] }
-const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", paymentLink: "", imageUrl: "", sortOrder: "0" };
+const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", imageUrl: "", sortOrder: "0" };
 
 export function AdminCoursesClient({ courses }: Props) {
   const router = useRouter();
@@ -28,7 +28,7 @@ export function AdminCoursesClient({ courses }: Props) {
     setForm({
       name: c.name, category: c.category, description: c.description ?? "",
       priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4),
-      paymentLink: c.payment_link ?? "", imageUrl: c.image_url ?? "", sortOrder: String(c.sort_order ?? 0),
+      imageUrl: c.image_url ?? "", sortOrder: String(c.sort_order ?? 0),
     });
     setOpen(true);
   }
@@ -37,10 +37,13 @@ export function AdminCoursesClient({ courses }: Props) {
     setLoading(true);
     const method = editing ? "PUT" : "POST";
     const body = {
-      ...form,
-      priceCop: form.priceCop ? Number(form.priceCop) : null,
+      name:          form.name,
+      category:      form.category,
+      description:   form.description,
+      priceCop:      form.priceCop ? Number(form.priceCop) : null,
       durationHours: Number(form.durationHours),
-      sortOrder: Number(form.sortOrder),
+      imageUrl:      form.imageUrl,
+      sortOrder:     Number(form.sortOrder),
       ...(editing ? { id: editing.id } : {}),
     };
     await fetch("/api/admin/courses", { method, headers: await authHeaders(), body: JSON.stringify(body) });
@@ -123,7 +126,6 @@ export function AdminCoursesClient({ courses }: Props) {
                 <input value={form.priceCop} onChange={(e) => setForm({...form,priceCop:e.target.value})} type="number" placeholder="Precio COP" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
                 <input value={form.durationHours} onChange={(e) => setForm({...form,durationHours:e.target.value})} type="number" placeholder="Duración (h)" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               </div>
-              <input value={form.paymentLink} onChange={(e) => setForm({...form,paymentLink:e.target.value})} placeholder="Link de pago (URL)" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-tertiary text-background font-headline font-black py-3 disabled:opacity-60">{loading?"GUARDANDO...":"GUARDAR"}</button>

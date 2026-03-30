@@ -19,7 +19,7 @@ export default function RecreativoPage() {
             </span>
           </div>
           <h1 className="font-headline font-black text-5xl md:text-7xl leading-none tracking-tighter text-on-background">
-            JORNADAS <span className="text-secondary italic">RECREATIVAS</span> PARA CAJAS DE COMPENSACIÓN
+            JORNADAS <span className="text-secondary italic">RECREATIVAS</span>
           </h1>
           <p className="font-body text-xl text-on-surface-variant mt-6 max-w-2xl border-l-4 border-secondary pl-6">
             Lleva a tu equipo de trabajo a la experiencia gaming más completa de Colombia.

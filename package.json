@@ -16,6 +16,7 @@
     "@vercel/blob": "^0.27.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
+    "mercadopago": "^2.12.0",
     "next": "^16.2.1",
     "postgres": "^3.4.8",
     "react": "^19.0.0",

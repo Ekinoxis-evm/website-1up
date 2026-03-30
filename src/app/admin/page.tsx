@@ -2,18 +2,22 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
 const CARDS = [
-  { href: "/admin/games",        icon: "sports_esports",  label: "Juegos",      color: "border-primary-container"   },
-  { href: "/admin/players",      icon: "groups",          label: "Jugadores",   color: "border-secondary-container" },
-  { href: "/admin/courses",      icon: "school",          label: "Cursos",      color: "border-tertiary"            },
-  { href: "/admin/submissions",  icon: "inbox",           label: "Solicitudes", color: "border-white"               },
+  { href: "/admin/games",        icon: "sports_esports",  label: "Juegos",         color: "border-primary-container"   },
+  { href: "/admin/players",      icon: "groups",          label: "Jugadores",      color: "border-secondary-container" },
+  { href: "/admin/courses",      icon: "school",          label: "Cursos",         color: "border-tertiary"            },
+  { href: "/admin/submissions",  icon: "inbox",           label: "Solicitudes",    color: "border-white"               },
+  { href: "/admin/discounts",    icon: "local_offer",     label: "Descuentos",     color: "border-secondary-container" },
+  { href: "/admin/enrollments",  icon: "receipt_long",    label: "Inscripciones",  color: "border-primary"             },
 ];
 
 export default async function AdminDashboard() {
-  const [games, players, courses, submissions] = await Promise.all([
+  const [games, players, courses, submissions, discounts, enrollments] = await Promise.all([
     supabase.from("games").select("id", { count: "exact", head: true }),
     supabase.from("players").select("id", { count: "exact", head: true }),
     supabase.from("courses").select("id", { count: "exact", head: true }),
     supabase.from("recruitment_submissions").select("id", { count: "exact", head: true }),
+    supabase.from("discount_rules").select("id", { count: "exact", head: true }),
+    supabase.from("enrollments").select("id", { count: "exact", head: true }),
   ]);
 
   const counts = [
@@ -21,6 +25,8 @@ export default async function AdminDashboard() {
     players.count ?? 0,
     courses.count ?? 0,
     submissions.count ?? 0,
+    discounts.count ?? 0,
+    enrollments.count ?? 0,
   ];
 
   return (
@@ -32,7 +38,7 @@ export default async function AdminDashboard() {
         <div className="h-1 w-20 bg-primary-container mt-2" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
         {CARDS.map(({ href, icon, label, color }, i) => (
           <Link key={href} href={href} className={`bg-surface-container p-6 border-l-4 ${color} hover:bg-surface-container-high transition-colors`}>
             <span className="material-symbols-outlined text-3xl text-on-surface-variant mb-3 block">{icon}</span>
@@ -48,6 +54,7 @@ export default async function AdminDashboard() {
           {[
             { href: "/admin/players",       label: "+ Jugador"        },
             { href: "/admin/courses",        label: "+ Curso"          },
+            { href: "/admin/discounts",      label: "+ Descuento"      },
             { href: "/admin/competitions",   label: "+ Competición"    },
             { href: "/admin/games",          label: "+ Juego"          },
             { href: "/admin/pass-benefits",  label: "+ Beneficio Pass" },

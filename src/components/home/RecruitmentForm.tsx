@@ -48,7 +48,7 @@ export function RecruitmentForm({ categories, games, source = "home" }: Props) {
       <div className="max-w-4xl w-full bg-surface-container p-12 relative border-r-8 border-b-8 border-primary-container">
         {/* Badge */}
         <div className="absolute -top-6 -left-6 bg-primary text-background font-black px-8 py-3 skew-fix">
-          <span className="skew-content block uppercase tracking-tighter font-headline">RECRUITMENT OPEN</span>
+          <span className="skew-content block uppercase tracking-tighter font-headline"> APLICACIONES ABIERTAS</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-4">

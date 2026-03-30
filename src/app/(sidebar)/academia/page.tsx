@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { HeroAcademia } from "@/components/academia/HeroAcademia";
 import { CourseCatalog } from "@/components/academia/CourseCatalog";
 import { LearningPath } from "@/components/academia/LearningPath";
+import { PaymentFeedback } from "@/components/academia/PaymentFeedback";
 
 export const metadata = { title: "Academia — 1UP Gaming Tower" };
 
@@ -17,6 +19,9 @@ export default async function AcademiaPage() {
       <HeroAcademia />
       <CourseCatalog courses={allCourses ?? []} />
       <LearningPath />
+      <Suspense>
+        <PaymentFeedback />
+      </Suspense>
     </>
   );
 }

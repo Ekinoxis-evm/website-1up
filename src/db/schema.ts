@@ -1,6 +1,14 @@
 import {
   pgTable, serial, text, integer, timestamp, varchar, boolean,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+
+// ── Enums ────────────────────────────────────────────────────────
+export const tipoDocumentoEnum = pgEnum("tipo_documento", ["CC", "CE", "TI", "PP", "NIT"]);
+export const discountTriggerEnum = pgEnum("discount_trigger", ["comfenalco", "promo_code", "manual", "auto"]);
+export const discountAppliesToEnum = pgEnum("discount_applies_to", ["courses", "pass", "all"]);
+export const productTypeEnum = pgEnum("product_type", ["course", "pass"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "approved", "rejected", "cancelled"]);
 
 // ── Game Categories & Games ─────────────────────────────────────
 export const gameCategories = pgTable("game_categories", {
@@ -58,7 +66,6 @@ export const courses = pgTable("courses", {
   description:   text("description"),
   priceCop:      integer("price_cop"),
   durationHours: integer("duration_hours"),
-  paymentLink:   text("payment_link"),
   imageUrl:      text("image_url"),
   sortOrder:     integer("sort_order").default(0),
   isActive:      boolean("is_active").default(true),
@@ -102,6 +109,51 @@ export const recruitmentSubmissions = pgTable("recruitment_submissions", {
   createdAt:    timestamp("created_at").defaultNow(),
 });
 
+// ── User Profiles ────────────────────────────────────────────────
+export const userProfiles = pgTable("user_profiles", {
+  id:                    serial("id").primaryKey(),
+  privyUserId:           text("privy_user_id").notNull().unique(),
+  email:                 text("email"),
+  tipoDocumento:         tipoDocumentoEnum("tipo_documento"),
+  numeroDocumento:       varchar("numero_documento", { length: 50 }),
+  comfenalcoAfiliado:    boolean("comfenalco_afiliado").default(false),
+  comfenalcoVerifiedAt:  timestamp("comfenalco_verified_at"),
+  createdAt:             timestamp("created_at").defaultNow(),
+  updatedAt:             timestamp("updated_at").defaultNow(),
+});
+
+// ── Discount Rules ───────────────────────────────────────────────
+export const discountRules = pgTable("discount_rules", {
+  id:          serial("id").primaryKey(),
+  name:        varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  triggerType: discountTriggerEnum("trigger_type").notNull(),  // comfenalco | promo_code | manual | auto
+  discountPct: integer("discount_pct").notNull(),              // 0–100
+  appliesTo:   discountAppliesToEnum("applies_to").notNull(),  // courses | pass | all
+  isActive:    boolean("is_active").default(true),
+  validFrom:   timestamp("valid_from"),
+  validUntil:  timestamp("valid_until"),
+  createdBy:   text("created_by"),
+  createdAt:   timestamp("created_at").defaultNow(),
+});
+
+// ── Enrollments ──────────────────────────────────────────────────
+export const enrollments = pgTable("enrollments", {
+  id:                 serial("id").primaryKey(),
+  userProfileId:      integer("user_profile_id").references(() => userProfiles.id).notNull(),
+  productType:        productTypeEnum("product_type").notNull(),   // course | pass
+  courseId:           integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  originalPriceCop:   integer("original_price_cop").notNull(),
+  discountRuleId:     integer("discount_rule_id").references(() => discountRules.id, { onDelete: "set null" }),
+  discountPctApplied: integer("discount_pct_applied").default(0),
+  finalPriceCop:      integer("final_price_cop").notNull(),
+  mpPreferenceId:     text("mp_preference_id"),
+  mpPaymentId:        text("mp_payment_id"),
+  paymentStatus:      paymentStatusEnum("payment_status").default("pending"),
+  paidAt:             timestamp("paid_at"),
+  createdAt:          timestamp("created_at").defaultNow(),
+});
+
 // ── Type exports ─────────────────────────────────────────────────
 export type GameCategory  = typeof gameCategories.$inferSelect;
 export type Game          = typeof games.$inferSelect;
@@ -111,3 +163,6 @@ export type Course        = typeof courses.$inferSelect;
 export type PassBenefit   = typeof passBenefits.$inferSelect;
 export type FloorInfo     = typeof floorInfo.$inferSelect;
 export type Submission    = typeof recruitmentSubmissions.$inferSelect;
+export type UserProfile   = typeof userProfiles.$inferSelect;
+export type DiscountRule  = typeof discountRules.$inferSelect;
+export type Enrollment    = typeof enrollments.$inferSelect;
