@@ -26,19 +26,31 @@ export function JuegosDisplay({ categories, games }: Props) {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-12">
-        <h1 className="font-headline font-black text-5xl text-on-background uppercase tracking-tighter">
-          NUESTROS <span className="text-primary">JUEGOS</span>
-        </h1>
-        <div className="h-1 w-24 bg-primary mt-3" />
-        <p className="font-body text-sm text-outline mt-4 max-w-xl">
-          Explora todos los títulos disponibles en 1UP Gaming Tower — desde fighting games hasta TCG y ritmo.
-        </p>
-      </div>
+      {/* Hero */}
+      <section className="relative min-h-[40vh] flex flex-col justify-end px-8 md:px-16 py-16 overflow-hidden border-b-[12px] border-primary-container">
+        <div className="absolute inset-0 z-0">
+          <div className="w-full h-full bg-gradient-to-br from-surface-container-lowest to-surface-container" />
+          <div className="absolute inset-0 opacity-5"
+            style={{ backgroundImage: "linear-gradient(#ffb2bf 1px, transparent 1px), linear-gradient(90deg, #ffb2bf 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
+        </div>
+        <div className="relative z-10">
+          <div className="inline-block bg-primary-container px-4 py-1 mb-4 skew-fix">
+            <span className="text-white font-black italic skew-content block text-sm tracking-widest font-headline">
+              ARCADE · COMPETITIVE · FUN
+            </span>
+          </div>
+          <h1 className="font-headline font-black text-7xl md:text-9xl leading-none tracking-tighter text-on-background">
+            NUESTROS<br />
+            <span className="text-primary text-glow-pink">JUEGOS</span>
+          </h1>
+          <p className="font-body text-xl text-on-surface-variant mt-6 max-w-xl border-l-4 border-primary pl-6">
+            Todos los títulos disponibles en 1UP Gaming Tower — desde fighting games hasta TCG y ritmo.
+          </p>
+        </div>
+      </section>
 
       {/* Category sections */}
-      <div className="space-y-16">
+      <div className="space-y-16 px-8 md:px-16 py-16">
         {categoriesWithGames.map((cat, i) => {
           const accent = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
           const catImg = cat.image_url || FALLBACK_IMAGES[cat.slug] || FALLBACK_IMAGES.fighting;

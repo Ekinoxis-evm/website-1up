@@ -19,14 +19,20 @@ export function proxy(request: NextRequest) {
   const isInternal = pathname.startsWith("/api") || pathname.startsWith("/_next");
 
   if (isApp && !isInternal) {
-    // app.1upesports.org/* → /app/*
-    const appPath = pathname === "/" ? "/app" : `/app${pathname}`;
+    // Strip /app prefix if links include it (e.g. app.1upesports.org/app/identidad → /app/identidad)
+    const clean = pathname === "/app" || pathname.startsWith("/app/")
+      ? pathname.slice(4) || "/"
+      : pathname;
+    const appPath = clean === "/" ? "/app" : `/app${clean}`;
     return NextResponse.rewrite(new URL(appPath, request.url));
   }
 
   if (isAdmin && !isInternal) {
-    // admin.1upesports.org/* → /admin/*
-    const adminPath = pathname === "/" ? "/admin" : `/admin${pathname}`;
+    // Strip /admin prefix if links include it (e.g. admin.1upesports.org/admin/courses → /admin/courses)
+    const clean = pathname === "/admin" || pathname.startsWith("/admin/")
+      ? pathname.slice(6) || "/"
+      : pathname;
+    const adminPath = clean === "/" ? "/admin" : `/admin${clean}`;
     return NextResponse.rewrite(new URL(adminPath, request.url));
   }
 
