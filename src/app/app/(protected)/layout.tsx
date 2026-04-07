@@ -5,15 +5,14 @@ import { AppSidebar } from "@/components/app/AppSidebar";
 
 export const metadata = { title: "1UP App" };
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+
+export default async function AppProtectedLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("privy-token")?.value;
 
   const claims = await verifyCookieToken(token);
-  if (!claims) {
-    // Redirect to main site login
-    redirect(process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org");
-  }
+  if (!claims) redirect(`${APP_URL}/login`);
 
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
