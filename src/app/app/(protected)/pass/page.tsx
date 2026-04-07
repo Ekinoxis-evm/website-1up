@@ -10,7 +10,6 @@ export default function AppPassPage() {
         <div className="h-1 w-16 bg-secondary-container mt-3" />
       </div>
 
-      {/* Empty state — pass purchase not yet implemented */}
       <div className="bg-surface-container-low border-l-8 border-primary-container p-12 flex flex-col items-center justify-center gap-6 text-center shadow-[12px_12px_0px_rgba(0,0,0,0.35)]">
         <span
           className="material-symbols-outlined text-primary-container text-6xl"
@@ -42,7 +41,6 @@ export default function AppPassPage() {
         </div>
       </div>
 
-      {/* Benefits preview */}
       <div className="bg-surface-container p-6">
         <h3 className="font-headline font-bold text-lg uppercase tracking-wider mb-6 text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-secondary">stars</span>

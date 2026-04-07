@@ -20,7 +20,7 @@ const NAV_LINKS = [
 
 export function TopAppBar() {
   const pathname = usePathname();
-  const { login, logout, authenticated, ready } = usePrivy();
+  const { logout, authenticated, ready } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
 
@@ -100,12 +100,12 @@ export function TopAppBar() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={login}
+            <a
+              href={`${APP_URL}/login`}
               className="bg-primary-container text-white px-6 py-2 font-headline font-black skew-fix hover:bg-primary hover:neo-shadow-pink transition-all active:scale-95"
             >
               <span className="block skew-content">JOIN NOW</span>
-            </button>
+            </a>
           )
         )}
       </div>

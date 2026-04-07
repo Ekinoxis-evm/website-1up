@@ -10,7 +10,6 @@ export default function AppAcademiaPage() {
         <div className="h-1 w-16 bg-secondary-container mt-3" />
       </div>
 
-      {/* Empty state — enrollment list needs enrollments table (now live) */}
       <div className="bg-surface-container-low p-12 flex flex-col items-center justify-center gap-6 text-center">
         <span
           className="material-symbols-outlined text-on-surface/15 text-6xl"
