@@ -1,7 +1,12 @@
 import type { Master } from "@/types/database.types";
 import { MasterCard } from "./MasterCard";
 
-export function MasterGrid({ masters }: { masters: Master[] }) {
+interface Props {
+  masters: Master[];
+  coursesByMaster: Record<number, { id: number; name: string; category: string }[]>;
+}
+
+export function MasterGrid({ masters, coursesByMaster }: Props) {
   if (masters.length === 0) {
     return (
       <section className="px-6 py-20 text-center">
@@ -17,7 +22,7 @@ export function MasterGrid({ masters }: { masters: Master[] }) {
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {masters.map((m) => (
-            <MasterCard key={m.id} master={m} />
+            <MasterCard key={m.id} master={m} courses={coursesByMaster[m.id] ?? []} />
           ))}
         </div>
       </div>

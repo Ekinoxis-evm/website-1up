@@ -5,6 +5,24 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.3] — 2026-04-07
+
+### Added
+- **Course badges on MasterCard** — `/masters` now shows each master's assigned courses with category color-coding (Gaming → pink, Performance → blue, Technology → green)
+
+### Changed
+- **Image storage migrated to Supabase Storage** — `images` bucket created in Supabase (public, 5MB limit, jpg/png/webp/gif/avif). Replaces Vercel Blob. `BLOB_READ_WRITE_TOKEN` is no longer needed.
+- `src/lib/blob.ts` — rewritten to use `supabaseAdmin.storage`; folder types extended to include `masters` and `aliados`
+
+### Fixed
+- **Build failure** — TypeScript rejected `uploadImage("masters")` because `blob.ts` type union didn't include `"masters"` or `"aliados"` — fixed in both the route and the lib
+- **Masters `saveError` not shown** — error state was set but never rendered in the modal JSX
+
+### Removed
+- Vercel Blob dependency (`@vercel/blob`) — no longer used
+
+---
+
 ## [1.3.2] — 2026-04-07
 
 ### Fixed

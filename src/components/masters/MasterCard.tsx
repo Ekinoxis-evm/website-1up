@@ -8,7 +8,18 @@ const SOCIAL_LINKS = [
   { key: "linkedin_url"  as const, icon: "work",          label: "LinkedIn"  },
 ];
 
-export function MasterCard({ master }: { master: Master }) {
+const CATEGORY_COLORS: Record<string, string> = {
+  Gaming:      "bg-primary-container/20 text-primary",
+  Performance: "bg-secondary-container/20 text-secondary",
+  Technology:  "bg-tertiary/20 text-tertiary",
+};
+
+interface Props {
+  master: Master;
+  courses: { id: number; name: string; category: string }[];
+}
+
+export function MasterCard({ master, courses }: Props) {
   return (
     <div className="bg-surface-container border-b-4 border-primary-container flex flex-col">
       {/* Photo */}
@@ -58,9 +69,30 @@ export function MasterCard({ master }: { master: Master }) {
         )}
 
         {master.bio && (
-          <p className="font-body text-sm text-on-surface/60 mt-3 flex-1 leading-relaxed">
+          <p className="font-body text-sm text-on-surface/60 mt-3 leading-relaxed">
             {master.bio}
           </p>
+        )}
+
+        {/* Courses */}
+        {courses.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-surface-container-highest">
+            <p className="font-headline font-black text-[9px] uppercase tracking-widest text-outline mb-2">
+              Cursos
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {courses.map((c) => (
+                <div key={c.id} className="flex items-center gap-2">
+                  <span
+                    className={`font-headline font-black text-[8px] px-1.5 py-0.5 uppercase tracking-wider shrink-0 ${CATEGORY_COLORS[c.category] ?? "bg-surface-container-high text-outline"}`}
+                  >
+                    {c.category}
+                  </span>
+                  <span className="font-body text-xs text-on-surface/70 truncate">{c.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Social links */}

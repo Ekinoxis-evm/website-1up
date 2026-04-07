@@ -103,9 +103,6 @@ DATABASE_URL=              # Transaction pooler connection string
 NEXT_PUBLIC_PRIVY_APP_ID=
 PRIVY_APP_SECRET=
 
-# Vercel Blob
-BLOB_READ_WRITE_TOKEN=
-
 # Admin access
 ADMIN_EMAILS=              # Comma-separated root admin emails
 
