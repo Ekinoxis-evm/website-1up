@@ -29,6 +29,7 @@ export function AdminMastersClient({ masters }: Props) {
   const [editing, setEditing] = useState<Master | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -53,8 +54,9 @@ export function AdminMastersClient({ masters }: Props) {
     const method = editing ? "PUT" : "POST";
     const topics = form.topicsRaw.split(",").map((t) => t.trim()).filter(Boolean);
     const body = { ...form, topics, sortOrder: Number(form.sortOrder), ...(editing ? { id: editing.id } : {}) };
-    await fetch("/api/admin/masters", { method, headers: await authHeaders(), body: JSON.stringify(body) });
-    setOpen(false); setLoading(false); router.refresh();
+    const res = await fetch("/api/admin/masters", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null); setOpen(false); setLoading(false); router.refresh();
   }
 
   async function handleDelete(id: number) {

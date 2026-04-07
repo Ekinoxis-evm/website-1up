@@ -24,6 +24,7 @@ export function AdminAliadosClient({ aliados }: Props) {
   const [editing, setEditing] = useState<Aliado | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState<number | null>(null);
 
   async function authHeaders() {
@@ -45,8 +46,9 @@ export function AdminAliadosClient({ aliados }: Props) {
     setLoading(true);
     const method = editing ? "PUT" : "POST";
     const body = { ...form, ...(editing ? { id: editing.id } : {}) };
-    await fetch("/api/admin/aliados", { method, headers: await authHeaders(), body: JSON.stringify(body) });
-    setOpen(false); setLoading(false); router.refresh();
+    const res = await fetch("/api/admin/aliados", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null); setOpen(false); setLoading(false); router.refresh();
   }
 
   async function handleDelete(id: number) {

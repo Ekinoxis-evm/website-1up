@@ -17,6 +17,7 @@ export function AdminCoursesClient({ courses, masters }: Props) {
   const [editing, setEditing] = useState<Course | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -48,8 +49,9 @@ export function AdminCoursesClient({ courses, masters }: Props) {
       sortOrder:     Number(form.sortOrder),
       ...(editing ? { id: editing.id } : {}),
     };
-    await fetch("/api/admin/courses", { method, headers: await authHeaders(), body: JSON.stringify(body) });
-    setOpen(false); setLoading(false); router.refresh();
+    const res = await fetch("/api/admin/courses", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null); setOpen(false); setLoading(false); router.refresh();
   }
 
   async function handleDelete(id: number) {
@@ -133,6 +135,7 @@ export function AdminCoursesClient({ courses, masters }: Props) {
                 <input value={form.durationHours} onChange={(e) => setForm({...form,durationHours:e.target.value})} type="number" placeholder="Duración (h)" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               </div>
             </div>
+            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-tertiary text-background font-headline font-black py-3 disabled:opacity-60">{loading?"GUARDANDO...":"GUARDAR"}</button>
               <button onClick={() => setOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">CANCELAR</button>
