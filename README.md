@@ -34,14 +34,18 @@ src/
   app/
     (main)/           # 1upesports.org — Home, Recreativo, Perfil (no sidebar)
     (sidebar)/        # 1upesports.org — Gaming Tower, Team, Masters, Academia (with sidebar)
-    app/              # app.1upesports.org — auth-gated user shell
-      layout.tsx      #   Privy cookie auth guard + AppSidebar
-      page.tsx        #   Wallet ($1UP balance, send, receive)
-      identidad/      #   Document + Comfenalco + aliado verification
-      pass/           #   1UP Pass status + purchase
-      academia/       #   My courses + content access
-      settings/       #   Linked accounts management
-    admin/            # admin.1upesports.org — protected admin panel
+    app/              # app.1upesports.org — user shell
+      login/          #   Public login page (Privy, redirects to dashboard)
+      (protected)/    #   Auth-gated group — requires privy-token cookie
+        layout.tsx    #     Auth guard + AppSidebar
+        page.tsx      #     Wallet ($1UP balance, send, receive)
+        identidad/    #     Document + Comfenalco + aliado verification
+        pass/         #     1UP Pass status + purchase
+        academia/     #     My courses + content access
+        settings/     #     Linked accounts management
+    admin/            # admin.1upesports.org — admin panel
+      login/          #   Public login page (admin Privy login)
+      (protected)/    #   Auth-gated group — requires privy-token + isAdmin
     api/
       recruitment/    # Public form submission
       checkout/       # MercadoPago preference creation
