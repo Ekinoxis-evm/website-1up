@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     title:        body.title,
     description:  body.description,
     accent_color: body.accentColor || null,
+    image_url:    body.imageUrl || null,
     sort_order:   body.sortOrder ?? 0,
   }).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/floors");
@@ -32,6 +33,7 @@ export async function PUT(req: NextRequest) {
     title:        body.title,
     description:  body.description,
     accent_color: body.accentColor || null,
+    image_url:    body.imageUrl || null,
     sort_order:   body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
   revalidatePath("/gaming-tower"); revalidatePath("/admin/floors");

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     sort_order:   body.sortOrder ?? 0,
     is_published: body.isPublished ?? false,
   }).select().single();
-  revalidatePath("/admin/academia-content");
+  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
   return NextResponse.json(data);
 }
 
@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest) {
     sort_order:   body.sortOrder ?? 0,
     is_published: body.isPublished ?? false,
   }).eq("id", body.id).select().single();
-  revalidatePath("/admin/academia-content");
+  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
   return NextResponse.json(data);
 }
 
@@ -46,6 +46,6 @@ export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
   await supabaseAdmin.from("academia_content").delete().eq("id", id);
-  revalidatePath("/admin/academia-content");
+  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
   return NextResponse.json({ ok: true });
 }

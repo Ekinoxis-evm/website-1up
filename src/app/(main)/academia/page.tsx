@@ -11,6 +11,7 @@ export default async function AcademiaPage() {
   const { data: allCourses } = await supabase
     .from("courses")
     .select("*")
+    .eq("is_active", true)
     .order("category")
     .order("sort_order");
 

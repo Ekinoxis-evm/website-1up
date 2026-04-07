@@ -13,8 +13,8 @@ export default async function TeamPage() {
     { data: allCategories },
     { data: allGames },
   ] = await Promise.all([
-    supabase.from("players").select("*").order("sort_order"),
-    supabase.from("competitions").select("*").order("year"),
+    supabase.from("players").select("*").eq("is_active", true).order("sort_order"),
+    supabase.from("competitions").select("*").order("year", { ascending: false }),
     supabase.from("game_categories").select("*").order("sort_order"),
     supabase.from("games").select("*").order("sort_order"),
   ]);

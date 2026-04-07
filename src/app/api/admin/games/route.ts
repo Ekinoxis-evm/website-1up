@@ -40,6 +40,6 @@ export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
   await supabaseAdmin.from("games").delete().eq("id", id);
-  revalidatePath("/"); revalidatePath("/admin/games");
+  revalidatePath("/"); revalidatePath("/juegos"); revalidatePath("/admin/games");
   return NextResponse.json({ ok: true });
 }
