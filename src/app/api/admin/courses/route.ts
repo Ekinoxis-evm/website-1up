@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     image_url:      body.imageUrl || null,
     master_id:      body.masterId || null,
     sort_order:     body.sortOrder ?? 0,
+    is_active:      body.isActive ?? true,
   }).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
   return NextResponse.json(data);
@@ -39,6 +40,7 @@ export async function PUT(req: NextRequest) {
     image_url:      body.imageUrl || null,
     master_id:      body.masterId || null,
     sort_order:     body.sortOrder ?? 0,
+    is_active:      body.isActive ?? true,
   }).eq("id", body.id).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
   return NextResponse.json(data);

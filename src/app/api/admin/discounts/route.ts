@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  revalidatePath("/admin/discounts");
+  revalidatePath("/academia"); revalidatePath("/admin/discounts");
   return NextResponse.json(data);
 }
 
@@ -86,7 +86,7 @@ export async function PUT(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  revalidatePath("/admin/discounts");
+  revalidatePath("/academia"); revalidatePath("/admin/discounts");
   return NextResponse.json(data);
 }
 
@@ -98,6 +98,6 @@ export async function DELETE(req: NextRequest) {
 
   await supabaseAdmin.from("discount_rules").delete().eq("id", id);
 
-  revalidatePath("/admin/discounts");
+  revalidatePath("/academia"); revalidatePath("/admin/discounts");
   return NextResponse.json({ ok: true });
 }

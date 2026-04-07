@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     sort_order:    body.sortOrder ?? 0,
     is_active:     body.isActive ?? true,
   }).select().single();
-  revalidatePath("/masters"); revalidatePath("/admin/masters");
+  revalidatePath("/masters"); revalidatePath("/academia"); revalidatePath("/admin/masters");
   return NextResponse.json(data);
 }
 
@@ -48,7 +48,7 @@ export async function PUT(req: NextRequest) {
     sort_order:    body.sortOrder ?? 0,
     is_active:     body.isActive ?? true,
   }).eq("id", body.id).select().single();
-  revalidatePath("/masters"); revalidatePath("/admin/masters");
+  revalidatePath("/masters"); revalidatePath("/academia"); revalidatePath("/admin/masters");
   return NextResponse.json(data);
 }
 
@@ -56,6 +56,6 @@ export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
   await supabaseAdmin.from("masters").delete().eq("id", id);
-  revalidatePath("/masters"); revalidatePath("/admin/masters");
+  revalidatePath("/masters"); revalidatePath("/academia"); revalidatePath("/admin/masters");
   return NextResponse.json({ ok: true });
 }
