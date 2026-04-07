@@ -7,8 +7,8 @@ import { usePrivy } from "@privy-io/react-auth";
 const PUBLIC_TABS = [
   { href: "/",             icon: "home",            label: "HOME"    },
   { href: "/gaming-tower", icon: "domain",          label: "TOWER"   },
-  { href: "/juegos",       icon: "videogame_asset", label: "JUEGOS"  },
   { href: "/team",         icon: "groups",          label: "TEAM"    },
+  { href: "/masters",      icon: "military_tech",   label: "MASTERS" },
   { href: "/academia",     icon: "school",          label: "ACADEMIA"},
 ];
 
@@ -16,8 +16,10 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { authenticated } = usePrivy();
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+
   const tabs = authenticated
-    ? [...PUBLIC_TABS, { href: "/perfil", icon: "account_circle", label: "PERFIL" }]
+    ? [...PUBLIC_TABS, { href: appUrl, icon: "account_circle", label: "APP" }]
     : PUBLIC_TABS;
 
   return (

@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/gaming-tower", icon: "domain",         label: "Gaming Tower"},
   { href: "/juegos",       icon: "videogame_asset", label: "Juegos"     },
   { href: "/team",         icon: "groups",         label: "Team 1UP"   },
+  { href: "/masters",      icon: "military_tech",  label: "Masters"    },
   { href: "/academia",     icon: "school",         label: "Academia"   },
   { href: "/recreativo",   icon: "sports_esports", label: "Recreativo" },
 ];
