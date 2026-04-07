@@ -7,6 +7,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
 
 const NAV_LINKS = [
   { href: "/",             label: "Home"      },
@@ -55,12 +56,21 @@ export function TopAppBar() {
         </nav>
       </div>
 
-      {/* Auth */}
+      {/* Auth + Admin */}
       <div className="flex items-center gap-3">
+        {/* Admin shortcut — icon only, desktop */}
+        <a
+          href={ADMIN_URL}
+          className="hidden md:flex items-center text-on-background/20 hover:text-on-background/60 transition-colors"
+          title="Admin Panel"
+        >
+          <span className="material-symbols-outlined text-base">admin_panel_settings</span>
+        </a>
+
         {ready && (
           authenticated ? (
             <div className="flex items-center gap-3">
-              {/* Wallet balance pill */}
+              {/* Wallet pill */}
               {embeddedWallet && (
                 <Link
                   href={APP_URL}
@@ -77,7 +87,7 @@ export function TopAppBar() {
                   </span>
                 </Link>
               )}
-              {/* Profile icon */}
+              {/* Profile */}
               <Link
                 href={APP_URL}
                 className="flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors text-on-background/70 hover:text-primary"
