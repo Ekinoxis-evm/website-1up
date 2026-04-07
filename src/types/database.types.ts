@@ -84,6 +84,7 @@ export type Database = {
           duration_hours: number | null
           id: number
           image_url: string | null
+          master_id: number | null
           is_active: boolean | null
           name: string
           price_cop: number | null
@@ -96,6 +97,7 @@ export type Database = {
           duration_hours?: number | null
           id?: number
           image_url?: string | null
+          master_id?: number | null
           is_active?: boolean | null
           name: string
           price_cop?: number | null
@@ -108,12 +110,21 @@ export type Database = {
           duration_hours?: number | null
           id?: number
           image_url?: string | null
+          master_id?: number | null
           is_active?: boolean | null
           name?: string
           price_cop?: number | null
           sort_order?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "courses_master_id_fkey"
+            columns: ["master_id"]
+            isOneToOne: false
+            referencedRelation: "masters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discount_rules: {
         Row: {
@@ -123,6 +134,7 @@ export type Database = {
           trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
           discount_pct: number
           applies_to: "courses" | "pass" | "all"
+          aliado_id: number | null
           is_active: boolean | null
           valid_from: string | null
           valid_until: string | null
@@ -136,6 +148,7 @@ export type Database = {
           trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
           discount_pct: number
           applies_to: "courses" | "pass" | "all"
+          aliado_id?: number | null
           is_active?: boolean | null
           valid_from?: string | null
           valid_until?: string | null
@@ -149,6 +162,7 @@ export type Database = {
           trigger_type?: "comfenalco" | "promo_code" | "manual" | "auto"
           discount_pct?: number
           applies_to?: "courses" | "pass" | "all"
+          aliado_id?: number | null
           is_active?: boolean | null
           valid_from?: string | null
           valid_until?: string | null
@@ -236,6 +250,7 @@ export type Database = {
           numero_documento: string | null
           comfenalco_afiliado: boolean | null
           comfenalco_verified_at: string | null
+          verified_aliados: number[] | null
           created_at: string | null
           updated_at: string | null
         }
@@ -247,6 +262,7 @@ export type Database = {
           numero_documento?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
+          verified_aliados?: number[] | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -258,6 +274,7 @@ export type Database = {
           numero_documento?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
+          verified_aliados?: number[] | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -426,6 +443,137 @@ export type Database = {
           youtube_url?: string | null
         }
         Relationships: []
+      }
+      masters: {
+        Row: {
+          id: number
+          name: string
+          specialty: string | null
+          bio: string | null
+          photo_url: string | null
+          instagram_url: string | null
+          tiktok_url: string | null
+          twitter_url: string | null
+          youtube_url: string | null
+          linkedin_url: string | null
+          topics: string[] | null
+          sort_order: number | null
+          is_active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          specialty?: string | null
+          bio?: string | null
+          photo_url?: string | null
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          youtube_url?: string | null
+          linkedin_url?: string | null
+          topics?: string[] | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          specialty?: string | null
+          bio?: string | null
+          photo_url?: string | null
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          youtube_url?: string | null
+          linkedin_url?: string | null
+          topics?: string[] | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      aliados: {
+        Row: {
+          id: number
+          name: string
+          nit: string | null
+          email: string | null
+          api_url: string | null
+          api_key: string | null
+          logo_url: string | null
+          is_active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          nit?: string | null
+          email?: string | null
+          api_url?: string | null
+          api_key?: string | null
+          logo_url?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          nit?: string | null
+          email?: string | null
+          api_url?: string | null
+          api_key?: string | null
+          logo_url?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      academia_content: {
+        Row: {
+          id: number
+          course_id: number
+          content_type: string
+          title: string
+          description: string | null
+          url: string | null
+          sort_order: number | null
+          is_published: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          course_id: number
+          content_type: string
+          title: string
+          description?: string | null
+          url?: string | null
+          sort_order?: number | null
+          is_published?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          course_id?: number
+          content_type?: string
+          title?: string
+          description?: string | null
+          url?: string | null
+          sort_order?: number | null
+          is_published?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_content_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recruitment_submissions: {
         Row: {
@@ -631,6 +779,9 @@ export type Course        = Database["public"]["Tables"]["courses"]["Row"];
 export type PassBenefit   = Database["public"]["Tables"]["pass_benefits"]["Row"];
 export type FloorInfo     = Database["public"]["Tables"]["floor_info"]["Row"];
 export type Submission    = Database["public"]["Tables"]["recruitment_submissions"]["Row"];
-export type UserProfile   = Database["public"]["Tables"]["user_profiles"]["Row"];
-export type DiscountRule  = Database["public"]["Tables"]["discount_rules"]["Row"];
-export type Enrollment    = Database["public"]["Tables"]["enrollments"]["Row"];
+export type UserProfile     = Database["public"]["Tables"]["user_profiles"]["Row"];
+export type DiscountRule    = Database["public"]["Tables"]["discount_rules"]["Row"];
+export type Enrollment      = Database["public"]["Tables"]["enrollments"]["Row"];
+export type Master          = Database["public"]["Tables"]["masters"]["Row"];
+export type Aliado          = Database["public"]["Tables"]["aliados"]["Row"];
+export type AcademiaContent = Database["public"]["Tables"]["academia_content"]["Row"];
