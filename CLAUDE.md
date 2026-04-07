@@ -19,16 +19,22 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 
 ## Route Map
 
+All public routes use the single `(main)` layout group — TopAppBar + MobileBottomNav + Footer. No sidebar.
+
 | URL | Layout group | Purpose |
 |-----|-------------|---------|
 | `/` | `(main)` | Home — Hero, Games Gallery, Recruitment |
+| `/gaming-tower` | `(main)` | 6-floor breakdown, Pass, Map |
+| `/juegos` | `(main)` | Games showcase by category |
+| `/team` | `(main)` | Pro roster + Hall of Fame |
+| `/masters` | `(main)` | Masters showcase |
+| `/academia` | `(main)` | Course catalog + MercadoPago checkout |
 | `/recreativo` | `(main)` | Casual gaming |
-| `/gaming-tower` | `(sidebar)` | 6-floor breakdown, Pass, Map |
-| `/juegos` | `(sidebar)` | Games showcase by category |
-| `/team` | `(sidebar)` | Pro roster + Hall of Fame |
-| `/academia` | `(sidebar)` | Course catalog + MercadoPago checkout |
-| `/perfil` | `(main)` | Wallet + Identidad (Comfenalco) + Settings (auth-gated) |
-| `/admin/*` | `admin/` | Protected admin panel |
+| `/perfil` | `(main)` | Legacy — redirects to app subdomain |
+| `app/login` | `app/` | Public login page for app subdomain |
+| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, pass, academia, settings) |
+| `admin/login` | `admin/` | Public login page for admin subdomain |
+| `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
 
 **API routes** — all `/api/admin/*` require Privy Bearer token + isAdmin check.
 
@@ -59,12 +65,15 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color |
 | `recruitment_submissions` | name, email, phone, source |
-| `user_profiles` | privy_user_id, tipo_documento, numero_documento, comfenalco_afiliado |
-| `discount_rules` | trigger_type, discount_pct, applies_to, is_active, valid_from/until |
+| `user_profiles` | privy_user_id, tipo_documento, numero_documento, comfenalco_afiliado, verified_aliados[] |
+| `aliados` | name, nit, email, api_url, api_key |
+| `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |
 | `enrollments` | user_profile_id, course_id, final_price_cop, payment_status, mp_payment_id |
+| `masters` | name, specialty, photo_url, topics, instagram, tiktok, twitter, youtube, linkedin |
+| `academia_content` | course_id FK, type, title, url, is_published |
 | `admin_users` | email, added_by |
 
-**Schema changes:** `courses.payment_link` was removed — checkout now goes through MercadoPago.
+**Schema changes:** `courses.payment_link` removed (MercadoPago checkout); `courses.master_id` FK added; `discount_rules.aliado_id` FK added.
 **Schema source of truth:** `src/db/schema.ts` — always update this + `src/types/database.types.ts` together.
 
 ---
@@ -76,7 +85,7 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 | `.claude/skills/design-system.md` | `src/components/**` |
 | `.claude/skills/admin-crud.md` | `src/app/admin/**`, `src/components/admin/**` |
 | `.claude/skills/database.md` | `src/db/**`, `src/lib/supabase.ts`, `src/app/api/**` |
-| `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/layout.tsx` |
+| `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/(protected)/layout.tsx`, `src/app/app/(protected)/layout.tsx` |
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
 
 ---
@@ -107,7 +116,9 @@ npx drizzle-kit generate --name=<migration_name>   # Generate SQL migration
 | `ADMIN_EMAILS` | Manual — comma-separated root admin emails |
 | `MERCADOPAGO_ACCESS_TOKEN` | MercadoPago dashboard → Credentials |
 | `MERCADOPAGO_WEBHOOK_SECRET` | MercadoPago dashboard → Webhooks |
-| `NEXT_PUBLIC_BASE_URL` | Production URL (e.g. `https://1upesports.org`) |
+| `NEXT_PUBLIC_BASE_URL` | Production URL (`https://1upesports.org`) |
+| `NEXT_PUBLIC_APP_URL` | App subdomain (`https://app.1upesports.org`) |
+| `NEXT_PUBLIC_ADMIN_URL` | Admin subdomain (`https://admin.1upesports.org`) |
 | `COMFENALCO_API_URL` | Pending — Comfenalco API endpoint |
 | `COMFENALCO_API_KEY` | Pending — Comfenalco API key |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Optional — Base L2 RPC (defaults to mainnet.base.org) |
