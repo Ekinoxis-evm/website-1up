@@ -112,6 +112,8 @@ MERCADOPAGO_WEBHOOK_SECRET=
 
 # App URL (used in MP back_urls and webhook notification_url)
 NEXT_PUBLIC_BASE_URL=https://1upesports.org
+NEXT_PUBLIC_APP_URL=https://app.1upesports.org
+NEXT_PUBLIC_ADMIN_URL=https://admin.1upesports.org
 
 # Comfenalco (activate when API docs are available)
 # COMFENALCO_API_URL=

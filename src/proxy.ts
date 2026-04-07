@@ -15,13 +15,16 @@ export function proxy(request: NextRequest) {
     hostname === "admin.1upesports.org" ||
     hostname === "admin.localhost";
 
-  if (isApp) {
+  // Never rewrite API or internal Next.js paths — let them resolve as-is
+  const isInternal = pathname.startsWith("/api") || pathname.startsWith("/_next");
+
+  if (isApp && !isInternal) {
     // app.1upesports.org/* → /app/*
     const appPath = pathname === "/" ? "/app" : `/app${pathname}`;
     return NextResponse.rewrite(new URL(appPath, request.url));
   }
 
-  if (isAdmin) {
+  if (isAdmin && !isInternal) {
     // admin.1upesports.org/* → /admin/*
     const adminPath = pathname === "/" ? "/admin" : `/admin${pathname}`;
     return NextResponse.rewrite(new URL(adminPath, request.url));

@@ -7,14 +7,14 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 export const metadata = { title: "Admin — 1UP Gaming Tower" };
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
+
+export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("privy-token")?.value;
 
-  const mainSite = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
-
   const claims = await verifyCookieToken(token);
-  if (!claims) redirect(mainSite);
+  if (!claims) redirect(`${ADMIN_URL}/login`);
 
   let email: string | undefined;
   try {
@@ -25,10 +25,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       user.discord?.email ??
       undefined;
   } catch {
-    redirect(mainSite);
+    redirect(`${ADMIN_URL}/login`);
   }
 
-  if (!await isAdmin(email)) redirect(mainSite);
+  if (!await isAdmin(email)) redirect(process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org");
 
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
