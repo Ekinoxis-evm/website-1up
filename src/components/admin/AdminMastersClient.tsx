@@ -183,6 +183,7 @@ export function AdminMastersClient({ masters }: Props) {
               Activo
             </label>
 
+            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-60">
                 {loading ? "GUARDANDO..." : "GUARDAR"}
