@@ -5,6 +5,28 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.1] — 2026-04-07
+
+### Fixed
+- **Proxy API passthrough** — `/api/*` calls from `app.` and `admin.` subdomains no longer get prefixed with `/app` or `/admin`; fixes all API-dependent pages (identidad, settings, etc.)
+- **Admin subdomain routing** — `admin.1upesports.org` now redirects to its own login page instead of the main site when unauthenticated
+- **Masters missing from nav** — added `/masters` to TopAppBar, SideNavBar, and MobileBottomNav
+- **JOIN NOW flow** — button now navigates to `app.1upesports.org/login` instead of triggering inline Privy modal on public site
+
+### Changed
+- **`app/` route group** — auth-gated routes moved to `app/(protected)/`; `app/login/` is public (no auth guard)
+- **`admin/` route group** — all admin pages moved to `admin/(protected)/`; `admin/login/` is public
+- **Auth redirects** — unauthenticated → own subdomain's `/login`; non-admin → main site
+- **New env vars** — `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ADMIN_URL` (both with production fallbacks)
+
+### Added
+- `src/app/admin/login/page.tsx` — branded admin login page
+
+### Production note
+Enable **HttpOnly cookies** in Privy Dashboard (Configuration → App settings → Domains → set domain to `1upesports.org`). Once active, a single login on any subdomain works across all three — `1upesports.org`, `app.`, and `admin.`.
+
+---
+
 ## [1.3.0] — 2026-04-07
 
 ### Added
