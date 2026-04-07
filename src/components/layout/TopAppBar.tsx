@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+
 const NAV_LINKS = [
   { href: "/",             label: "Home"      },
   { href: "/gaming-tower", label: "Tower"     },
   { href: "/juegos",       label: "Juegos"    },
   { href: "/team",         label: "Team"      },
+  { href: "/masters",      label: "Masters"   },
   { href: "/academia",     label: "Academia"  },
   { href: "/recreativo",   label: "Recreativo"},
 ];
@@ -60,7 +63,7 @@ export function TopAppBar() {
               {/* Wallet balance pill */}
               {embeddedWallet && (
                 <Link
-                  href="/perfil"
+                  href={APP_URL}
                   className="hidden sm:flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-primary/20 hover:border-primary/50 transition-colors"
                 >
                   <span
@@ -76,10 +79,8 @@ export function TopAppBar() {
               )}
               {/* Profile icon */}
               <Link
-                href="/perfil"
-                className={`flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors ${
-                  pathname === "/perfil" ? "text-primary" : "text-on-background/70 hover:text-primary"
-                }`}
+                href={APP_URL}
+                className="flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors text-on-background/70 hover:text-primary"
               >
                 <span
                   className="material-symbols-outlined text-xl"
