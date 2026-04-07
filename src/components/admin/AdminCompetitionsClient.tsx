@@ -15,6 +15,7 @@ export function AdminCompetitionsClient({ competitions, players }: Props) {
   const [editing, setEditing] = useState<Competition | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -31,8 +32,9 @@ export function AdminCompetitionsClient({ competitions, players }: Props) {
     setLoading(true);
     const method = editing ? "PUT" : "POST";
     const body = { ...form, year: Number(form.year), playerId: form.playerId ? Number(form.playerId) : null, ...(editing ? { id: editing.id } : {}) };
-    await fetch("/api/admin/competitions", { method, headers: await authHeaders(), body: JSON.stringify(body) });
-    setOpen(false); setLoading(false); router.refresh();
+    const res = await fetch("/api/admin/competitions", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null); setOpen(false); setLoading(false); router.refresh();
   }
 
   async function handleDelete(id: number) {
@@ -90,6 +92,7 @@ export function AdminCompetitionsClient({ competitions, players }: Props) {
                 {players.map((p) => <option key={p.id} value={p.id}>{p.gamertag}</option>)}
               </select>
             </div>
+            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-60">{loading?"GUARDANDO...":"GUARDAR"}</button>
               <button onClick={() => setOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">CANCELAR</button>

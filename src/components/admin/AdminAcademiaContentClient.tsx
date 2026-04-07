@@ -26,6 +26,7 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
   const [editing, setEditing] = useState<AcademiaContent | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [filterCourse, setFilterCourse] = useState<string>("all");
 
   async function authHeaders() {
@@ -53,8 +54,9 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
       sortOrder: Number(form.sortOrder),
       ...(editing ? { id: editing.id } : {}),
     };
-    await fetch("/api/admin/academia-content", { method, headers: await authHeaders(), body: JSON.stringify(body) });
-    setOpen(false); setLoading(false); router.refresh();
+    const res = await fetch("/api/admin/academia-content", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null); setOpen(false); setLoading(false); router.refresh();
   }
 
   async function handleDelete(id: number) {

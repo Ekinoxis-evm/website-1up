@@ -15,6 +15,7 @@ export function AdminGamesClient({ games, categories }: Props) {
   const [editing, setEditing] = useState<Game | null>(null);
   const [form, setForm]   = useState({ name: "", categoryId: "", imageUrl: "", sortOrder: "0" });
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [savingCatId, setSavingCatId] = useState<number | null>(null);
 
   async function authHeaders() {
@@ -33,7 +34,9 @@ export function AdminGamesClient({ games, categories }: Props) {
     setLoading(true);
     const method = editing ? "PUT" : "POST";
     const body = { ...form, categoryId: Number(form.categoryId), sortOrder: Number(form.sortOrder), ...(editing ? { id: editing.id } : {}) };
-    await fetch("/api/admin/games", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    const res = await fetch("/api/admin/games", { method, headers: await authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); setLoading(false); return; }
+    setSaveError(null);
     setOpen(false);
     setLoading(false);
     router.refresh();
@@ -155,6 +158,7 @@ export function AdminGamesClient({ games, categories }: Props) {
               </select>
               <input value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} type="number" placeholder="Orden" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
             </div>
+            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 hover:neo-shadow-pink transition-all disabled:opacity-60">
                 {loading ? "GUARDANDO..." : "GUARDAR"}
