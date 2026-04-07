@@ -32,8 +32,7 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 src/
   proxy.ts            # Subdomain routing (Next.js 16) — app.* → /app, admin.* → /admin
   app/
-    (main)/           # 1upesports.org — Home, Recreativo, Perfil (no sidebar)
-    (sidebar)/        # 1upesports.org — Gaming Tower, Team, Masters, Academia (with sidebar)
+    (main)/           # 1upesports.org — all public routes (TopAppBar + MobileBottomNav)
     app/              # app.1upesports.org — user shell
       login/          #   Public login page (Privy, redirects to dashboard)
       (protected)/    #   Auth-gated group — requires privy-token cookie
@@ -169,16 +168,16 @@ npm run dev
 
 **1upesports.org (public)**
 
-| Route | Layout | Description |
-|-------|--------|-------------|
-| `/` | No sidebar | Home — Hero, Games Gallery, Recruitment |
-| `/gaming-tower` | SideNavBar | 6-floor breakdown, 1UP Pass, Map |
-| `/team` | SideNavBar | Pro roster + Hall of Fame + Recruitment |
-| `/masters` | SideNavBar | Masters showcase — coaches and specialists |
-| `/academia` | SideNavBar | Course catalog + MercadoPago checkout |
-| `/juegos` | SideNavBar | Games showcase by category |
-| `/recreativo` | No sidebar | Casual gaming section |
-| `/perfil` | No sidebar | Legacy profile page (redirects to app subdomain) |
+| Route | Description |
+|-------|-------------|
+| `/` | Home — Hero, Games Gallery, Recruitment |
+| `/gaming-tower` | 6-floor breakdown, 1UP Pass, Map |
+| `/team` | Pro roster + Hall of Fame + Recruitment |
+| `/masters` | Masters showcase — coaches and specialists |
+| `/academia` | Course catalog + MercadoPago checkout |
+| `/juegos` | Games showcase by category |
+| `/recreativo` | Casual gaming section |
+| `/perfil` | Legacy profile page (redirects to app subdomain) |
 
 **app.1upesports.org (user app)**
 
