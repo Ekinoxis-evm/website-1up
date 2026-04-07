@@ -5,6 +5,37 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.0] — 2026-04-07
+
+### Added
+- **Subdomain routing** — `proxy.ts` (Next.js 16) routes `app.1upesports.org → /app/*` and `admin.1upesports.org → /admin/*`
+- **`/app` shell** — auth-gated layout for `app.1upesports.org` with `AppSidebar`; routes: `/app` (wallet), `/app/identidad`, `/app/pass`, `/app/academia`, `/app/settings`
+- **`/masters` public page** — Masters showcase with `HeroMasters`, `MasterCard` (photo, specialty, social links, topics), `MasterGrid`
+- **`/admin/masters`** — full CRUD with image upload, social links, topics (comma-separated)
+- **`/admin/aliados`** — partner CRUD (name, NIT, email, API URL/key with masked toggle)
+- **`/admin/academia-content`** — video/document/quiz content per course, published toggle, filter by course
+- **`/admin/user-profiles`** — read-only list of all registered users with Comfenalco status
+- **`/admin/1pass`** — pass dashboard aggregating benefits, pass-specific discounts, and purchase history
+- **Send $1UP modal** — ERC-20 transfer via Privy embedded wallet + viem `writeContract`; shows tx hash + Basescan link on success
+- **Receive $1UP modal** — displays wallet address with one-click copy
+- **Generic aliado verify endpoint** — `POST /api/user/aliado/verify` checks partner API and stores `verified_aliados[]` on user profile
+- **Courses → Masters link** — `master_id` FK on `courses`; selector in admin course form
+- **Discounts → Aliados link** — `aliado_id` FK on `discount_rules`; aliado selector in admin discount form
+- `ERC20_TRANSFER_ABI` added to `src/lib/viem.ts`
+
+### DB Migrations (applied)
+- `comfenalco_mercadopago_enrollments` — `user_profiles`, `discount_rules`, `enrollments`, drop `courses.payment_link`
+- `masters_aliados_academia_content` — `masters`, `aliados`, `academia_content` tables
+- `courses_master_discounts_aliado_user_verified` — `courses.master_id`, `discount_rules.aliado_id`, `user_profiles.verified_aliados`
+
+### Changed
+- `AdminCoursesClient` — added master selector dropdown
+- `AdminDiscountsClient` — added aliado selector dropdown
+- `AdminSidebar` — added Masters, Aliados, Contenido, Usuarios, 1UP Pass links
+- `ImageUpload` — added `"masters"` and `"aliados"` to allowed folder types
+
+---
+
 ## [1.2.0] — 2026-03-30
 
 ### Added

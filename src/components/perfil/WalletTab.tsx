@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
+import { createWalletClient, custom, parseUnits, isAddress } from "viem";
+import { base } from "viem/chains";
 import { use1upBalance } from "@/hooks/use1upBalance";
-import { ONE_UP_TOKEN } from "@/lib/viem";
+import { ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 
 const TOKEN_UTILITY = [
   { label: "Cursos Academia",   pct: 45, barClass: "bg-secondary-container", textClass: "text-secondary"  },
@@ -29,6 +31,56 @@ export function WalletTab() {
   const walletAddress  = activeWallet?.address as `0x${string}` | undefined;
 
   const { balance, loading: balanceLoading } = use1upBalance(walletAddress);
+
+  // Send modal state
+  const [sendOpen, setSendOpen]     = useState(false);
+  const [sendTo, setSendTo]         = useState("");
+  const [sendAmount, setSendAmount] = useState("");
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendError, setSendError]   = useState<string | null>(null);
+  const [sendTxHash, setSendTxHash] = useState<string | null>(null);
+
+  // Receive modal state
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [receiveCopied, setReceiveCopied] = useState(false);
+
+  async function handleSend() {
+    if (!activeWallet || !walletAddress) return;
+    if (!isAddress(sendTo)) { setSendError("Dirección inválida"); return; }
+    const amt = parseFloat(sendAmount);
+    if (isNaN(amt) || amt <= 0) { setSendError("Monto inválido"); return; }
+
+    setSendLoading(true);
+    setSendError(null);
+    setSendTxHash(null);
+    try {
+      const provider = await activeWallet.getEthereumProvider();
+      const walletClient = createWalletClient({
+        chain: base,
+        transport: custom(provider),
+      });
+      const hash = await walletClient.writeContract({
+        address:      ONE_UP_TOKEN.address,
+        abi:          ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args:         [sendTo as `0x${string}`, parseUnits(sendAmount, ONE_UP_TOKEN.decimals)],
+        account:      walletAddress,
+      });
+      setSendTxHash(hash);
+      setSendTo(""); setSendAmount("");
+    } catch (e: unknown) {
+      setSendError(e instanceof Error ? e.message : "Error al enviar");
+    } finally {
+      setSendLoading(false);
+    }
+  }
+
+  function copyReceiveAddress() {
+    if (!walletAddress) return;
+    navigator.clipboard.writeText(walletAddress);
+    setReceiveCopied(true);
+    setTimeout(() => setReceiveCopied(false), 2000);
+  }
 
   // Derive display name from linked accounts
   const googleAccount  = user?.linkedAccounts.find((a) => a.type === "google_oauth");
@@ -114,6 +166,26 @@ export function WalletTab() {
                 <span className="text-sm font-headline text-on-surface/40 uppercase tracking-tight">
                   Inicializando wallet…
                 </span>
+              </div>
+            )}
+
+            {/* Send / Receive */}
+            {walletAddress && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => { setSendOpen(true); setSendError(null); setSendTxHash(null); }}
+                  className="flex items-center justify-center gap-2 bg-primary-container text-white font-headline font-black text-sm py-3 skew-fix hover:neo-shadow-pink transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-base">arrow_upward</span>
+                  <span className="block skew-content">ENVIAR</span>
+                </button>
+                <button
+                  onClick={() => setReceiveOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-secondary-container/20 border border-secondary-container/40 text-secondary font-headline font-black text-sm py-3 skew-fix hover:bg-secondary-container/30 transition-all"
+                >
+                  <span className="material-symbols-outlined text-base">arrow_downward</span>
+                  <span className="block skew-content">RECIBIR</span>
+                </button>
               </div>
             )}
 
@@ -275,6 +347,102 @@ export function WalletTab() {
           </div>
         </div>
       </div>
+
+      {/* ── Send Modal ─────────────────────────────────────────── */}
+      {sendOpen && (
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container border-4 border-primary-container p-8 w-full max-w-md">
+            <h2 className="font-headline font-black text-xl uppercase mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary-container">arrow_upward</span>
+              ENVIAR $1UP
+            </h2>
+
+            {sendTxHash ? (
+              <div className="text-center space-y-4">
+                <span className="material-symbols-outlined text-tertiary text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <p className="font-headline font-bold text-on-surface uppercase">¡Transacción enviada!</p>
+                <a
+                  href={`https://basescan.org/tx/${sendTxHash}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="font-mono text-xs text-secondary break-all hover:text-secondary-container"
+                >
+                  {sendTxHash}
+                </a>
+                <button onClick={() => { setSendOpen(false); setSendTxHash(null); }} className="w-full bg-primary-container text-white font-headline font-black py-3 mt-2">
+                  CERRAR
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Dirección destinatario</label>
+                  <input
+                    value={sendTo}
+                    onChange={(e) => { setSendTo(e.target.value); setSendError(null); }}
+                    placeholder="0x..."
+                    className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Monto $1UP</label>
+                  <input
+                    value={sendAmount}
+                    onChange={(e) => { setSendAmount(e.target.value); setSendError(null); }}
+                    type="number" min="0" step="any"
+                    placeholder="0.00"
+                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-black text-xl border-none"
+                  />
+                </div>
+                {sendError && (
+                  <p className="text-error font-body text-sm">{sendError}</p>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleSend}
+                    disabled={sendLoading || !sendTo || !sendAmount}
+                    className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-50 transition-opacity"
+                  >
+                    {sendLoading ? "ENVIANDO..." : "CONFIRMAR"}
+                  </button>
+                  <button onClick={() => setSendOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">
+                    CANCELAR
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Receive Modal ───────────────────────────────────────── */}
+      {receiveOpen && (
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container border-4 border-secondary-container p-8 w-full max-w-md text-center">
+            <h2 className="font-headline font-black text-xl uppercase mb-6 flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-secondary">arrow_downward</span>
+              RECIBIR $1UP
+            </h2>
+            <p className="font-body text-sm text-on-surface/50 mb-6">
+              Comparte tu dirección para recibir <span className="text-primary font-bold">$1UP</span> en la red Base.
+            </p>
+            <div className="bg-surface-container-lowest p-4 mb-4">
+              <p className="font-mono text-xs text-on-background break-all">{walletAddress}</p>
+            </div>
+            <button
+              onClick={copyReceiveAddress}
+              className={`w-full py-3 font-headline font-black text-sm uppercase transition-all mb-3 flex items-center justify-center gap-2 ${
+                receiveCopied ? "bg-tertiary text-background" : "bg-secondary-container text-white hover:neo-shadow-pink"
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">{receiveCopied ? "check" : "content_copy"}</span>
+              {receiveCopied ? "¡COPIADO!" : "COPIAR DIRECCIÓN"}
+            </button>
+            <button onClick={() => setReceiveOpen(false)} className="w-full bg-surface-container-highest font-headline font-black py-3">
+              CERRAR
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Promo banner */}
       <div className="mt-8 bg-surface-container-highest overflow-hidden relative flex items-center h-48">

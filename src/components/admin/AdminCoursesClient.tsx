@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Course } from "@/types/database.types";
+import type { Course, Master } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
 import { ImageUpload } from "./ImageUpload";
 
-interface Props { courses: Course[] }
-const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", imageUrl: "", sortOrder: "0" };
+interface Props { courses: Course[]; masters: Pick<Master, "id" | "name">[] }
+const EMPTY = { name: "", category: "Gaming", description: "", priceCop: "", durationHours: "4", imageUrl: "", masterId: "", sortOrder: "0" };
 
-export function AdminCoursesClient({ courses }: Props) {
+export function AdminCoursesClient({ courses, masters }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
   const [open, setOpen] = useState(false);
@@ -28,7 +28,8 @@ export function AdminCoursesClient({ courses }: Props) {
     setForm({
       name: c.name, category: c.category, description: c.description ?? "",
       priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4),
-      imageUrl: c.image_url ?? "", sortOrder: String(c.sort_order ?? 0),
+      imageUrl: c.image_url ?? "", masterId: String(c.master_id ?? ""),
+      sortOrder: String(c.sort_order ?? 0),
     });
     setOpen(true);
   }
@@ -43,6 +44,7 @@ export function AdminCoursesClient({ courses }: Props) {
       priceCop:      form.priceCop ? Number(form.priceCop) : null,
       durationHours: Number(form.durationHours),
       imageUrl:      form.imageUrl,
+      masterId:      form.masterId ? Number(form.masterId) : null,
       sortOrder:     Number(form.sortOrder),
       ...(editing ? { id: editing.id } : {}),
     };
@@ -120,6 +122,10 @@ export function AdminCoursesClient({ courses }: Props) {
               <input value={form.name} onChange={(e) => setForm({...form,name:e.target.value})} placeholder="Nombre del curso" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               <select value={form.category} onChange={(e) => setForm({...form,category:e.target.value})} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold appearance-none">
                 {["Performance","Technology","Gaming"].map((c) => <option key={c}>{c}</option>)}
+              </select>
+              <select value={form.masterId} onChange={(e) => setForm({...form,masterId:e.target.value})} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold appearance-none">
+                <option value="">Sin master asignado</option>
+                {masters.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
               </select>
               <textarea value={form.description} onChange={(e) => setForm({...form,description:e.target.value})} placeholder="Descripción" rows={2} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold resize-none" />
               <div className="grid grid-cols-2 gap-3">

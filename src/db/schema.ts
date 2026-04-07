@@ -1,6 +1,6 @@
 import {
   pgTable, serial, text, integer, timestamp, varchar, boolean,
-  pgEnum,
+  pgEnum, jsonb,
 } from "drizzle-orm/pg-core";
 
 // ── Enums ────────────────────────────────────────────────────────
@@ -67,6 +67,7 @@ export const courses = pgTable("courses", {
   priceCop:      integer("price_cop"),
   durationHours: integer("duration_hours"),
   imageUrl:      text("image_url"),
+  masterId:      integer("master_id").references(() => masters.id, { onDelete: "set null" }),
   sortOrder:     integer("sort_order").default(0),
   isActive:      boolean("is_active").default(true),
   createdAt:     timestamp("created_at").defaultNow(),
@@ -118,6 +119,7 @@ export const userProfiles = pgTable("user_profiles", {
   numeroDocumento:       varchar("numero_documento", { length: 50 }),
   comfenalcoAfiliado:    boolean("comfenalco_afiliado").default(false),
   comfenalcoVerifiedAt:  timestamp("comfenalco_verified_at"),
+  verifiedAliados:       jsonb("verified_aliados").$type<number[]>().default([]),
   createdAt:             timestamp("created_at").defaultNow(),
   updatedAt:             timestamp("updated_at").defaultNow(),
 });
@@ -130,6 +132,7 @@ export const discountRules = pgTable("discount_rules", {
   triggerType: discountTriggerEnum("trigger_type").notNull(),  // comfenalco | promo_code | manual | auto
   discountPct: integer("discount_pct").notNull(),              // 0–100
   appliesTo:   discountAppliesToEnum("applies_to").notNull(),  // courses | pass | all
+  aliadoId:    integer("aliado_id").references(() => aliados.id, { onDelete: "set null" }),
   isActive:    boolean("is_active").default(true),
   validFrom:   timestamp("valid_from"),
   validUntil:  timestamp("valid_until"),
@@ -154,15 +157,62 @@ export const enrollments = pgTable("enrollments", {
   createdAt:          timestamp("created_at").defaultNow(),
 });
 
+// ── Masters ──────────────────────────────────────────────────────
+export const masters = pgTable("masters", {
+  id:           serial("id").primaryKey(),
+  name:         varchar("name",      { length: 200 }).notNull(),
+  specialty:    varchar("specialty", { length: 200 }),
+  bio:          text("bio"),
+  photoUrl:     text("photo_url"),
+  instagramUrl: text("instagram_url"),
+  tiktokUrl:    text("tiktok_url"),
+  twitterUrl:   text("twitter_url"),
+  youtubeUrl:   text("youtube_url"),
+  linkedinUrl:  text("linkedin_url"),
+  topics:       jsonb("topics").$type<string[]>().default([]),
+  sortOrder:    integer("sort_order").default(0),
+  isActive:     boolean("is_active").default(true),
+  createdAt:    timestamp("created_at").defaultNow(),
+});
+
+// ── Aliados (Partners / Clients) ─────────────────────────────────
+export const aliados = pgTable("aliados", {
+  id:        serial("id").primaryKey(),
+  name:      varchar("name",  { length: 200 }).notNull(),
+  nit:       varchar("nit",   { length: 50 }),
+  email:     varchar("email", { length: 300 }),
+  apiUrl:    text("api_url"),
+  apiKey:    text("api_key"),           // store encrypted / via env in prod
+  logoUrl:   text("logo_url"),
+  isActive:  boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ── Academia Content (videos / docs per course) ───────────────────
+export const academiaContent = pgTable("academia_content", {
+  id:          serial("id").primaryKey(),
+  courseId:    integer("course_id").references(() => courses.id, { onDelete: "cascade" }).notNull(),
+  contentType: varchar("content_type", { length: 20 }).notNull(), // 'video' | 'document' | 'quiz'
+  title:       varchar("title",        { length: 200 }).notNull(),
+  description: text("description"),
+  url:         text("url"),
+  sortOrder:   integer("sort_order").default(0),
+  isPublished: boolean("is_published").default(false),
+  createdAt:   timestamp("created_at").defaultNow(),
+});
+
 // ── Type exports ─────────────────────────────────────────────────
-export type GameCategory  = typeof gameCategories.$inferSelect;
-export type Game          = typeof games.$inferSelect;
-export type Player        = typeof players.$inferSelect;
-export type Competition   = typeof competitions.$inferSelect;
-export type Course        = typeof courses.$inferSelect;
-export type PassBenefit   = typeof passBenefits.$inferSelect;
-export type FloorInfo     = typeof floorInfo.$inferSelect;
-export type Submission    = typeof recruitmentSubmissions.$inferSelect;
-export type UserProfile   = typeof userProfiles.$inferSelect;
-export type DiscountRule  = typeof discountRules.$inferSelect;
-export type Enrollment    = typeof enrollments.$inferSelect;
+export type GameCategory    = typeof gameCategories.$inferSelect;
+export type Game            = typeof games.$inferSelect;
+export type Player          = typeof players.$inferSelect;
+export type Competition     = typeof competitions.$inferSelect;
+export type Course          = typeof courses.$inferSelect;
+export type PassBenefit     = typeof passBenefits.$inferSelect;
+export type FloorInfo       = typeof floorInfo.$inferSelect;
+export type Submission      = typeof recruitmentSubmissions.$inferSelect;
+export type UserProfile     = typeof userProfiles.$inferSelect;
+export type DiscountRule    = typeof discountRules.$inferSelect;
+export type Enrollment      = typeof enrollments.$inferSelect;
+export type Master          = typeof masters.$inferSelect;
+export type Aliado          = typeof aliados.$inferSelect;
+export type AcademiaContent = typeof academiaContent.$inferSelect;

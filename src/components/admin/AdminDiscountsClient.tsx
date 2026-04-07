@@ -11,18 +11,20 @@ interface DiscountRule {
   trigger_type: string;
   discount_pct: number;
   applies_to: string;
+  aliado_id: number | null;
   is_active: boolean | null;
   valid_from: string | null;
   valid_until: string | null;
   created_at: string | null;
 }
 
-interface Props { rules: DiscountRule[] }
+interface Aliado { id: number; name: string }
+interface Props { rules: DiscountRule[]; aliados: Aliado[] }
 
 const EMPTY = {
   name: "", description: "", triggerType: "comfenalco",
-  discountPct: "10", appliesTo: "courses", isActive: true,
-  validFrom: "", validUntil: "",
+  discountPct: "10", appliesTo: "courses", aliadoId: "",
+  isActive: true, validFrom: "", validUntil: "",
 };
 
 const TRIGGER_LABELS: Record<string, string> = {
@@ -45,7 +47,7 @@ const TRIGGER_BADGE: Record<string, string> = {
   auto:       "bg-tertiary text-background",
 };
 
-export function AdminDiscountsClient({ rules }: Props) {
+export function AdminDiscountsClient({ rules, aliados }: Props) {
   const router = useRouter();
   const { getAccessToken, user } = usePrivy();
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ export function AdminDiscountsClient({ rules }: Props) {
       triggerType: r.trigger_type,
       discountPct: String(r.discount_pct),
       appliesTo:   r.applies_to,
+      aliadoId:    r.aliado_id ? String(r.aliado_id) : "",
       isActive:    r.is_active ?? true,
       validFrom:   r.valid_from ? r.valid_from.slice(0, 16) : "",
       validUntil:  r.valid_until ? r.valid_until.slice(0, 16) : "",
@@ -79,6 +82,7 @@ export function AdminDiscountsClient({ rules }: Props) {
     const body = {
       ...form,
       ...(editing ? { id: editing.id } : {}),
+      aliadoId:  form.aliadoId ? Number(form.aliadoId) : null,
       createdBy: user?.email?.address ?? "",
       validFrom:  form.validFrom  || null,
       validUntil: form.validUntil || null,
@@ -236,6 +240,20 @@ export function AdminDiscountsClient({ rules }: Props) {
                   </select>
                 </div>
               </div>
+
+              {aliados.length > 0 && (
+                <div>
+                  <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">Aliado (opcional)</label>
+                  <select
+                    value={form.aliadoId}
+                    onChange={(e) => setForm({ ...form, aliadoId: e.target.value })}
+                    className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold appearance-none"
+                  >
+                    <option value="">Sin aliado específico</option>
+                    {aliados.map((a) => <option key={a.id} value={String(a.id)}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">Descuento (%)</label>

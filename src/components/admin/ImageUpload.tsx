@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 
 interface Props {
   currentUrl: string | null;
-  folder: "players" | "courses" | "games" | "floors";
+  folder: "players" | "courses" | "games" | "floors" | "masters" | "aliados";
   onUploaded: (url: string) => void;
   getAccessToken: () => Promise<string | null>;
   aspectRatio?: "square" | "video";

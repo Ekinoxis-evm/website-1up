@@ -11,25 +11,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const cookieStore = await cookies();
   const token = cookieStore.get("privy-token")?.value;
 
+  const mainSite = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
+
   const claims = await verifyCookieToken(token);
-  if (!claims) redirect("/");
+  if (!claims) redirect(mainSite);
 
   let email: string | undefined;
   try {
     const user = await privyServer.getUser(claims.userId);
-    // email-method login → user.email.address
-    // Google OAuth login → user.google.email
-    // Discord OAuth login → user.discord.email
     email =
       user.email?.address ??
       user.google?.email ??
       user.discord?.email ??
       undefined;
   } catch {
-    redirect("/");
+    redirect(mainSite);
   }
 
-  if (!await isAdmin(email)) redirect("/");
+  if (!await isAdmin(email)) redirect(mainSite);
 
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">

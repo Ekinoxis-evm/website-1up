@@ -6,12 +6,17 @@ const MODULES = [
   { href: "/admin/players",      icon: "groups",              label: "Jugadores"      },
   { href: "/admin/competitions", icon: "emoji_events",        label: "Competiciones"  },
   { href: "/admin/courses",      icon: "school",              label: "Cursos"         },
-  { href: "/admin/pass-benefits",icon: "card_membership",     label: "Pass Benefits"  },
+  { href: "/admin/1pass",        icon: "card_membership",     label: "1UP Pass"       },
+  { href: "/admin/pass-benefits",icon: "checklist",           label: "Pass Benefits"  },
   { href: "/admin/floors",       icon: "domain",              label: "Pisos"          },
   { href: "/admin/discounts",    icon: "local_offer",         label: "Descuentos"     },
   { href: "/admin/enrollments",  icon: "receipt_long",        label: "Inscripciones"  },
-  { href: "/admin/submissions",  icon: "inbox",               label: "Solicitudes"    },
-  { href: "/admin/users",        icon: "admin_panel_settings", label: "Admins"         },
+  { href: "/admin/submissions",      icon: "inbox",               label: "Solicitudes"    },
+  { href: "/admin/masters",          icon: "star",                label: "Masters"        },
+  { href: "/admin/aliados",          icon: "handshake",           label: "Aliados"        },
+  { href: "/admin/academia-content", icon: "play_circle",         label: "Contenido"      },
+  { href: "/admin/user-profiles",    icon: "people",              label: "Usuarios"       },
+  { href: "/admin/users",            icon: "admin_panel_settings", label: "Admins"        },
 ];
 
 export function AdminSidebar() {
