@@ -65,6 +65,20 @@ Omit sections that don't apply. Always include **Delivered by** and **DB Migrati
 
 ---
 
+## Mandatory Doc Update Rule (Rule 8)
+
+**After every addition, fix, or feature — update docs before committing.** No exceptions.
+
+| Doc | Update when |
+|-----|------------|
+| `CHANGELOG.md` | Always — every change gets a version entry |
+| `README.md` | Routes added/removed, tables added/removed, stack changed, env vars changed |
+| `CLAUDE.md` | Rules changed, routes changed, env vars changed, DB tables added |
+| `.claude/skills/admin-crud.md` | New admin routes, new revalidatePath entries, new sidebar items |
+| `.claude/skills/database.md` | New tables, schema changes, storage changes |
+
+---
+
 ## Release Checklist
 
 Before marking a version as delivered, verify all steps:
@@ -83,15 +97,15 @@ DATABASE
 
 ENVIRONMENT
 [ ] All new env vars documented in CLAUDE.md + README.md
-[ ] .env.local.example updated if it exists
 
-DOCUMENTATION
+DOCUMENTATION (mandatory — Rule 8)
 [ ] CHANGELOG.md entry written for this version
 [ ] README.md updated if routes/tables/stack changed
-[ ] CLAUDE.md updated if rules/routes/env vars changed
+[ ] CLAUDE.md updated if rules/routes/env vars/tables changed
+[ ] Relevant skill files updated (.claude/skills/)
 
 DELIVERY
-[ ] Git commit with version tag: git tag v<X.Y.Z>
+[ ] Git commit pushed to main
 [ ] Client notified of what changed (plain language)
 [ ] Pending items listed (e.g., "Comfenalco API pending credentials")
 ```
