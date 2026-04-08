@@ -5,6 +5,24 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.6] — 2026-04-08
+
+### Fixed
+- **Masters admin shows all records** — page now uses `supabaseAdmin` (service role) instead of the anon client; inactive masters were silently filtered by RLS and invisible in the admin panel
+- **Active/inactive badge on master cards** — each card now shows an Activo/Inactivo status indicator; all topics shown (previously capped at 3)
+- **Social links revalidation** — `revalidatePath("/", "layout")` now invalidates the footer on all public pages, not just `/`; changes were visible on home but not on `/masters`, `/team`, etc.
+- **Aliados admin uses service role** — `supabaseAdmin` used for reads so `api_key` is always visible regardless of future RLS changes
+- **`next.config.ts` image domain** — replaced stale `*.public.blob.vercel-storage.com` (Vercel Blob, removed) with `*.supabase.co` (Supabase Storage, current)
+- **`SocialLink` type export added** — `src/db/schema.ts` was missing `export type SocialLink` despite the table being defined; added to match all other tables
+
+### Removed
+- **`@vercel/blob` dependency** — package was still in `package.json` after storage migration to Supabase; removed (no code was importing it)
+
+### Security
+- **`drizzle-orm` updated to 0.45.2** — fixes CVE: SQL injection via improperly escaped identifiers (GHSA-gpj5-g38j-94v9); was on 0.45.1
+
+---
+
 ## [1.3.5] — 2026-04-07
 
 ### Added

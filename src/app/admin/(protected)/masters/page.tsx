@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase";
 import { AdminMastersClient } from "@/components/admin/AdminMastersClient";
 
 export default async function AdminMastersPage() {

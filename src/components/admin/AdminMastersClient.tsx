@@ -97,11 +97,16 @@ export function AdminMastersClient({ masters, courses }: Props) {
                 <span className="material-symbols-outlined text-[3rem] text-surface-container-highest">school</span>
               )}
             </div>
-            <div className="font-headline font-black text-on-background">{m.name}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-headline font-black text-on-background truncate">{m.name}</div>
+              <span className={`shrink-0 font-headline font-black text-[9px] px-2 py-0.5 uppercase ${m.is_active ? "bg-primary-container/20 text-primary-container" : "bg-error/20 text-error"}`}>
+                {m.is_active ? "Activo" : "Inactivo"}
+              </span>
+            </div>
             {m.specialty && <div className="font-body text-xs text-outline mt-1">{m.specialty}</div>}
             {(m.topics ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
-                {(m.topics ?? []).slice(0, 3).map((t) => (
+                {(m.topics ?? []).map((t) => (
                   <span key={t} className="bg-secondary-container/20 text-secondary font-headline text-[9px] px-2 py-0.5 uppercase">
                     {t}
                   </span>

@@ -226,3 +226,4 @@ export type Enrollment      = typeof enrollments.$inferSelect;
 export type Master          = typeof masters.$inferSelect;
 export type Aliado          = typeof aliados.$inferSelect;
 export type AcademiaContent = typeof academiaContent.$inferSelect;
+export type SocialLink      = typeof socialLinks.$inferSelect;

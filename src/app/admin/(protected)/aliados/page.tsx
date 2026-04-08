@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase";
 import { AdminAliadosClient } from "@/components/admin/AdminAliadosClient";
 
 export default async function AdminAliadosPage() {

@@ -18,6 +18,6 @@ export async function PUT(req: NextRequest) {
     is_active: body.isActive ?? true,
     sort_order: body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
-  revalidatePath("/"); revalidatePath("/admin/social-links");
+  revalidatePath("/", "layout"); revalidatePath("/admin/social-links");
   return NextResponse.json(data);
 }
