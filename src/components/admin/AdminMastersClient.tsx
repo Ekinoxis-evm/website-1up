@@ -6,7 +6,8 @@ import { usePrivy } from "@privy-io/react-auth";
 import type { Master } from "@/types/database.types";
 import { ImageUpload } from "./ImageUpload";
 
-interface Props { masters: Master[] }
+type CourseRef = { id: number; name: string; category: string; master_id: number | null };
+interface Props { masters: Master[]; courses: CourseRef[] }
 
 type FormState = {
   name: string; specialty: string; bio: string;
@@ -22,7 +23,7 @@ const EMPTY: FormState = {
   topicsRaw: "", sortOrder: "0", isActive: true,
 };
 
-export function AdminMastersClient({ masters }: Props) {
+export function AdminMastersClient({ masters, courses }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
   const [open, setOpen] = useState(false);
@@ -107,6 +108,16 @@ export function AdminMastersClient({ masters }: Props) {
                 ))}
               </div>
             )}
+            {courses.filter((c) => c.master_id === m.id).length > 0 && (
+              <div className="mt-2 pt-2 border-t border-surface-container-highest">
+                {courses.filter((c) => c.master_id === m.id).map((c) => (
+                  <div key={c.id} className="flex items-center gap-1.5 mt-1">
+                    <span className="bg-tertiary/20 text-tertiary font-headline text-[8px] px-1.5 py-0.5 uppercase shrink-0">{c.category}</span>
+                    <span className="font-body text-xs text-on-surface/60 truncate">{c.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2 mt-3">
               <button onClick={() => openEdit(m)} className="flex-1 text-secondary font-headline font-bold text-xs uppercase hover:text-secondary-container">Editar</button>
               <button onClick={() => handleDelete(m.id)} className="flex-1 text-error font-headline font-bold text-xs uppercase">Eliminar</button>
@@ -183,6 +194,18 @@ export function AdminMastersClient({ masters }: Props) {
               Activo
             </label>
 
+            {editing && courses.filter((c) => c.master_id === editing.id).length > 0 && (
+              <div className="mb-4 p-3 bg-surface-container-lowest">
+                <p className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline mb-2">Cursos asignados</p>
+                {courses.filter((c) => c.master_id === editing.id).map((c) => (
+                  <div key={c.id} className="flex items-center gap-2 mt-1">
+                    <span className="bg-tertiary/20 text-tertiary font-headline text-[8px] px-1.5 py-0.5 uppercase shrink-0">{c.category}</span>
+                    <span className="font-body text-xs text-on-surface/70">{c.name}</span>
+                  </div>
+                ))}
+                <p className="font-body text-[10px] text-outline/50 mt-2">Asigna cursos desde la sección Cursos.</p>
+              </div>
+            )}
             {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3">
               <button onClick={handleSave} disabled={loading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-60">

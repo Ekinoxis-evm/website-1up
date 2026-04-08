@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
 import { createWalletClient, custom, parseUnits, isAddress } from "viem";
 import { base } from "viem/chains";
 import { use1upBalance } from "@/hooks/use1upBalance";
 import { ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
+import { QRCodeSVG } from "qrcode.react";
 
 const TOKEN_UTILITY = [
   { label: "Cursos Academia",   pct: 45, barClass: "bg-secondary-container", textClass: "text-secondary"  },
@@ -43,6 +44,56 @@ export function WalletTab() {
   // Receive modal state
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveCopied, setReceiveCopied] = useState(false);
+
+  // QR scanner state
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (!scanOpen) {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      return;
+    }
+    let animFrame: number;
+    async function startScan() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        streamRef.current = stream;
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        scan();
+      } catch {
+        setScanError("No se pudo acceder a la cámara");
+      }
+    }
+    function scan() {
+      if (!videoRef.current || videoRef.current.readyState < 2) { animFrame = requestAnimationFrame(scan); return; }
+      if (!("BarcodeDetector" in window)) { setScanError("Tu navegador no soporta escaneo de QR"); return; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+      async function detect() {
+        if (!videoRef.current) return;
+        try {
+          const codes = await detector.detect(videoRef.current);
+          if (codes.length > 0) {
+            const value = codes[0].rawValue as string;
+            const addr = value.startsWith("ethereum:") ? value.split(":")[1].split("@")[0] : value;
+            setSendTo(addr);
+            setScanOpen(false);
+          } else {
+            animFrame = requestAnimationFrame(detect);
+          }
+        } catch { animFrame = requestAnimationFrame(detect); }
+      }
+      detect();
+    }
+    startScan();
+    return () => { cancelAnimationFrame(animFrame); streamRef.current?.getTracks().forEach((t) => t.stop()); };
+  }, [scanOpen]);
 
   async function handleSend() {
     if (!activeWallet || !walletAddress) return;
@@ -376,12 +427,22 @@ export function WalletTab() {
               <div className="space-y-4">
                 <div>
                   <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Dirección destinatario</label>
-                  <input
-                    value={sendTo}
-                    onChange={(e) => { setSendTo(e.target.value); setSendError(null); }}
-                    placeholder="0x..."
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={sendTo}
+                      onChange={(e) => { setSendTo(e.target.value); setSendError(null); }}
+                      placeholder="0x..."
+                      className="flex-1 bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none min-w-0"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setScanError(null); setScanOpen(true); }}
+                      className="bg-surface-container-highest px-3 flex items-center justify-center text-outline hover:text-primary transition-colors shrink-0"
+                      title="Escanear QR"
+                    >
+                      <span className="material-symbols-outlined text-xl">qr_code_scanner</span>
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Monto $1UP</label>
@@ -425,6 +486,13 @@ export function WalletTab() {
             <p className="font-body text-sm text-on-surface/50 mb-6">
               Comparte tu dirección para recibir <span className="text-primary font-bold">$1UP</span> en la red Base.
             </p>
+            {walletAddress && (
+              <div className="flex justify-center mb-5">
+                <div className="bg-white p-4 inline-block">
+                  <QRCodeSVG value={walletAddress} size={180} />
+                </div>
+              </div>
+            )}
             <div className="bg-surface-container-lowest p-4 mb-4">
               <p className="font-mono text-xs text-on-background break-all">{walletAddress}</p>
             </div>
@@ -439,6 +507,36 @@ export function WalletTab() {
             </button>
             <button onClick={() => setReceiveOpen(false)} className="w-full bg-surface-container-highest font-headline font-black py-3">
               CERRAR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── QR Scanner Modal ────────────────────────────────────── */}
+      {scanOpen && (
+        <div className="fixed inset-0 bg-background/90 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container border-4 border-primary-container p-6 w-full max-w-sm">
+            <h2 className="font-headline font-black text-lg uppercase mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary-container">qr_code_scanner</span>
+              ESCANEAR DIRECCIÓN
+            </h2>
+            {scanError ? (
+              <div className="text-center py-8 space-y-3">
+                <span className="material-symbols-outlined text-error text-4xl">error</span>
+                <p className="font-body text-sm text-error">{scanError}</p>
+              </div>
+            ) : (
+              <div className="relative w-full aspect-square bg-black overflow-hidden mb-4">
+                <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                <div className="absolute inset-0 border-[3px] border-primary-container/60 pointer-events-none" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border-2 border-primary-container pointer-events-none" />
+              </div>
+            )}
+            <p className="font-body text-xs text-on-surface/40 text-center mb-4">
+              Apunta la cámara al código QR de la dirección destino.
+            </p>
+            <button onClick={() => setScanOpen(false)} className="w-full bg-surface-container-highest font-headline font-black py-3">
+              CANCELAR
             </button>
           </div>
         </div>
