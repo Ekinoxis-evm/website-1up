@@ -456,6 +456,10 @@ export type Database = {
           twitter_url: string | null
           youtube_url: string | null
           linkedin_url: string | null
+          kick_url: string | null
+          twitch_url: string | null
+          github_url: string | null
+          categories: string[] | null
           topics: string[] | null
           sort_order: number | null
           is_active: boolean | null
@@ -472,6 +476,10 @@ export type Database = {
           twitter_url?: string | null
           youtube_url?: string | null
           linkedin_url?: string | null
+          kick_url?: string | null
+          twitch_url?: string | null
+          github_url?: string | null
+          categories?: string[] | null
           topics?: string[] | null
           sort_order?: number | null
           is_active?: boolean | null
@@ -488,6 +496,10 @@ export type Database = {
           twitter_url?: string | null
           youtube_url?: string | null
           linkedin_url?: string | null
+          kick_url?: string | null
+          twitch_url?: string | null
+          github_url?: string | null
+          categories?: string[] | null
           topics?: string[] | null
           sort_order?: number | null
           is_active?: boolean | null

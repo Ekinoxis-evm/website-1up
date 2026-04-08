@@ -68,7 +68,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `players` | gamertag, real_name, role, photo_url, social URLs, is_active |
 | `competitions` | tournament_name, year, result, player_id |
 | `courses` | name, category, price_cop, duration_hours, image_url, master_id FK, is_active |
-| `masters` | name, specialty, bio, photo_url, instagram/tiktok/twitter/youtube/linkedin URLs, topics[], is_active |
+| `masters` | name, specialty, bio, photo_url, instagram/tiktok/twitter/youtube/linkedin/kick/twitch/github URLs, categories[], topics[], is_active |
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color, image_url |
 | `recruitment_submissions` | name, email, phone, source |

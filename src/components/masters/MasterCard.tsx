@@ -4,8 +4,11 @@ import { SOCIAL_ICON } from "@/lib/socialIcons";
 const SOCIAL_LINKS: { key: keyof Master; platform: string }[] = [
   { key: "instagram_url", platform: "instagram" },
   { key: "tiktok_url",    platform: "tiktok"    },
-  { key: "twitter_url",   platform: "twitter"   },
   { key: "youtube_url",   platform: "youtube"   },
+  { key: "twitter_url",   platform: "twitter"   },
+  { key: "kick_url",      platform: "kick"      },
+  { key: "twitch_url",    platform: "twitch"    },
+  { key: "github_url",    platform: "github"    },
   { key: "linkedin_url",  platform: "linkedin"  },
 ];
 
@@ -13,6 +16,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Gaming:      "bg-primary-container/20 text-primary",
   Performance: "bg-secondary-container/20 text-secondary",
   Technology:  "bg-tertiary/20 text-tertiary",
+  Marketing:   "bg-error/20 text-error",
+  Legal:       "bg-outline/20 text-outline",
 };
 
 interface Props {
@@ -50,18 +55,32 @@ export function MasterCard({ master, courses }: Props) {
           {master.name}
         </h3>
         {master.specialty && (
-          <p className="font-body text-xs text-primary uppercase tracking-widest mt-1">
+          <p className="font-body text-xs text-outline uppercase tracking-widest mt-1">
             {master.specialty}
           </p>
         )}
 
+        {/* Categories */}
+        {(master.categories ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {(master.categories ?? []).map((cat) => (
+              <span
+                key={cat}
+                className={`font-headline font-black text-[9px] px-2 py-0.5 uppercase tracking-wider ${CATEGORY_COLORS[cat] ?? "bg-surface-container-high text-outline"}`}
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Topics */}
         {(master.topics ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
+          <div className="flex flex-wrap gap-1 mt-2">
             {(master.topics ?? []).map((t) => (
               <span
                 key={t}
-                className="bg-secondary-container/20 text-secondary font-headline text-[9px] px-2 py-0.5 uppercase tracking-wider"
+                className="bg-surface-container-high text-on-surface/50 font-headline text-[9px] px-2 py-0.5 uppercase tracking-wider"
               >
                 {t}
               </span>

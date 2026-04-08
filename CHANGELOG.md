@@ -5,6 +5,21 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.7] — 2026-04-08
+
+### Added
+- **Masters — 8 social networks** — `kick_url`, `twitch_url`, `github_url` columns added to `masters` table; admin form now shows all 8 platforms (instagram, tiktok, youtube, x, kick, twitch, github, linkedin); public MasterCard renders all active icons
+- **Masters — category selection** — new `categories text[]` column replaces free-text specialty concept; admin form has checkbox buttons for Gaming / Performance / Technology / Marketing / Legal; public MasterCard shows categories as colored badges (pink/blue/teal/red/gray)
+- **Masters admin card — always-visible course count** — every master card in the admin list shows assigned courses with category badges and a count; shows "Sin cursos" when none instead of hiding the section
+- **Masters edit modal — course panel always visible** — when editing a master the assigned courses section always renders (was previously hidden if empty)
+
+### DB Migration
+- SQL file: `src/db/migrations/incremental_masters_social_categories.sql`
+- **Run in Supabase SQL Editor before deploying**
+- Table modified: `masters` — added `kick_url`, `twitch_url`, `github_url` (text nullable), `categories` (text[] default '{}')
+
+---
+
 ## [1.3.6] — 2026-04-08
 
 ### Fixed
