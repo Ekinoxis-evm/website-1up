@@ -1,4 +1,5 @@
 import type { Player } from "@/types/database.types";
+import { SOCIAL_ICON } from "@/lib/socialIcons";
 
 interface Props { player: Player; index: number }
 
@@ -6,18 +7,18 @@ const BORDER_COLORS = ["border-primary", "border-secondary", "border-tertiary", 
 const ROLE_BG = ["bg-primary-container", "bg-secondary-container", "bg-tertiary", "bg-white"];
 const ROLE_TEXT = ["text-white", "text-white", "text-background", "text-background"];
 
-const SOCIALS = [
-  { key: "instagram_url" as const, icon: "photo_camera",   label: "IG"  },
-  { key: "tiktok_url"   as const,  icon: "music_note",      label: "TT"  },
-  { key: "kick_url"     as const,  icon: "live_tv",         label: "KCK" },
-  { key: "youtube_url"  as const,  icon: "play_circle",     label: "YT"  },
+const SOCIALS: { key: keyof Player; platform: string }[] = [
+  { key: "instagram_url", platform: "instagram" },
+  { key: "tiktok_url",    platform: "tiktok"    },
+  { key: "kick_url",      platform: "kick"       },
+  { key: "youtube_url",   platform: "youtube"    },
 ];
 
 export function PlayerCard({ player, index }: Props) {
   const border = BORDER_COLORS[index % BORDER_COLORS.length];
   const roleBg = ROLE_BG[index % ROLE_BG.length];
   const roleText = ROLE_TEXT[index % ROLE_TEXT.length];
-  const isOffset = index % 2 === 1; // stagger odd cards down
+  const isOffset = index % 2 === 1;
 
   return (
     <div className={`group relative bg-surface-container ${border} border-l-4 ${isOffset ? "md:mt-8" : ""} overflow-hidden`}>
@@ -37,18 +38,18 @@ export function PlayerCard({ player, index }: Props) {
         )}
 
         {/* Social overlay on hover */}
-        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-          {SOCIALS.map(({ key, icon, label }) =>
+        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-5">
+          {SOCIALS.map(({ key, platform }) =>
             player[key] ? (
               <a
                 key={key}
-                href={player[key]!}
+                href={player[key] as string}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 text-primary hover:text-primary-container transition-colors"
+                className="hover:scale-110 transition-transform"
               >
-                <span className="material-symbols-outlined">{icon}</span>
-                <span className="text-[9px] font-headline font-black">{label}</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={SOCIAL_ICON[platform]} alt={platform} className="w-7 h-7 object-contain" />
               </a>
             ) : null
           )}

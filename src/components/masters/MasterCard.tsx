@@ -1,11 +1,12 @@
 import type { Master } from "@/types/database.types";
+import { SOCIAL_ICON } from "@/lib/socialIcons";
 
-const SOCIAL_LINKS = [
-  { key: "instagram_url" as const, icon: "photo_camera",  label: "Instagram" },
-  { key: "tiktok_url"    as const, icon: "video_library", label: "TikTok"    },
-  { key: "twitter_url"   as const, icon: "tag",           label: "Twitter"   },
-  { key: "youtube_url"   as const, icon: "play_circle",   label: "YouTube"   },
-  { key: "linkedin_url"  as const, icon: "work",          label: "LinkedIn"  },
+const SOCIAL_LINKS: { key: keyof Master; platform: string }[] = [
+  { key: "instagram_url", platform: "instagram" },
+  { key: "tiktok_url",    platform: "tiktok"    },
+  { key: "twitter_url",   platform: "twitter"   },
+  { key: "youtube_url",   platform: "youtube"   },
+  { key: "linkedin_url",  platform: "linkedin"  },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -97,17 +98,18 @@ export function MasterCard({ master, courses }: Props) {
 
         {/* Social links */}
         <div className="flex gap-3 mt-4 pt-4">
-          {SOCIAL_LINKS.map(({ key, icon, label }) =>
+          {SOCIAL_LINKS.map(({ key, platform }) =>
             master[key] ? (
               <a
                 key={key}
                 href={master[key] as string}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={label}
-                className="text-outline hover:text-primary transition-colors"
+                aria-label={platform}
+                className="hover:scale-110 transition-transform opacity-70 hover:opacity-100"
               >
-                <span className="material-symbols-outlined text-base">{icon}</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={SOCIAL_ICON[platform]} alt={platform} className="w-5 h-5 object-contain" />
               </a>
             ) : null
           )}

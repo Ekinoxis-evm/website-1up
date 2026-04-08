@@ -575,6 +575,33 @@ export type Database = {
           },
         ]
       }
+      social_links: {
+        Row: {
+          id: number
+          platform: string
+          url: string | null
+          is_active: boolean | null
+          sort_order: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          platform: string
+          url?: string | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          platform?: string
+          url?: string | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       recruitment_submissions: {
         Row: {
           category_id: number | null
@@ -785,3 +812,4 @@ export type Enrollment      = Database["public"]["Tables"]["enrollments"]["Row"]
 export type Master          = Database["public"]["Tables"]["masters"]["Row"];
 export type Aliado          = Database["public"]["Tables"]["aliados"]["Row"];
 export type AcademiaContent = Database["public"]["Tables"]["academia_content"]["Row"];
+export type SocialLink      = Database["public"]["Tables"]["social_links"]["Row"];

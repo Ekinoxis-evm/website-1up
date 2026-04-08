@@ -157,6 +157,16 @@ export const enrollments = pgTable("enrollments", {
   createdAt:          timestamp("created_at").defaultNow(),
 });
 
+// ── Social Links ─────────────────────────────────────────────────
+export const socialLinks = pgTable("social_links", {
+  id:        serial("id").primaryKey(),
+  platform:  varchar("platform", { length: 50 }).notNull(),
+  url:       text("url"),
+  isActive:  boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ── Masters ──────────────────────────────────────────────────────
 export const masters = pgTable("masters", {
   id:           serial("id").primaryKey(),
