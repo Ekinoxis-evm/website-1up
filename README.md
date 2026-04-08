@@ -141,6 +141,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 4. `courses_master_discounts_aliado_user_verified` — FK columns + `user_profiles.verified_aliados`
 5. `create_images_storage_bucket` — Supabase Storage `images` bucket + policies
 6. `create_social_links` — `social_links` table (footer social icons, 6 platforms seeded)
+7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
 
 ### 4. Seed the database (fresh install only)
 
@@ -206,7 +207,7 @@ npm run dev
 | `/admin/floors` | Gaming Tower floor info CRUD |
 | `/admin/players` | Team roster CRUD (photo upload, social links) |
 | `/admin/competitions` | Hall of Fame CRUD |
-| `/admin/masters` | Masters CRUD (photo, social links, topics, assigned courses shown) |
+| `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
 | `/admin/courses` | Academia course CRUD (image, master assignment, category) |
 | `/admin/academia-content` | Video/doc/quiz content per course (published toggle) |
 | `/admin/1pass` | 1UP Pass overview — benefits, discounts, purchase history |
@@ -241,7 +242,7 @@ npm run dev
 | `players` | Pro roster (social links, photo) |
 | `competitions` | Hall of Fame entries |
 | `courses` | Academia catalog (price, master_id FK, checkout via MP) |
-| `masters` | Coaches — photo, specialty, topics, social links |
+| `masters` | Coaches — photo, specialty, categories[], topics[], all 8 social links (instagram/tiktok/youtube/x/kick/twitch/github/linkedin) |
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
