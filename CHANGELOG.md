@@ -5,6 +5,15 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.4] — 2026-04-07
+
+### Added
+- **Master → Courses relation in admin** — master list cards and edit modal now show all courses assigned to that master (name + category badge). Assignment still happens from the Courses form via the master selector dropdown.
+- **QR code on Receive modal** — wallet address is now displayed as a scannable QR code (white background, 180px, via `qrcode.react`)
+- **QR scanner on Send modal** — scan button opens camera using `BarcodeDetector` (native browser API, no extra runtime); scans QR code and fills the recipient address field automatically. Graceful error shown on unsupported browsers.
+
+---
+
 ## [1.3.3] — 2026-04-07
 
 ### Added
