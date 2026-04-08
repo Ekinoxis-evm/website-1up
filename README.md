@@ -125,6 +125,13 @@ NEXT_PUBLIC_ADMIN_URL=https://admin.1upesports.org
 # COMFENALCO_API_URL=
 # COMFENALCO_API_KEY=
 
+# Cloudflare Stream (planned — activate when integrating Academia video)
+# CF_STREAM_ACCOUNT_ID=
+# CF_STREAM_API_TOKEN=
+# CF_STREAM_KEY_ID=
+# CF_STREAM_PEM=
+# CF_STREAM_CUSTOMER_CODE=
+
 # Optional — Base L2 RPC
 # NEXT_PUBLIC_BASE_RPC_URL=
 ```
@@ -298,6 +305,93 @@ User clicks "INSCRIBIRSE"
 Status: **stub** — awaiting API documentation and credentials from Comfenalco.
 
 To activate: set `COMFENALCO_API_URL` + `COMFENALCO_API_KEY` and implement response parsing in `src/lib/comfenalco.ts` (marked with `// TODO`).
+
+---
+
+## Planned Integration — Cloudflare Stream (Academia Video)
+
+Status: **planned** — architecture documented in `.claude/skills/cloudflare-stream.md`.
+
+### Why Cloudflare Stream
+Course videos need to be gated — only enrolled users can watch, and URLs must not be shareable. Cloudflare Stream provides:
+- Signed JWT tokens (1h expiry) — videos only play for verified enrolled users
+- `requireSignedURLs: true` — no direct URL sharing or hotlinking
+- Adaptive bitrate (360p–1080p HLS) — no custom player infrastructure needed
+- Direct creator uploads from admin panel — no video passes through the server
+
+### Architecture
+
+```
+ADMIN UPLOAD
+  Admin clicks "Subir Video" → POST /api/admin/stream-upload-url
+    → Cloudflare API returns { uid, uploadURL }
+    → Browser PUT file directly to uploadURL (never exposes API token)
+    → Store uid in academia_content.stream_uid
+
+USER PLAYBACK
+  Enrolled user opens /app/academia/[courseId]
+    → POST /api/user/stream-token { contentId }
+      → Verify enrollment: enrollments.status = 'approved'
+      → Sign RS256 JWT (1h expiry)
+      → Return { token }
+    → <iframe src="https://customer-{CODE}.cloudflarestream.com/{token}/iframe" />
+```
+
+### DB Change Required
+
+```sql
+ALTER TABLE academia_content ADD COLUMN IF NOT EXISTS stream_uid text;
+```
+
+`url` column stays for YouTube/docs/quizzes. `stream_uid` is only set for Stream-hosted videos.
+
+### New Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CF_STREAM_ACCOUNT_ID` | Cloudflare dashboard → Account ID |
+| `CF_STREAM_API_TOKEN` | API token with Stream:Edit + Stream:Read permissions |
+| `CF_STREAM_KEY_ID` | From one-time signing key creation (POST /accounts/{id}/stream/keys) |
+| `CF_STREAM_PEM` | Base64-encoded RSA private key (from same signing key response) |
+| `CF_STREAM_CUSTOMER_CODE` | From embed URL in Stream dashboard (customer-XXXXX) |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/stream.ts` | `signStreamToken(uid)` + `createUploadUrl(filename)` helpers |
+| `src/app/api/user/stream-token/route.ts` | POST — verify enrollment → return signed JWT |
+| `src/app/api/admin/stream-upload-url/route.ts` | POST — isAdmin → return CF direct upload URL + uid |
+
+### Package Required
+
+```bash
+npm install jose
+```
+
+### Cost Estimate
+
+| Plan | Monthly | Storage | Delivery | Fits 1UP? |
+|------|---------|---------|----------|-----------|
+| Starter | $5 | 1,000 min | 5,000 min | ❌ storage too small |
+| Creator | $50 | 10,000 min | 50,000 min | ✅ comfortable headroom |
+
+Assumptions: 20 courses × avg 2h = 2,400 min stored. 100 enrolled users × avg 30 min/month = 3,000 min delivered.
+**Recommendation: Creator plan at $50 USD/month.**
+
+### One-Time Cloudflare Setup
+
+```
+1. Create Cloudflare account → enable Stream product
+2. Create API token: Permissions → Stream:Edit + Stream:Read
+3. Note Account ID (top-right of dashboard)
+4. Run signing key creation:
+   curl -X POST "https://api.cloudflare.com/client/v4/accounts/${CF_STREAM_ACCOUNT_ID}/stream/keys" \
+     -H "Authorization: Bearer ${CF_STREAM_API_TOKEN}"
+   → Save id (KEY_ID) and pem (base64 private key)
+5. Note Customer Code from any test video embed URL
+6. Set allowedOrigins on videos → ["app.1upesports.org"]
+```
 
 ---
 

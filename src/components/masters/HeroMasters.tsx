@@ -1,18 +1,20 @@
 export function HeroMasters() {
   return (
-    <section className="px-6 py-16 md:py-24 bg-surface-container-lowest">
-      <div className="max-w-5xl mx-auto">
-        <div className="overflow-hidden">
-          <h1 className="font-headline font-black text-6xl md:text-9xl leading-none tracking-tighter text-on-surface skew-fix">
-            <span className="block skew-content">
-              LOS <span className="text-primary">MASTERS</span>
-            </span>
-          </h1>
+    <section className="relative min-h-[60vh] flex flex-col justify-end px-8 md:px-16 py-16 overflow-hidden border-b-[12px] border-primary-container">
+      <div className="absolute inset-0 z-0 bg-gradient-to-br from-surface-container-lowest via-background to-surface-container" />
+
+      <div className="relative z-10 max-w-3xl">
+        <div className="inline-block bg-primary-container px-4 py-1 mb-4 skew-fix">
+          <span className="text-white font-black italic skew-content block text-sm tracking-widest font-headline">
+            ACADEMIA 1UP
+          </span>
         </div>
-        <div className="h-1 w-20 bg-primary-container mt-4 mb-6" />
-        <p className="font-body text-on-surface/50 max-w-xl text-lg">
-          Los expertos detrás de la Academia 1UP — coaches, mentores y especialistas
-          que llevan el esports colombiano al siguiente nivel.
+        <h1 className="font-headline font-black text-5xl md:text-7xl leading-none tracking-tighter text-on-background">
+          LOS EXPERTOS DETRÁS DE{" "}
+          <span className="text-primary italic text-glow-pink">LA ACADEMIA.</span>
+        </h1>
+        <p className="font-body text-xl text-secondary mt-6 max-w-2xl border-l-4 border-primary-container pl-6">
+          Coaches, mentores y especialistas que llevan el esports colombiano al siguiente nivel.
         </p>
       </div>
     </section>

@@ -5,6 +5,14 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.8] — 2026-04-08
+
+### Changed
+- **Masters page — layout aligned with site standard** — `HeroMasters` rebuilt to match `HeroTeam` / `HeroAcademia` pattern: `min-h-[60vh]` gradient hero, `border-b-[12px]` bottom accent, label pill with skew, `px-8 md:px-16` padding, `max-w-3xl` content width. Removed Rule-2-violating `h-1` divider line.
+- **MasterGrid padding aligned** — section now uses `py-20 px-8 md:px-16 bg-surface-container-lowest`, matching `PlayerGrid` and `CourseCatalog`. Removed inner `max-w-5xl mx-auto` wrapper — consistent with all other grid sections.
+
+---
+
 ## [1.3.7] — 2026-04-08
 
 ### Added

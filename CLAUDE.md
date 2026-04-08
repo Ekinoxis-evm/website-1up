@@ -104,6 +104,7 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 | `.claude/skills/database.md` | `src/db/**`, `src/lib/supabase.ts`, `src/lib/blob.ts`, `src/app/api/**` |
 | `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/(protected)/layout.tsx`, `src/app/app/(protected)/layout.tsx` |
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
+| `.claude/skills/cloudflare-stream.md` | `src/lib/stream.ts`, `src/app/api/user/stream-token/**`, `src/app/api/admin/stream-upload-url/**`, academia content work |
 
 ---
 
