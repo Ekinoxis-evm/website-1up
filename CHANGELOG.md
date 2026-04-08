@@ -5,6 +5,19 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.5] — 2026-04-07
+
+### Added
+- **Social media icons on player/master cards** — `/public/socialmedia/` PNG icons (instagram, tiktok, kick, youtube, x, twitch, github, linkedin) replace material-symbols on `PlayerCard` hover overlay and `MasterCard` social row
+- **Editable footer social links** — `social_links` table stores per-platform URLs; Footer is now a Server Component reading active links from DB
+- **`/admin/social-links`** — admin page to set URL + active toggle per platform (instagram, tiktok, kick, youtube, x, twitch); seeded on deploy
+- **`src/lib/socialIcons.ts`** — shared platform → icon path + label mapping used across player cards, master cards, and footer
+
+### DB Migration
+- `create_social_links` — `social_links` table with 6 rows pre-seeded (instagram, tiktok, kick, youtube, x, twitch)
+
+---
+
 ## [1.3.4] — 2026-04-07
 
 ### Added
