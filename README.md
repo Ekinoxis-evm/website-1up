@@ -19,7 +19,6 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Styling | Tailwind CSS v3 — Neo-Brutalist design system |
 | Auth | Privy (`@privy-io/react-auth` + `@privy-io/server-auth`) |
 | Database | Supabase (`@supabase/supabase-js`) |
-| ORM | Drizzle ORM (`drizzle-orm` + `postgres`) — schema + seeding only |
 | File Storage | Supabase Storage (`images` bucket — public, 5MB limit) |
 | Payments | MercadoPago (`mercadopago` SDK v2) |
 | Runtime | Node.js 24 |
@@ -65,9 +64,6 @@ src/
     admin/            # Admin panel components
     layout/           # TopAppBar, Footer (reads social_links from DB), MobileBottomNav
     providers/        # PrivyClientProvider
-  db/
-    schema.ts         # Drizzle table definitions (source of truth for migrations)
-    migrations/       # SQL migration files
   lib/
     supabase.ts       # Public + admin Supabase clients
     blob.ts           # uploadImage() → Supabase Storage images bucket
@@ -102,8 +98,6 @@ Create `.env.local` at the project root:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=    # Also used for Supabase Storage uploads
-
-DATABASE_URL=                 # Transaction pooler connection string
 
 # Privy
 NEXT_PUBLIC_PRIVY_APP_ID=
@@ -150,13 +144,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 6. `create_social_links` — `social_links` table (footer social icons, 6 platforms seeded)
 7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
 
-### 4. Seed the database (fresh install only)
-
-```bash
-npm run db:seed
-```
-
-### 5. Start the dev server
+### 4. Start the dev server
 
 ```bash
 npm run dev
@@ -173,8 +161,6 @@ npm run dev
 | `npm run build` | Production build (run before shipping) |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint check |
-| `npm run db:seed` | Seed initial database data |
-| `npx drizzle-kit generate` | Generate a new SQL migration from schema changes |
 
 ---
 

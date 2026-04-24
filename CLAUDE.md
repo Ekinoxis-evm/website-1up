@@ -114,8 +114,6 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 npm run dev        # Turbopack dev server → http://localhost:3000
 npm run build      # Production build (run to verify types before shipping)
 npm run lint       # ESLint
-npm run db:seed    # Seed initial data (run once after first migration)
-npx drizzle-kit generate --name=<migration_name>   # Generate SQL migration
 ```
 
 ---
@@ -127,7 +125,6 @@ npx drizzle-kit generate --name=<migration_name>   # Generate SQL migration
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API (also used for Supabase Storage uploads) |
-| `DATABASE_URL` | Supabase → Settings → Database → Connection string (Transaction pooler) |
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy dashboard |
 | `PRIVY_APP_SECRET` | Privy dashboard |
 | `ADMIN_EMAILS` | Manual — comma-separated root admin emails |

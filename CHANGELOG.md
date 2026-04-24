@@ -5,6 +5,16 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.3.9] — 2026-04-23
+
+### Fixed
+- **Admin dashboard counts** — dashboard was using the anon Supabase client to count `discount_rules` and `enrollments`; both tables have RLS with no anon SELECT policy so the counts always showed 0. Now uses `supabaseAdmin` (service role).
+
+### Removed
+- **Drizzle ORM** — `drizzle-orm`, `postgres`, and `drizzle-kit` packages removed; `src/db/` folder and `drizzle.config.ts` deleted. Nothing in the app imported from `src/db/` — all pages and API routes use the Supabase JS client directly. `DATABASE_URL` env var is no longer needed.
+
+---
+
 ## [1.3.8] — 2026-04-08
 
 ### Changed
