@@ -8,10 +8,11 @@ export async function uploadImage(
   entityId?: number | string,
 ): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  // When the entity ID is known (editing), use a stable path that upserts.
-  // When creating (no ID yet), park under pending/ with a timestamp.
+  // Entity uploads use no extension — same path regardless of file type,
+  // so upsert always replaces the old file with zero orphans.
+  // Creates park under pending/ with a timestamp until the DB record exists.
   const path = entityId
-    ? `${folder}/${entityId}/image.${ext}`
+    ? `${folder}/${entityId}/cover`
     : `${folder}/pending/${Date.now()}.${ext}`;
 
   const { error } = await supabaseAdmin.storage
