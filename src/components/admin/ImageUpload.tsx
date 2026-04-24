@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 
 interface Props {
   currentUrl: string | null;
-  folder: "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados";
+  folder: "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site";
   entityId?: number | string;
   onUploaded: (url: string) => void;
   onUploadingChange?: (uploading: boolean) => void;

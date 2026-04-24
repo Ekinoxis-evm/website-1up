@@ -3,7 +3,9 @@ const STATS = [
   { value: "100", label: "Monitores",   sublabel: "High-Refresh Displays" },
 ];
 
-export function EquipmentHighlight() {
+interface Props { imageUrl?: string | null }
+
+export function EquipmentHighlight({ imageUrl }: Props) {
   return (
     <section className="py-20 px-8 md:px-16 bg-surface-container-lowest">
       <div className="flex flex-col md:flex-row gap-8 items-center">
@@ -23,10 +25,20 @@ export function EquipmentHighlight() {
             ))}
           </div>
         </div>
+
         <div className="flex-1 max-w-md">
-          <div className="w-full aspect-square bg-surface-container flex items-center justify-center border-4 border-secondary-container/30">
-            <span className="material-symbols-outlined text-[8rem] text-secondary-container/40">videogame_asset</span>
-          </div>
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt="Elite Hardware"
+              className="w-full aspect-square object-cover border-4 border-secondary-container/30"
+            />
+          ) : (
+            <div className="w-full aspect-square bg-surface-container flex items-center justify-center border-4 border-secondary-container/30">
+              <span className="material-symbols-outlined text-[8rem] text-secondary-container/40">videogame_asset</span>
+            </div>
+          )}
         </div>
       </div>
     </section>

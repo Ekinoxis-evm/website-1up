@@ -671,6 +671,24 @@ export type Database = {
           },
         ]
       }
+      site_content: {
+        Row: {
+          key: string
+          image_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          key: string
+          image_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          key?: string
+          image_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -825,3 +843,4 @@ export type Master          = Database["public"]["Tables"]["masters"]["Row"];
 export type Aliado          = Database["public"]["Tables"]["aliados"]["Row"];
 export type AcademiaContent = Database["public"]["Tables"]["academia_content"]["Row"];
 export type SocialLink      = Database["public"]["Tables"]["social_links"]["Row"];
+export type SiteContent     = Database["public"]["Tables"]["site_content"]["Row"];

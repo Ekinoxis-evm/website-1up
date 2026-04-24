@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
-export type ImageFolder = "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados";
+export type ImageFolder = "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site";
 
 export async function uploadImage(
   file: File,

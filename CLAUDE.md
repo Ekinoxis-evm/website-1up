@@ -1,7 +1,7 @@
 # CLAUDE.md — 1UP Gaming Tower Website
 
 Production website for **1UP Gaming Tower** (`1upesports.org`), Colombia's first professional esports hub.
-Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScript, Tailwind CSS v3, Privy auth, Supabase JS + Drizzle ORM, Supabase Storage, MercadoPago. Node 24 LTS.
+Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScript, Tailwind CSS v3, Privy auth, Supabase JS, Supabase Storage, MercadoPago. Node 24 LTS.
 
 ---
 
@@ -80,17 +80,43 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `social_links` | platform, url, is_active, sort_order — footer social icons |
 | `admin_users` | email, added_by |
 
-**Schema source of truth:** `src/db/schema.ts` — always update this + `src/types/database.types.ts` together.
+**Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 
 > **Admin Server Components must use `supabaseAdmin`** (service role key), never `supabase` (anon). RLS policies on tables like `masters` silently filter inactive records from the anon client — admin panels need to see everything. Import: `import { supabaseAdmin } from "@/lib/supabase"`.
+
+---
+
+## Database Migrations
+
+**Always run migrations via the Supabase MCP tool — never ask the user to run SQL manually.**
+
+```
+1. mcp__plugin_supabase_supabase__list_projects  → confirm project ID (1uptower = kwqfpkvalspuvyiszrfh)
+2. mcp__plugin_supabase_supabase__apply_migration → for DDL (CREATE TABLE, ALTER TABLE, etc.)
+3. mcp__plugin_supabase_supabase__execute_sql     → for DML checks (SELECT) or seed data
+```
+
+After applying, confirm `success: true` before moving on.
 
 ---
 
 ## Image Storage
 
 All images use **Supabase Storage** — `images` bucket (public, 5MB limit).
-Folders: `players/`, `courses/`, `games/`, `floors/`, `masters/`, `aliados/`.
 Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`.
+
+**Path structure** — entity uploads use `{folder}/{entityId}/cover` (no extension — Supabase stores MIME in metadata). New entities without an ID yet use `{folder}/pending/{timestamp}.{ext}`. Upsert always overwrites the same key so re-uploads never leave orphaned files.
+
+| Folder | Used by |
+|--------|---------|
+| `players/{id}/cover` | Player photos |
+| `courses/{id}/cover` | Course cover images |
+| `games/{id}/cover` | Game cover images |
+| `categories/{id}/cover` | Game category images |
+| `floors/{id}/cover` | Floor images (Gaming Tower) |
+| `masters/{id}/cover` | Master photos |
+| `aliados/{id}/cover` | Partner logos |
+
 Social media brand icons live in `/public/socialmedia/` as static PNGs — not uploaded, shipped with the app.
 
 ---
@@ -101,7 +127,7 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 |-----------|----------------------|
 | `.claude/skills/design-system.md` | `src/components/**` |
 | `.claude/skills/admin-crud.md` | `src/app/admin/**`, `src/components/admin/**` |
-| `.claude/skills/database.md` | `src/db/**`, `src/lib/supabase.ts`, `src/lib/blob.ts`, `src/app/api/**` |
+| `.claude/skills/database.md` | `src/lib/supabase.ts`, `src/lib/blob.ts`, `src/app/api/**` |
 | `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/(protected)/layout.tsx`, `src/app/app/(protected)/layout.tsx` |
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
 | `.claude/skills/cloudflare-stream.md` | `src/lib/stream.ts`, `src/app/api/user/stream-token/**`, `src/app/api/admin/stream-upload-url/**`, academia content work |

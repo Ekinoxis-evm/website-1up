@@ -4,7 +4,9 @@ const STEPS = [
   { num: "03", label: "MAESTRÍA",     desc: "Circuito competitivo, torneos y representación internacional.", color: "bg-tertiary"            },
 ];
 
-export function LearningPath() {
+interface Props { imageUrl?: string | null }
+
+export function LearningPath({ imageUrl }: Props) {
   return (
     <section className="py-20 px-8 md:px-16 bg-surface-container-low">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -35,12 +37,23 @@ export function LearningPath() {
           </div>
         </div>
 
-        {/* Right: image placeholder */}
-        <div className="aspect-square bg-surface-container flex items-center justify-center border-4 border-outline-variant/20 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-5"
-            style={{ backgroundImage: "linear-gradient(#abd600 1px, transparent 1px), linear-gradient(90deg, #abd600 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-          <span className="material-symbols-outlined text-[8rem] text-tertiary/30 relative z-10">emoji_events</span>
-        </div>
+        {/* Right: image */}
+        {imageUrl ? (
+          <div className="aspect-square overflow-hidden relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt="Estructura de aprendizaje"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="aspect-square bg-surface-container flex items-center justify-center border-4 border-outline-variant/20 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-5"
+              style={{ backgroundImage: "linear-gradient(#abd600 1px, transparent 1px), linear-gradient(90deg, #abd600 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+            <span className="material-symbols-outlined text-[8rem] text-tertiary/30 relative z-10">emoji_events</span>
+          </div>
+        )}
       </div>
     </section>
   );

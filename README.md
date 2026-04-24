@@ -197,7 +197,7 @@ npm run dev
 |-------|-------------|
 | `/admin` | Dashboard — stat cards + quick links |
 | `/admin/games` | Games + categories CRUD (image upload per game + per category) |
-| `/admin/floors` | Gaming Tower floor info CRUD |
+| `/admin/floors` | Gaming Tower floor info CRUD (image upload per floor) |
 | `/admin/players` | Team roster CRUD (photo upload, social links) |
 | `/admin/competitions` | Hall of Fame CRUD |
 | `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
@@ -253,14 +253,17 @@ npm run dev
 
 All uploaded images go to the **Supabase Storage `images` bucket** (public, 5MB, jpg/png/webp/gif/avif).
 
-| Folder | Used by |
-|--------|---------|
-| `images/players/` | Player photos |
-| `images/courses/` | Course cover images |
-| `images/games/` | Game + category images |
-| `images/floors/` | Floor info images |
-| `images/masters/` | Master photos |
-| `images/aliados/` | Partner logos |
+Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in metadata). Re-uploading always overwrites the same key via `upsert: true`, so no orphaned files accumulate. New entities without an ID yet land at `{folder}/pending/{timestamp}.{ext}`.
+
+| Path | Used by |
+|------|---------|
+| `images/players/{id}/cover` | Player photos |
+| `images/courses/{id}/cover` | Course cover images |
+| `images/games/{id}/cover` | Game cover images |
+| `images/categories/{id}/cover` | Game category images |
+| `images/floors/{id}/cover` | Floor images (Gaming Tower) |
+| `images/masters/{id}/cover` | Master photos |
+| `images/aliados/{id}/cover` | Partner logos |
 
 Static brand icons (instagram, tiktok, etc.) live in `/public/socialmedia/` — not uploaded, shipped with the app.
 

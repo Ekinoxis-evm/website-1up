@@ -3,7 +3,7 @@ import { uploadImage, type ImageFolder } from "@/lib/blob";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 
-const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados"] as const;
+const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados", "site"] as const;
 type Folder = typeof ALLOWED_FOLDERS[number];
 
 async function checkAdmin(req: NextRequest) {
@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file");
   const folder = formData.get("folder") as string;
   const entityIdRaw = formData.get("entityId") as string | null;
-  const entityId = entityIdRaw ? Number(entityIdRaw) : undefined;
+  // Keep as string — numeric IDs stringify fine; named IDs (e.g. "equipment-highlight") must not be cast to Number.
+  const entityId = entityIdRaw || undefined;
 
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "archivo requerido" }, { status: 400 });

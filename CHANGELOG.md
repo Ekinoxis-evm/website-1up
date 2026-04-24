@@ -5,6 +5,27 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.4.0] — 2026-04-23
+
+### Added
+- **Floor images in Gaming Tower** — `FloorBreakdown` now displays a per-floor image when one is set: desktop shows it as a `w-80` panel on the right with a gradient blend edge; mobile shows it full-width above the content. Hover removes grayscale with a 700ms transition.
+- **ImageUpload in Admin Floors modal** — `AdminFloorsClient` now includes `ImageUpload` (folder `floors`, entity ID passed for upsert path); the floor list also shows a thumbnail preview for floors with images. Save button is disabled while upload is in progress ("SUBIENDO...").
+- **Real Google Maps embed** — `LocationMap` component replaced placeholder with a real Google Maps iframe centered on Cra. 34 # 5A-19, Barrio 3 de Julio, Cali (beside Estadio Pascual Guerrero). Includes address block, schedule, landmark reference, and GET DIRECTIONS link.
+
+---
+
+## [1.3.10] — 2026-04-23
+
+### Fixed
+- **Image upload race condition (all admin clients)** — `ImageUpload` component now exposes an `onUploadingChange` prop; all 5 CRUD clients (`AdminGamesClient`, `AdminPlayersClient`, `AdminCoursesClient`, `AdminMastersClient`, `AdminFloorsClient`) pass `imgUploading` state that disables the GUARDAR button with "SUBIENDO..." label while the upload is in progress. Prevents saving records with `null` image URLs.
+- **Entity ID passed to upload route** — `ImageUpload` now appends `entityId` to the FormData it sends; `AdminGamesClient` passes `entityId={editing?.id}` for game images and `entityId={cat.id}` for category images. Ensures uploads land at the correct entity-ID path from the first save.
+
+### Changed
+- **Storage path structure — entity-ID folders** — `src/lib/blob.ts` rewritten: entity uploads now use `{folder}/{entityId}/cover` (extension-free); pending (new entity, no ID yet) uses `{folder}/pending/{timestamp}.{ext}`. Extension-free paths mean upsert always replaces the same key regardless of file format changes — no orphaned files.
+- **`categories/` added as valid image folder** — `ImageFolder` type and `ALLOWED_FOLDERS` in the upload route now include `"categories"`. `AdminGamesClient` uses `folder="categories"` + `entityId={cat.id}` for category images (was incorrectly using `"games"`).
+
+---
+
 ## [1.3.9] — 2026-04-23
 
 ### Fixed
