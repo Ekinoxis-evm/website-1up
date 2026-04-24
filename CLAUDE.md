@@ -78,6 +78,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `enrollments` | user_profile_id, course_id, final_price_cop, payment_status, mp_payment_id |
 | `academia_content` | course_id FK, content_type, title, url, is_published |
 | `social_links` | platform, url, is_active, sort_order — footer social icons |
+| `site_content` | key (PK), image_url — site-level images (equipment_highlight, learning_path) |
 | `admin_users` | email, added_by |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
@@ -116,6 +117,7 @@ Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`
 | `floors/{id}/cover` | Floor images (Gaming Tower) |
 | `masters/{id}/cover` | Master photos |
 | `aliados/{id}/cover` | Partner logos |
+| `site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 
 Social media brand icons live in `/public/socialmedia/` as static PNGs — not uploaded, shipped with the app.
 

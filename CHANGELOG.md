@@ -5,6 +5,20 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.5.0] — 2026-04-23
+
+### Added
+- **Admin-editable site images** — new `site_content` DB table (key/image_url) with two seeded rows: `equipment_highlight` and `learning_path`. New `/admin/site-images` page (sidebar: "Imágenes Sitio") lets the admin upload images for both sections; saves automatically on upload — no extra button needed.
+- **Equipment Highlight image live** — `EquipmentHighlight` component on `/gaming-tower` now shows the uploaded image when set; falls back to the `videogame_asset` icon placeholder when empty.
+- **Learning Path image live** — `LearningPath` component on `/academia` now shows the uploaded image when set; falls back to the grid + trophy placeholder when empty.
+- **`site/` storage folder** — `ImageFolder` type and upload route now include `"site"` as a valid folder. Entity keys are kept as strings (e.g. `site/equipment-highlight/cover`) — not cast to Number.
+
+### DB Migration (applied via Supabase MCP)
+- Table created: `site_content` — `key text PRIMARY KEY`, `image_url text`, `updated_at timestamptz`
+- Seeded: `equipment_highlight`, `learning_path`
+
+---
+
 ## [1.4.0] — 2026-04-23
 
 ### Added

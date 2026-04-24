@@ -143,6 +143,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 5. `create_images_storage_bucket` — Supabase Storage `images` bucket + policies
 6. `create_social_links` — `social_links` table (footer social icons, 6 platforms seeded)
 7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
+8. `create_site_content` — `site_content` table seeded with `equipment_highlight` and `learning_path` rows
 
 ### 4. Start the dev server
 
@@ -208,6 +209,7 @@ npm run dev
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/user-profiles` | All registered users (read-only, Comfenalco status) |
+| `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
 | `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
 | `/admin/submissions` | Recruitment form submissions (read-only) |
@@ -245,6 +247,7 @@ npm run dev
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |
 | `academia_content` | Videos/docs/quizzes per course (published after enrollment) |
 | `social_links` | Footer social icons — platform, url, is_active, sort_order |
+| `site_content` | Site-level images — key (PK), image_url (equipment_highlight, learning_path) |
 | `admin_users` | DB-stored admins (env var admins always override) |
 
 ---
@@ -264,6 +267,7 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/floors/{id}/cover` | Floor images (Gaming Tower) |
 | `images/masters/{id}/cover` | Master photos |
 | `images/aliados/{id}/cover` | Partner logos |
+| `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 
 Static brand icons (instagram, tiktok, etc.) live in `/public/socialmedia/` — not uploaded, shipped with the app.
 
