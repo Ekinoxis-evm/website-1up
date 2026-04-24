@@ -4,9 +4,12 @@ const STEPS = [
   { num: "03", label: "MAESTRÍA",     desc: "Circuito competitivo, torneos y representación internacional.", color: "bg-tertiary"            },
 ];
 
-interface Props { imageUrl?: string | null }
+interface Props { imageUrl?: string | null; updatedAt?: string | null }
 
-export function LearningPath({ imageUrl }: Props) {
+export function LearningPath({ imageUrl, updatedAt }: Props) {
+  const src = imageUrl
+    ? `${imageUrl}?t=${updatedAt ? new Date(updatedAt).getTime() : 0}`
+    : null;
   return (
     <section className="py-20 px-8 md:px-16 bg-surface-container-low">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -38,11 +41,11 @@ export function LearningPath({ imageUrl }: Props) {
         </div>
 
         {/* Right: image */}
-        {imageUrl ? (
+        {src ? (
           <div className="aspect-square overflow-hidden relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={imageUrl}
+              src={src}
               alt="Estructura de aprendizaje"
               className="w-full h-full object-cover"
             />

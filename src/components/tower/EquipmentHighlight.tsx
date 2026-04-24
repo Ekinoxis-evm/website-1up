@@ -3,9 +3,12 @@ const STATS = [
   { value: "100", label: "Monitores",   sublabel: "High-Refresh Displays" },
 ];
 
-interface Props { imageUrl?: string | null }
+interface Props { imageUrl?: string | null; updatedAt?: string | null }
 
-export function EquipmentHighlight({ imageUrl }: Props) {
+export function EquipmentHighlight({ imageUrl, updatedAt }: Props) {
+  const src = imageUrl
+    ? `${imageUrl}?t=${updatedAt ? new Date(updatedAt).getTime() : 0}`
+    : null;
   return (
     <section className="py-20 px-8 md:px-16 bg-surface-container-lowest">
       <div className="flex flex-col md:flex-row gap-8 items-center">
@@ -27,10 +30,10 @@ export function EquipmentHighlight({ imageUrl }: Props) {
         </div>
 
         <div className="flex-1 max-w-md">
-          {imageUrl ? (
+          {src ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={imageUrl}
+              src={src}
               alt="Elite Hardware"
               className="w-full aspect-square object-cover border-4 border-secondary-container/30"
             />
