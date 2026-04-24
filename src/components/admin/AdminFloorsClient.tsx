@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { FloorInfo } from "@/types/database.types";
+import { ImageUpload } from "./ImageUpload";
 
 interface Props { floors: FloorInfo[] }
-const EMPTY = { floorLabel: "", title: "", description: "", accentColor: "primary-container", sortOrder: "0" };
+const EMPTY = { floorLabel: "", title: "", description: "", accentColor: "primary-container", imageUrl: "", sortOrder: "0" };
 const ACCENT_OPTIONS = ["primary-container","secondary-container","primary","tertiary","white"];
 
 export function AdminFloorsClient({ floors }: Props) {
@@ -16,11 +17,25 @@ export function AdminFloorsClient({ floors }: Props) {
   const [editing, setEditing] = useState<FloorInfo | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  }
+
+  function openEdit(f: FloorInfo) {
+    setEditing(f);
+    setForm({
+      floorLabel:  f.floor_label,
+      title:       f.title,
+      description: f.description,
+      accentColor: f.accent_color ?? "primary-container",
+      imageUrl:    f.image_url ?? "",
+      sortOrder:   String(f.sort_order ?? 0),
+    });
+    setOpen(true);
   }
 
   async function handleSave() {
@@ -52,17 +67,26 @@ export function AdminFloorsClient({ floors }: Props) {
 
       <div className="space-y-3">
         {floors.map((f) => (
-          <div key={f.id} className="bg-surface-container flex items-start gap-0 group">
-            <div className="bg-secondary-container min-w-[72px] flex items-center justify-center py-6 font-headline font-black text-2xl text-white skew-fix">
+          <div key={f.id} className="bg-surface-container flex items-stretch gap-0 group overflow-hidden">
+            <div className="bg-secondary-container min-w-[72px] flex items-center justify-center py-6 font-headline font-black text-2xl text-white skew-fix flex-shrink-0">
               <span className="block skew-content">{f.floor_label}</span>
             </div>
+
+            {/* Thumbnail */}
+            {f.image_url && (
+              <div className="w-20 flex-shrink-0 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.image_url} alt={f.title} className="w-full h-full object-cover grayscale" />
+              </div>
+            )}
+
             <div className="flex-1 p-5 flex items-start justify-between gap-4">
               <div>
                 <div className="font-headline font-bold text-on-background">{f.title}</div>
                 <div className="font-body text-sm text-on-surface-variant mt-1">{f.description}</div>
               </div>
               <div className="flex gap-3 shrink-0">
-                <button onClick={() => { setEditing(f); setForm({ floorLabel: f.floor_label, title: f.title, description: f.description, accentColor: f.accent_color ?? "primary-container", sortOrder: String(f.sort_order ?? 0) }); setOpen(true); }} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
+                <button onClick={() => openEdit(f)} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
                 <button onClick={() => handleDelete(f.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>
               </div>
             </div>
@@ -71,9 +95,23 @@ export function AdminFloorsClient({ floors }: Props) {
       </div>
 
       {open && (
-        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container border-4 border-secondary-container p-8 w-full max-w-md">
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-surface-container border-4 border-secondary-container p-8 w-full max-w-md my-8">
             <h2 className="font-headline font-black text-xl mb-6 uppercase">{editing ? "EDITAR PISO" : "NUEVO PISO"}</h2>
+
+            <div className="mb-4">
+              <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Imagen del Piso</p>
+              <ImageUpload
+                currentUrl={form.imageUrl || null}
+                folder="floors"
+                entityId={editing?.id}
+                aspectRatio="video"
+                onUploaded={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                onUploadingChange={setImgUploading}
+                getAccessToken={getAccessToken}
+              />
+            </div>
+
             <div className="space-y-3">
               <input value={form.floorLabel} onChange={(e) => setForm({...form,floorLabel:e.target.value})} placeholder='Piso (ej. "01", "02-03")' className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               <input value={form.title} onChange={(e) => setForm({...form,title:e.target.value})} placeholder="Título" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
@@ -83,9 +121,12 @@ export function AdminFloorsClient({ floors }: Props) {
               </select>
               <input value={form.sortOrder} onChange={(e) => setForm({...form,sortOrder:e.target.value})} type="number" placeholder="Orden" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
             </div>
-            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
+
+            {saveError && <p className="text-error font-headline font-bold text-xs uppercase mt-4 mb-0">{saveError}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={handleSave} disabled={loading} className="flex-1 bg-secondary-container text-white font-headline font-black py-3 disabled:opacity-60">{loading?"GUARDANDO...":"GUARDAR"}</button>
+              <button onClick={handleSave} disabled={loading || imgUploading} className="flex-1 bg-secondary-container text-white font-headline font-black py-3 disabled:opacity-60">
+                {imgUploading ? "SUBIENDO..." : loading ? "GUARDANDO..." : "GUARDAR"}
+              </button>
               <button onClick={() => setOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">CANCELAR</button>
             </div>
           </div>
