@@ -29,6 +29,7 @@ export function AdminPlayersClient({ players }: Props) {
   const [editing, setEditing] = useState<Player | null>(null);
   const [form, setForm]     = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   async function authHeaders() {
@@ -114,6 +115,7 @@ export function AdminPlayersClient({ players }: Props) {
                 folder="players"
                 aspectRatio="square"
                 onUploaded={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
+                onUploadingChange={setImgUploading}
                 getAccessToken={getAccessToken}
               />
             </div>
@@ -129,7 +131,7 @@ export function AdminPlayersClient({ players }: Props) {
             </label>
             {saveError && <p className="text-error font-headline font-bold text-xs uppercase mb-3">{saveError}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={handleSave} disabled={loading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-60">{loading ? "GUARDANDO..." : "GUARDAR"}</button>
+              <button onClick={handleSave} disabled={loading || imgUploading} className="flex-1 bg-primary-container text-white font-headline font-black py-3 disabled:opacity-60">{imgUploading ? "SUBIENDO..." : loading ? "GUARDANDO..." : "GUARDAR"}</button>
               <button onClick={() => setOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">CANCELAR</button>
             </div>
           </div>

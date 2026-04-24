@@ -6,15 +6,21 @@ interface Props {
   currentUrl: string | null;
   folder: "players" | "courses" | "games" | "floors" | "masters" | "aliados";
   onUploaded: (url: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   getAccessToken: () => Promise<string | null>;
   aspectRatio?: "square" | "video";
 }
 
-export function ImageUpload({ currentUrl, folder, onUploaded, getAccessToken, aspectRatio = "video" }: Props) {
+export function ImageUpload({ currentUrl, folder, onUploaded, onUploadingChange, getAccessToken, aspectRatio = "video" }: Props) {
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function setUploadingState(value: boolean) {
+    setUploading(value);
+    onUploadingChange?.(value);
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -23,7 +29,7 @@ export function ImageUpload({ currentUrl, folder, onUploaded, getAccessToken, as
     // Local preview immediately
     setPreview(URL.createObjectURL(file));
     setError(null);
-    setUploading(true);
+    setUploadingState(true);
 
     try {
       const token = await getAccessToken();
@@ -42,7 +48,7 @@ export function ImageUpload({ currentUrl, folder, onUploaded, getAccessToken, as
     } catch {
       setError("Error de red al subir imagen");
     } finally {
-      setUploading(false);
+      setUploadingState(false);
     }
   }
 
