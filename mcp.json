@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref", "<SUPABASE_PROJECT_REF_FROM_URL>"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "<supabase.com → account → access tokens>"
+      },
+      "note": "Used for: apply_migration, execute_sql, generate_typescript_types, list_tables"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "note": "Used for: library docs lookup (Next.js, Privy, viem, Supabase, Tailwind)"
+    },
+    "privy-docs": {
+      "command": "npx",
+      "args": ["-y", "privy-mcp-server@latest"],
+      "note": "Used for: Privy auth docs — embedded wallets, OAuth, token verification",
+      "status": "configured-via-plugin"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "note": "Used for: UI testing, screenshot verification of public pages",
+      "status": "optional — enable when doing visual regression testing"
+    }
+  }
+}
