@@ -218,6 +218,7 @@ export function AdminMastersClient({ masters, courses }: Props) {
               <ImageUpload
                 currentUrl={form.photoUrl || null}
                 folder="masters"
+                entityId={editing?.id}
                 aspectRatio="square"
                 onUploaded={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
                 onUploadingChange={setImgUploading}

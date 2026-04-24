@@ -4,14 +4,15 @@ import { useRef, useState } from "react";
 
 interface Props {
   currentUrl: string | null;
-  folder: "players" | "courses" | "games" | "floors" | "masters" | "aliados";
+  folder: "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados";
+  entityId?: number | string;
   onUploaded: (url: string) => void;
   onUploadingChange?: (uploading: boolean) => void;
   getAccessToken: () => Promise<string | null>;
   aspectRatio?: "square" | "video";
 }
 
-export function ImageUpload({ currentUrl, folder, onUploaded, onUploadingChange, getAccessToken, aspectRatio = "video" }: Props) {
+export function ImageUpload({ currentUrl, folder, entityId, onUploaded, onUploadingChange, getAccessToken, aspectRatio = "video" }: Props) {
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export function ImageUpload({ currentUrl, folder, onUploaded, onUploadingChange,
       const fd = new FormData();
       fd.append("file", file);
       fd.append("folder", folder);
+      if (entityId !== undefined) fd.append("entityId", String(entityId));
 
       const res = await fetch("/api/admin/upload", {
         method: "POST",

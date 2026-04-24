@@ -92,7 +92,8 @@ export function AdminGamesClient({ games, categories }: Props) {
               </p>
               <ImageUpload
                 currentUrl={cat.image_url}
-                folder="games"
+                folder="categories"
+                entityId={cat.id}
                 aspectRatio="video"
                 onUploaded={(url) => handleCategoryImage(cat.id, url)}
                 getAccessToken={getAccessToken}
@@ -145,6 +146,7 @@ export function AdminGamesClient({ games, categories }: Props) {
               <ImageUpload
                 currentUrl={form.imageUrl || null}
                 folder="games"
+                entityId={editing?.id}
                 aspectRatio="video"
                 onUploaded={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
                 onUploadingChange={setImgUploading}

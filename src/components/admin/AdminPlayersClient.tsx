@@ -113,6 +113,7 @@ export function AdminPlayersClient({ players }: Props) {
               <ImageUpload
                 currentUrl={form.photoUrl || null}
                 folder="players"
+                entityId={editing?.id}
                 aspectRatio="square"
                 onUploaded={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
                 onUploadingChange={setImgUploading}

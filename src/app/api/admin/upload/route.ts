@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadImage } from "@/lib/blob";
+import { uploadImage, type ImageFolder } from "@/lib/blob";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 
-const ALLOWED_FOLDERS = ["players", "courses", "games", "floors", "masters", "aliados"] as const;
+const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados"] as const;
 type Folder = typeof ALLOWED_FOLDERS[number];
 
 async function checkAdmin(req: NextRequest) {
@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file");
   const folder = formData.get("folder") as string;
+  const entityIdRaw = formData.get("entityId") as string | null;
+  const entityId = entityIdRaw ? Number(entityIdRaw) : undefined;
 
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "archivo requerido" }, { status: 400 });
@@ -32,6 +34,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Imagen demasiado grande (máx 5MB)" }, { status: 400 });
   }
 
-  const url = await uploadImage(file, folder as Folder);
+  const url = await uploadImage(file, folder as ImageFolder, entityId);
   return NextResponse.json({ url }, { status: 201 });
 }
