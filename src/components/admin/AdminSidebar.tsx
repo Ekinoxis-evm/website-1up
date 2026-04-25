@@ -30,8 +30,9 @@ const GROUPS = [
   {
     label: "Sistema",
     items: [
-      { href: "/admin/user-profiles", icon: "people",                label: "Usuarios"    },
-      { href: "/admin/social-links",  icon: "share",                 label: "Redes"       },
+      { href: "/admin/privy-users",    icon: "manage_accounts",       label: "Usuarios"    },
+      { href: "/admin/user-profiles",  icon: "people",                label: "Perfiles App" },
+      { href: "/admin/social-links",   icon: "share",                 label: "Redes"       },
       { href: "/admin/aliados",        icon: "handshake",             label: "Aliados"     },
       { href: "/admin/submissions",    icon: "inbox",                 label: "Solicitudes" },
       { href: "/admin/users",          icon: "admin_panel_settings",  label: "Admins"      },

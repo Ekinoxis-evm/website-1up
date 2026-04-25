@@ -37,7 +37,8 @@ src/
       (protected)/    #   Auth-gated group — requires privy-token cookie
         layout.tsx    #     Auth guard + AppSidebar
         page.tsx      #     Wallet ($1UP balance, send/receive + QR)
-        identidad/    #     Document + Comfenalco + aliado verification
+        identidad/    #     Personal data form (nombre, apellidos, username, phone, games, document)
+        beneficios/   #     Aliado verification — unlock discounts by checking affiliation
         pass/         #     1UP Pass status + purchase
         academia/     #     My courses + content access
         settings/     #     Linked accounts management
@@ -144,6 +145,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 6. `create_social_links` — `social_links` table (footer social icons, 6 platforms seeded)
 7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
 8. `create_site_content` — `site_content` table seeded with `equipment_highlight` and `learning_path` rows
+9. `extend_user_profiles_v1_6` — adds `nombre`, `apellidos`, `username`, `phone_country`, `phone_number`, `game_ids` to `user_profiles`; unique partial index on `username WHERE username IS NOT NULL`
 
 ### 4. Start the dev server
 
@@ -185,7 +187,8 @@ npm run dev
 | Route | Description |
 |-------|-------------|
 | `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code) |
-| `/app/identidad` | Document + Comfenalco + aliado verification |
+| `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
+| `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/pass` | 1UP Pass status + purchase |
 | `/app/academia` | My enrolled courses + content access |
 | `/app/settings` | Linked accounts management |
@@ -208,7 +211,8 @@ npm run dev
 | `/admin/pass-benefits` | 1UP Pass benefits CRUD |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
 | `/admin/enrollments` | Read-only payment log with revenue total |
-| `/admin/user-profiles` | All registered users (read-only, Comfenalco status) |
+| `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
+| `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
 | `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
@@ -241,7 +245,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — document, Comfenalco status, verified_aliados[] |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, game_ids[], document, Comfenalco status, verified_aliados[] |
 | `aliados` | Partner organizations — name, NIT, email, API URL/key |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |

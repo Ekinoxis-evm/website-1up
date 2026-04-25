@@ -5,6 +5,26 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.6.0] — 2026-04-24
+
+### Added
+- **Privy Users admin panel** (`/admin/privy-users`) — real-time user database merging Privy accounts, Supabase profiles, course/pass enrollments, and live $1UP token balances from Blockscout Base mainnet. Cards show nombre, apellidos, @username, wallet address, $1UP balance, cédula, Comfenalco status, enrolled courses count, games interests, 1UP Pass badge, linked account icons, and Privy join date. Client-side search covers email, wallet, cédula, DID, name, and username. Stats bar shows total users, with profile, with wallet, and 1UP Pass active count.
+- **Extended user profiles** — 6 new columns on `user_profiles`: `nombre varchar(100)`, `apellidos varchar(100)`, `username varchar(50)` (unique partial index `WHERE username IS NOT NULL`), `phone_country varchar(10)`, `phone_number varchar(20)`, `game_ids integer[] DEFAULT '{}'`.
+- **Identidad page redesigned** (`/app/identidad`) — pure "my data" form with 4 independent save sections: Datos personales (nombre, apellidos, @username with regex validation), Teléfono (country selector + number), Juegos favoritos (pill toggle grid from DB), Documento de identidad. Each section saves independently without affecting others.
+- **Beneficios page** (`/app/beneficios`) — new page for aliado verification. Lists all active aliados with their discount labels; routes Comfenalco to legacy endpoint (`/api/user/comfenalco/verify`), all others to generic endpoint (`/api/user/aliado/verify`). Shows "PRÓXIMO" badge for aliados without a configured API URL (503 state). Shows verified date for confirmed affiliations.
+- **AppSidebar active state** — sidebar now highlights the active route using `usePathname` (was a static server component before). Beneficios added between Identidad and 1UP Pass.
+
+### Changed
+- **Admin sidebar** — "Usuarios" now links to `/admin/privy-users` (primary Privy user database); old user-profiles link renamed to "Perfiles App" (`/admin/user-profiles`).
+- **`/api/user/profile` PUT** — now accepts all new fields via patch semantics: `nombre`, `apellidos`, `username` (validated `^[a-z0-9_]{3,20}$`, returns 409 on duplicate), `phoneCountry` (from allowlist), `phoneNumber`, `gameIds integer[]`. Only supplied fields are updated.
+- **Document section** — Documento de identidad in IdentidadTab now shows a hint linking to `/app/beneficios` when a document number is set, clarifying it's used for benefit verification.
+
+### DB Migration (applied via Supabase MCP)
+- `user_profiles`: added `nombre varchar(100)`, `apellidos varchar(100)`, `username varchar(50)`, `phone_country varchar(10)`, `phone_number varchar(20)`, `game_ids integer[] DEFAULT '{}'`
+- Unique partial index: `CREATE UNIQUE INDEX user_profiles_username_uq ON user_profiles(username) WHERE username IS NOT NULL`
+
+---
+
 ## [1.5.0] — 2026-04-23
 
 ### Added

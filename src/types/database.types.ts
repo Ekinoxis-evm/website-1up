@@ -246,6 +246,12 @@ export type Database = {
           id: number
           privy_user_id: string
           email: string | null
+          nombre: string | null
+          apellidos: string | null
+          username: string | null
+          phone_country: string | null
+          phone_number: string | null
+          game_ids: number[]
           tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT" | null
           numero_documento: string | null
           comfenalco_afiliado: boolean | null
@@ -258,6 +264,12 @@ export type Database = {
           id?: number
           privy_user_id: string
           email?: string | null
+          nombre?: string | null
+          apellidos?: string | null
+          username?: string | null
+          phone_country?: string | null
+          phone_number?: string | null
+          game_ids?: number[]
           tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
           numero_documento?: string | null
           comfenalco_afiliado?: boolean | null
@@ -270,6 +282,12 @@ export type Database = {
           id?: number
           privy_user_id?: string
           email?: string | null
+          nombre?: string | null
+          apellidos?: string | null
+          username?: string | null
+          phone_country?: string | null
+          phone_number?: string | null
+          game_ids?: number[]
           tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
           numero_documento?: string | null
           comfenalco_afiliado?: boolean | null

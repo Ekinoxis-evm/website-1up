@@ -33,7 +33,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page for app subdomain |
-| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, pass, academia, settings) |
+| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) |
 | `admin/login` | `admin/` | Public login page for admin subdomain |
 | `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
 
@@ -72,7 +72,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color, image_url |
 | `recruitment_submissions` | name, email, phone, source |
-| `user_profiles` | privy_user_id, tipo_documento, numero_documento, comfenalco_afiliado, verified_aliados[] |
+| `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, comfenalco_afiliado, verified_aliados[] |
 | `aliados` | name, nit, email, api_url, api_key, logo_url, is_active |
 | `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |
 | `enrollments` | user_profile_id, course_id, final_price_cop, payment_status, mp_payment_id |
