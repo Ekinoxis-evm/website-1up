@@ -33,7 +33,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page for app subdomain |
-| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) |
+| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) — AppSidebar on desktop, AppBottomNav on mobile |
 | `admin/login` | `admin/` | Public login page for admin subdomain |
 | `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
 

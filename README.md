@@ -35,8 +35,8 @@ src/
     app/              # app.1upesports.org — user shell
       login/          #   Public login page (Privy, redirects to dashboard)
       (protected)/    #   Auth-gated group — requires privy-token cookie
-        layout.tsx    #     Auth guard + AppSidebar
-        page.tsx      #     Wallet ($1UP balance, send/receive + QR)
+        layout.tsx    #     Auth guard + AppSidebar + AppBottomNav (mobile)
+        page.tsx      #     Wallet ($1UP balance, send/receive/buy + live tx history)
         identidad/    #     Personal data form (nombre, apellidos, username, phone, games, document)
         beneficios/   #     Aliado verification — unlock discounts by checking affiliation
         pass/         #     1UP Pass status + purchase
@@ -60,8 +60,8 @@ src/
     team/             # Team + Hall of Fame (PlayerCard with social PNG icons)
     masters/          # Masters page (HeroMasters, MasterCard, MasterGrid)
     academia/         # Course catalog + PaymentFeedback
-    perfil/           # WalletTab (send/receive + QR scanner), SettingsTab, IdentidadTab
-    app/              # App shell (AppSidebar)
+    perfil/           # WalletTab (send/receive/buy + Blockscout tx history), SettingsTab, IdentidadTab, BeneficiosTab
+    app/              # App shell (AppSidebar — desktop, AppBottomNav — mobile)
     admin/            # Admin panel components
     layout/           # TopAppBar, Footer (reads social_links from DB), MobileBottomNav
     providers/        # PrivyClientProvider

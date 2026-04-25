@@ -5,6 +5,18 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.7.0] — 2026-04-25
+
+### Added
+- **App mobile bottom nav** (`AppBottomNav`) — fixed bottom bar visible only on mobile (`md:hidden`). Shows all 6 app modules (Wallet, Identidad, Beneficios, Pass, Academia, Ajustes) with filled icon on active route via `usePathname`. Layout gains `pb-24` on mobile to prevent content sitting behind it.
+- **Wallet BUY action** — third quick-action button alongside ENVIAR / RECIBIR. Opens a swap modal with the existing asset-selector (USDC / ETH on Base) + amount input, enabled and functional. "SWAP POR $1UP" button builds a Uniswap URL with asset and amount prefilled and opens it in a new tab on Base.
+- **Live transaction history** — WalletTab fetches last 15 $1UP token transfers for the connected wallet from Blockscout Base mainnet API. Each row shows direction (ENVIADO / RECIBIDO), signed amount, counterparty address, date, and a Basescan link. Loading spinner and empty-state preserved.
+
+### Removed
+- **Token Utility bars** — mocked "Cursos Academia 45% / Entrada Torneos 35% / Beneficios 1UP Pass 20%" distribution chart removed from WalletTab. Right column now shows only the transaction history.
+
+---
+
 ## [1.6.0] — 2026-04-24
 
 ### Added

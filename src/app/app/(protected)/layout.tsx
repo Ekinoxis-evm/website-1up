@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyCookieToken } from "@/lib/privy";
 import { AppSidebar } from "@/components/app/AppSidebar";
+import { AppBottomNav } from "@/components/app/AppBottomNav";
 
 export const metadata = { title: "1UP App" };
 
@@ -17,7 +18,8 @@ export default async function AppProtectedLayout({ children }: { children: React
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
       <AppSidebar />
-      <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10">{children}</main>
+      <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10 pb-24 md:pb-10">{children}</main>
+      <AppBottomNav />
     </div>
   );
 }

@@ -107,21 +107,29 @@ text-on-background               white-ish ← primary readable text
 
 ## Layout groups — when to use which
 
-| Group | Route prefix | Has SideNavBar |
-|-------|-------------|---------------|
-| `(main)` | `/`, `/recreativo`, `/perfil` | No — TopAppBar + Footer only |
-| `(sidebar)` | `/gaming-tower`, `/juegos`, `/team`, `/academia` | Yes — fixed left sidebar + TopAppBar |
-| `admin/` | `/admin/*` | AdminSidebar only (no TopAppBar) |
+| Group | Route prefix | Navigation |
+|-------|-------------|------------|
+| `(main)` | `/`, `/recreativo`, `/perfil` | TopAppBar + MobileBottomNav + Footer |
+| `(sidebar)` | `/gaming-tower`, `/juegos`, `/team`, `/academia` | TopAppBar + SideNavBar (fixed left) + Footer |
+| `app/(protected)/` | `/app/*` | AppSidebar (desktop, fixed left) + AppBottomNav (mobile, fixed bottom) |
+| `admin/` | `/admin/*` | AdminSidebar only (no TopAppBar, no Footer) |
 
 ## Navigation update rule
 
-When adding a new page, update **all three** nav components:
+**Public pages** — when adding a new route under `(main)`, update all three:
 
 1. `src/components/layout/TopAppBar.tsx` → add to `NAV_LINKS` array
 2. `src/components/layout/SideNavBar.tsx` → add to `ITEMS` array (sidebar pages only)
 3. `src/components/layout/MobileBottomNav.tsx` → add to `PUBLIC_TABS` array
 
-For admin pages, also add to `MODULES` in `src/components/admin/AdminSidebar.tsx`.
+**App shell pages** — when adding a new route under `app/(protected)`, update both nav components so desktop and mobile stay in sync:
+
+1. `src/components/app/AppSidebar.tsx` → add to `MODULES` array (desktop sidebar)
+2. `src/components/app/AppBottomNav.tsx` → add to `MODULES` array (mobile bottom bar)
+
+Both files share the same `MODULES` shape: `{ href, icon, label }`. Keep them identical.
+
+**Admin pages** — add to `MODULES` in `src/components/admin/AdminSidebar.tsx`.
 
 ## Accent cycle pattern (for lists of sections)
 

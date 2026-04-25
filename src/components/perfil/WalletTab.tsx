@@ -3,30 +3,46 @@
 import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
-import { createWalletClient, custom, parseUnits, isAddress } from "viem";
+import { createWalletClient, custom, parseUnits, formatUnits, isAddress } from "viem";
 import { base } from "viem/chains";
 import { use1upBalance } from "@/hooks/use1upBalance";
 import { ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import { QRCodeSVG } from "qrcode.react";
 
-const TOKEN_UTILITY = [
-  { label: "Cursos Academia",   pct: 45, barClass: "bg-secondary-container", textClass: "text-secondary"  },
-  { label: "Entrada Torneos",   pct: 35, barClass: "bg-primary-container",   textClass: "text-primary"    },
-  { label: "Beneficios 1UP Pass", pct: 20, barClass: "bg-tertiary",           textClass: "text-tertiary"   },
-];
+const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-const UTILITY_ICONS = [
-  { icon: "school",            color: "text-secondary" },
-  { icon: "emoji_events",      color: "text-primary"   },
-  { icon: "confirmation_number", color: "text-tertiary"  },
-];
+type TxItem = {
+  hash: string;
+  timestamp: string;
+  from: string;
+  to: string;
+  amount: string;
+  direction: "send" | "receive";
+};
+
+type BlockscoutItem = {
+  transaction_hash: string;
+  timestamp: string;
+  from: { hash: string };
+  to: { hash: string };
+  total: { value: string; decimals: string };
+};
+
+function formatTxAmount(amount: string) {
+  const n = parseFloat(amount);
+  if (isNaN(n)) return "—";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+function truncate(addr: string) {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
 
 export function WalletTab() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const [copied, setCopied] = useState(false);
 
-  // Prefer embedded wallet, fall back to first available
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const activeWallet   = embeddedWallet ?? wallets[0];
   const walletAddress  = activeWallet?.address as `0x${string}` | undefined;
@@ -34,22 +50,56 @@ export function WalletTab() {
   const { balance, loading: balanceLoading } = use1upBalance(walletAddress);
 
   // Send modal state
-  const [sendOpen, setSendOpen]     = useState(false);
-  const [sendTo, setSendTo]         = useState("");
-  const [sendAmount, setSendAmount] = useState("");
+  const [sendOpen, setSendOpen]       = useState(false);
+  const [sendTo, setSendTo]           = useState("");
+  const [sendAmount, setSendAmount]   = useState("");
   const [sendLoading, setSendLoading] = useState(false);
-  const [sendError, setSendError]   = useState<string | null>(null);
-  const [sendTxHash, setSendTxHash] = useState<string | null>(null);
+  const [sendError, setSendError]     = useState<string | null>(null);
+  const [sendTxHash, setSendTxHash]   = useState<string | null>(null);
 
   // Receive modal state
-  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [receiveOpen, setReceiveOpen]     = useState(false);
   const [receiveCopied, setReceiveCopied] = useState(false);
 
+  // Buy modal state
+  const [buyOpen, setBuyOpen]       = useState(false);
+  const [swapAsset, setSwapAsset]   = useState("USDC");
+  const [swapAmount, setSwapAmount] = useState("");
+
   // QR scanner state
-  const [scanOpen, setScanOpen] = useState(false);
+  const [scanOpen, setScanOpen]   = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef  = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Transaction history
+  const [txHistory, setTxHistory]   = useState<TxItem[]>([]);
+  const [txLoading, setTxLoading]   = useState(false);
+
+  useEffect(() => {
+    if (!walletAddress) return;
+    setTxLoading(true);
+    fetch(
+      `https://base.blockscout.com/api/v2/addresses/${walletAddress}/token-transfers?token=${ONE_UP_TOKEN.address}&limit=15`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        const items: TxItem[] = (data.items ?? []).map((item: BlockscoutItem) => ({
+          hash: item.transaction_hash,
+          timestamp: item.timestamp,
+          from: item.from.hash,
+          to: item.to.hash,
+          amount: formatUnits(BigInt(item.total.value), parseInt(item.total.decimals)),
+          direction:
+            item.from.hash.toLowerCase() === walletAddress.toLowerCase()
+              ? "send"
+              : "receive",
+        }));
+        setTxHistory(items);
+      })
+      .catch(() => setTxHistory([]))
+      .finally(() => setTxLoading(false));
+  }, [walletAddress]);
 
   useEffect(() => {
     if (!scanOpen) {
@@ -106,10 +156,7 @@ export function WalletTab() {
     setSendTxHash(null);
     try {
       const provider = await activeWallet.getEthereumProvider();
-      const walletClient = createWalletClient({
-        chain: base,
-        transport: custom(provider),
-      });
+      const walletClient = createWalletClient({ chain: base, transport: custom(provider) });
       const hash = await walletClient.writeContract({
         address:      ONE_UP_TOKEN.address,
         abi:          ERC20_TRANSFER_ABI,
@@ -126,20 +173,14 @@ export function WalletTab() {
     }
   }
 
-  function copyReceiveAddress() {
-    if (!walletAddress) return;
-    navigator.clipboard.writeText(walletAddress);
-    setReceiveCopied(true);
-    setTimeout(() => setReceiveCopied(false), 2000);
+  function handleSwap() {
+    const url = new URL("https://app.uniswap.org/swap");
+    url.searchParams.set("chain", "base");
+    url.searchParams.set("outputCurrency", ONE_UP_TOKEN.address);
+    if (swapAsset === "USDC") url.searchParams.set("inputCurrency", USDC_BASE);
+    if (swapAmount) url.searchParams.set("exactAmount", swapAmount);
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
   }
-
-  // Derive display name from linked accounts
-  const googleAccount  = user?.linkedAccounts.find((a) => a.type === "google_oauth");
-  const emailAccount   = user?.linkedAccounts.find((a) => a.type === "email");
-  const displayName    =
-    (googleAccount && "name" in googleAccount ? (googleAccount.name as string) : null) ??
-    (emailAccount  && "address" in emailAccount ? (emailAccount.address as string) : null) ??
-    "GAMER";
 
   function copyAddress() {
     if (!walletAddress) return;
@@ -148,9 +189,21 @@ export function WalletTab() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function truncate(addr: string) {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  function copyReceiveAddress() {
+    if (!walletAddress) return;
+    navigator.clipboard.writeText(walletAddress);
+    setReceiveCopied(true);
+    setTimeout(() => setReceiveCopied(false), 2000);
   }
+
+  const googleAccount = user?.linkedAccounts.find((a) => a.type === "google_oauth");
+  const emailAccount  = user?.linkedAccounts.find((a) => a.type === "email");
+  const displayName   =
+    (googleAccount && "name" in googleAccount ? (googleAccount.name as string) : null) ??
+    (emailAccount  && "address" in emailAccount ? (emailAccount.address as string) : null) ??
+    "GAMER";
+
+  void displayName;
 
   return (
     <div className="space-y-8">
@@ -164,10 +217,8 @@ export function WalletTab() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {/* ── Left: Balance + Charge ────────────────────────────── */}
-        <div className="lg:col-span-7 space-y-8">
-
-          {/* Balance card */}
+        {/* ── Left: Balance ─────────────────────────────────────── */}
+        <div className="lg:col-span-7">
           <div className="bg-surface-container-low border-l-8 border-primary-container p-8 shadow-[12px_12px_0px_rgba(0,0,0,0.35)]">
             <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
               <div>
@@ -193,16 +244,13 @@ export function WalletTab() {
               </div>
             </div>
 
-            {/* Wallet address */}
             {walletAddress ? (
               <button
                 onClick={copyAddress}
                 className="w-full bg-surface-container-lowest p-4 flex items-center justify-between group border border-outline-variant/10 hover:border-primary/30 transition-colors"
               >
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] font-headline text-on-surface/50 uppercase mb-1">
-                    WALLET ADDRESS
-                  </span>
+                  <span className="text-[10px] font-headline text-on-surface/50 uppercase mb-1">WALLET ADDRESS</span>
                   <span className="font-mono text-sm tracking-tight text-on-surface truncate max-w-[240px] md:max-w-none">
                     {walletAddress}
                   </span>
@@ -220,31 +268,34 @@ export function WalletTab() {
               </div>
             )}
 
-            {/* Send / Receive */}
             {walletAddress && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <button
                   onClick={() => { setSendOpen(true); setSendError(null); setSendTxHash(null); }}
-                  className="flex items-center justify-center gap-2 bg-primary-container text-white font-headline font-black text-sm py-3 skew-fix hover:neo-shadow-pink transition-all active:scale-95"
+                  className="flex items-center justify-center gap-1.5 bg-primary-container text-white font-headline font-black text-xs py-3 skew-fix hover:opacity-90 transition-all active:scale-95"
                 >
-                  <span className="material-symbols-outlined text-base">arrow_upward</span>
+                  <span className="material-symbols-outlined text-sm">arrow_upward</span>
                   <span className="block skew-content">ENVIAR</span>
                 </button>
                 <button
                   onClick={() => setReceiveOpen(true)}
-                  className="flex items-center justify-center gap-2 bg-secondary-container/20 border border-secondary-container/40 text-secondary font-headline font-black text-sm py-3 skew-fix hover:bg-secondary-container/30 transition-all"
+                  className="flex items-center justify-center gap-1.5 bg-secondary-container/20 border border-secondary-container/40 text-secondary font-headline font-black text-xs py-3 skew-fix hover:bg-secondary-container/30 transition-all"
                 >
-                  <span className="material-symbols-outlined text-base">arrow_downward</span>
+                  <span className="material-symbols-outlined text-sm">arrow_downward</span>
                   <span className="block skew-content">RECIBIR</span>
+                </button>
+                <button
+                  onClick={() => { setBuyOpen(true); setSwapAmount(""); }}
+                  className="flex items-center justify-center gap-1.5 bg-tertiary/20 border border-tertiary/30 text-tertiary font-headline font-black text-xs py-3 skew-fix hover:bg-tertiary/30 transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">bolt</span>
+                  <span className="block skew-content">BUY</span>
                 </button>
               </div>
             )}
 
-            {/* Contract info */}
             <div className="mt-4 flex items-center gap-2">
-              <span className="text-[10px] font-headline uppercase text-on-surface/30 tracking-widest">
-                CONTRATO:
-              </span>
+              <span className="text-[10px] font-headline uppercase text-on-surface/30 tracking-widest">CONTRATO:</span>
               <a
                 href={`https://basescan.org/token/${ONE_UP_TOKEN.address}`}
                 target="_blank"
@@ -255,120 +306,12 @@ export function WalletTab() {
               </a>
             </div>
           </div>
-
-          {/* Charge account — coming soon */}
-          <div className="bg-surface-container shadow-[12px_12px_0px_rgba(161,201,255,0.06)]">
-            <div className="bg-surface-container-highest p-6">
-              <h3 className="font-headline font-bold text-xl uppercase tracking-wider text-secondary flex items-center gap-3">
-                <span className="material-symbols-outlined">bolt</span>
-                Cargar Cuenta
-              </h3>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50">
-                    Asset a depositar
-                  </label>
-                  <div className="relative">
-                    <select
-                      disabled
-                      className="w-full bg-surface-container-lowest border-b-2 border-outline text-on-surface/40 p-4 font-bold appearance-none cursor-not-allowed"
-                    >
-                      <option>USDC (Base)</option>
-                      <option>ETH (Base)</option>
-                    </select>
-                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface/30">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50">
-                    Monto
-                  </label>
-                  <input
-                    disabled
-                    type="number"
-                    placeholder="0.00"
-                    className="w-full bg-surface-container-lowest border-b-2 border-outline text-on-surface/40 p-4 font-headline text-xl font-black cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/10">
-                <span className="text-xs font-headline uppercase text-on-surface/50">
-                  $1UP estimados a recibir
-                </span>
-                <span className="font-headline font-bold text-primary/40">≈ — 1UP</span>
-              </div>
-
-              {/* Disabled CTA with badge */}
-              <div className="relative">
-                <button
-                  disabled
-                  className="w-full bg-primary-container/25 py-5 text-white/25 font-headline font-black text-xl uppercase tracking-tighter cursor-not-allowed"
-                >
-                  SWAP POR $1UP
-                </button>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="bg-surface-container border border-tertiary/50 text-tertiary font-headline text-xs uppercase tracking-widest px-5 py-1.5">
-                    PRÓXIMAMENTE
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* ── Right: Token Utility + History ───────────────────── */}
-        <div className="lg:col-span-5 space-y-8">
-
-          {/* Token utility breakdown */}
-          <div className="bg-surface-container-low p-6">
-            <h3 className="font-headline font-bold text-lg uppercase tracking-wider mb-6 text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">pie_chart</span>
-              Token Utility
-            </h3>
-            <div className="space-y-4">
-              {TOKEN_UTILITY.map(({ label, pct, barClass, textClass }) => (
-                <div key={label}>
-                  <div className="flex justify-between mb-2">
-                    <span className="font-headline text-xs uppercase font-bold text-on-surface">
-                      {label}
-                    </span>
-                    <span className={`font-headline text-xs ${textClass}`}>{pct}% uso</span>
-                  </div>
-                  <div className="w-full h-3 bg-surface-container-highest overflow-hidden">
-                    <div className={`h-full ${barClass} transition-all`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 grid grid-cols-3 gap-2">
-              {UTILITY_ICONS.map(({ icon, color }, i) => (
-                <div
-                  key={i}
-                  className="h-20 bg-surface-container-lowest flex flex-col items-center justify-center gap-1 border border-outline-variant/10"
-                >
-                  <span
-                    className={`material-symbols-outlined ${color}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {icon}
-                  </span>
-                  <span className="text-[9px] font-headline uppercase text-on-surface/50">
-                    {["Cursos", "Torneo", "Pass"][i]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Transaction history — empty state */}
-          <div className="bg-surface-container-low border-t-8 border-secondary-container">
-            <div className="p-6 flex justify-between items-center border-b border-outline-variant/10">
+        {/* ── Right: Transaction History ────────────────────────── */}
+        <div className="lg:col-span-5">
+          <div className="bg-surface-container-low border-t-8 border-secondary-container h-full">
+            <div className="p-6 flex justify-between items-center">
               <h3 className="font-headline font-bold text-lg uppercase tracking-wider text-on-surface">
                 Historial
               </h3>
@@ -381,21 +324,96 @@ export function WalletTab() {
                 Basescan
               </a>
             </div>
-            <div className="p-10 flex flex-col items-center justify-center gap-3 text-center">
-              <span
-                className="material-symbols-outlined text-on-surface/15 text-5xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                receipt_long
-              </span>
-              <p className="text-xs font-headline uppercase tracking-widest text-on-surface/30">
-                Sin transacciones
-              </p>
-              <p className="text-xs font-body text-on-surface/20 max-w-[200px]">
-                Aquí aparecerá tu historial de $1UP
-              </p>
-            </div>
+
+            {txLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="material-symbols-outlined text-primary text-3xl animate-spin">refresh</span>
+              </div>
+            ) : txHistory.length === 0 ? (
+              <div className="px-6 pb-10 flex flex-col items-center justify-center gap-3 text-center">
+                <span
+                  className="material-symbols-outlined text-on-surface/15 text-5xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  receipt_long
+                </span>
+                <p className="text-xs font-headline uppercase tracking-widest text-on-surface/30">
+                  Sin transacciones
+                </p>
+                <p className="text-xs font-body text-on-surface/20 max-w-[200px]">
+                  Aquí aparecerá tu historial de $1UP
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-outline-variant/10">
+                {txHistory.map((tx) => (
+                  <a
+                    key={tx.hash}
+                    href={`https://basescan.org/tx/${tx.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-6 py-3.5 hover:bg-surface-container transition-colors group"
+                  >
+                    <div
+                      className={`w-8 h-8 flex items-center justify-center shrink-0 ${
+                        tx.direction === "send"
+                          ? "bg-primary-container/15 text-primary-container"
+                          : "bg-secondary-container/15 text-secondary"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-base">
+                        {tx.direction === "send" ? "arrow_upward" : "arrow_downward"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className={`font-headline font-black text-xs uppercase ${
+                          tx.direction === "send" ? "text-primary-container" : "text-secondary"
+                        }`}>
+                          {tx.direction === "send" ? "ENVIADO" : "RECIBIDO"}
+                        </span>
+                        <span className={`font-headline font-bold text-sm ${
+                          tx.direction === "send" ? "text-on-surface/60" : "text-on-surface"
+                        }`}>
+                          {tx.direction === "send" ? "−" : "+"}{formatTxAmount(tx.amount)}{" "}
+                          <span className="text-[10px] text-primary/60">1UP</span>
+                        </span>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                        <span className="font-mono text-[10px] text-on-surface/30 truncate">
+                          {truncate(tx.direction === "send" ? tx.to : tx.from)}
+                        </span>
+                        <span className="font-body text-[10px] text-on-surface/30 shrink-0">
+                          {new Date(tx.timestamp).toLocaleDateString("es-CO", {
+                            day: "numeric", month: "short",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-[14px] text-on-surface/20 group-hover:text-on-surface/50 transition-colors shrink-0">
+                      open_in_new
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Promo banner */}
+      <div className="bg-surface-container-highest overflow-hidden relative flex items-center h-48">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-container/20 to-secondary-container/10" />
+        <div className="relative z-10 px-10">
+          <h4 className="font-headline font-black text-3xl md:text-4xl text-white mb-2 italic tracking-tighter">
+            LEVEL UP YOUR EXPERIENCE
+          </h4>
+          <p className="font-body text-on-surface/60 max-w-md text-sm mb-5">
+            Acumula $1UP para acceder a torneos exclusivos, coaching pro y beneficios del Gaming Tower.
+          </p>
+          <span className="inline-block border border-primary/40 text-primary font-headline text-xs uppercase tracking-widest px-6 py-2">
+            PRÓXIMAMENTE
+          </span>
         </div>
       </div>
 
@@ -407,7 +425,6 @@ export function WalletTab() {
               <span className="material-symbols-outlined text-primary-container">arrow_upward</span>
               ENVIAR $1UP
             </h2>
-
             {sendTxHash ? (
               <div className="text-center space-y-4">
                 <span className="material-symbols-outlined text-tertiary text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
@@ -454,9 +471,7 @@ export function WalletTab() {
                     className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-black text-xl border-none"
                   />
                 </div>
-                {sendError && (
-                  <p className="text-error font-body text-sm">{sendError}</p>
-                )}
+                {sendError && <p className="text-error font-body text-sm">{sendError}</p>}
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleSend}
@@ -499,7 +514,7 @@ export function WalletTab() {
             <button
               onClick={copyReceiveAddress}
               className={`w-full py-3 font-headline font-black text-sm uppercase transition-all mb-3 flex items-center justify-center gap-2 ${
-                receiveCopied ? "bg-tertiary text-background" : "bg-secondary-container text-white hover:neo-shadow-pink"
+                receiveCopied ? "bg-tertiary text-background" : "bg-secondary-container text-white hover:opacity-90"
               }`}
             >
               <span className="material-symbols-outlined text-base">{receiveCopied ? "check" : "content_copy"}</span>
@@ -508,6 +523,81 @@ export function WalletTab() {
             <button onClick={() => setReceiveOpen(false)} className="w-full bg-surface-container-highest font-headline font-black py-3">
               CERRAR
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Buy Modal ───────────────────────────────────────────── */}
+      {buyOpen && (
+        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container border-4 border-tertiary/60 p-8 w-full max-w-md">
+            <h2 className="font-headline font-black text-xl uppercase mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-tertiary">bolt</span>
+              COMPRAR $1UP
+            </h2>
+            <p className="font-body text-sm text-on-surface/50 mb-6">
+              Elige el activo y el monto. Serás redirigido a Uniswap para completar el swap en la red Base.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-2">
+                  Asset a depositar
+                </label>
+                <div className="relative">
+                  <select
+                    value={swapAsset}
+                    onChange={(e) => setSwapAsset(e.target.value)}
+                    className="w-full bg-surface-container-lowest text-on-surface p-4 font-bold appearance-none border-none"
+                  >
+                    <option value="USDC">USDC (Base)</option>
+                    <option value="ETH">ETH (Base)</option>
+                  </select>
+                  <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface/50">
+                    expand_more
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-2">
+                  Monto
+                </label>
+                <input
+                  type="number"
+                  value={swapAmount}
+                  onChange={(e) => setSwapAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="any"
+                  className="w-full bg-surface-container-lowest text-on-surface p-4 font-headline text-xl font-black border-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-surface-container-lowest">
+                <span className="text-xs font-headline uppercase text-on-surface/50">
+                  $1UP estimados a recibir
+                </span>
+                <span className="font-headline font-bold text-primary/60">≈ — 1UP</span>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSwap}
+                  className="flex-1 bg-tertiary/20 border border-tertiary/50 text-tertiary font-headline font-black py-4 uppercase tracking-tighter hover:bg-tertiary/30 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-base">open_in_new</span>
+                  SWAP POR $1UP
+                </button>
+                <button onClick={() => setBuyOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-4">
+                  CANCELAR
+                </button>
+              </div>
+
+              <p className="text-[10px] font-body text-on-surface/30 text-center">
+                La transacción se completa en Uniswap. Red: Base (L2).
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -541,23 +631,6 @@ export function WalletTab() {
           </div>
         </div>
       )}
-
-      {/* Promo banner */}
-      <div className="mt-8 bg-surface-container-highest overflow-hidden relative flex items-center h-48">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-container/20 to-secondary-container/10" />
-        <div className="relative z-10 px-10">
-          <h4 className="font-headline font-black text-3xl md:text-4xl text-white mb-2 italic tracking-tighter">
-            LEVEL UP YOUR EXPERIENCE
-          </h4>
-          <p className="font-body text-on-surface/60 max-w-md text-sm mb-5">
-            Acumula $1UP para acceder a torneos exclusivos, coaching pro y
-            beneficios del Gaming Tower.
-          </p>
-          <span className="inline-block border border-primary/40 text-primary font-headline text-xs uppercase tracking-widest px-6 py-2">
-            PRÓXIMAMENTE
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
