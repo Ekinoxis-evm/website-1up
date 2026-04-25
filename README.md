@@ -213,6 +213,8 @@ npm run dev
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
 | `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
+| `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, approve/reject with tx hash |
+| `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
 | `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
@@ -253,6 +255,8 @@ npm run dev
 | `social_links` | Footer social icons — platform, url, is_active, sort_order |
 | `site_content` | Site-level images — key (PK), image_url (equipment_highlight, learning_path) |
 | `admin_users` | DB-stored admins (env var admins always override) |
+| `bank_accounts` | OTC payment destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
+| `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 
 ---
 

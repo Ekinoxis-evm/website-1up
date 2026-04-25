@@ -47,6 +47,10 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/user/aliado/verify` | Privy user | Generic aliado affiliation check |
 | `POST /api/checkout` | Privy user | Creates MP preference + pending enrollment |
 | `POST /api/webhooks/mercadopago` | HMAC signature | Payment confirmation |
+| `POST /api/user/upload-comprobante` | Privy user | Upload payment receipt → Supabase Storage (`comprobantes/`) |
+| `GET\|POST /api/user/token-orders` | Privy user | List own purchase orders / create new order |
+| `POST /api/user/token-orders/cancel` | Privy user | Cancel own pending order |
+| `GET /api/bank-accounts` | Privy user | List active bank accounts (shown in BUY modal) |
 | `POST\|PUT\|DELETE /api/admin/courses` | isAdmin | Course CRUD |
 | `POST\|PUT\|DELETE /api/admin/discounts` | isAdmin | Discount rule CRUD |
 | `POST\|PUT\|DELETE /api/admin/masters` | isAdmin | Masters CRUD |
@@ -56,6 +60,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET /api/admin/enrollments` | isAdmin | Enrollment list |
 | `GET\|POST\|DELETE /api/admin/users` | isAdmin | Admin user management |
 | `POST /api/admin/upload` | isAdmin | Image upload → Supabase Storage |
+| `GET\|PATCH /api/admin/token-orders` | isAdmin | List OTC orders / approve or reject |
+| `POST\|PUT\|DELETE /api/admin/bank-accounts` | isAdmin | Bank account CRUD |
 
 ---
 
@@ -80,6 +86,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `social_links` | platform, url, is_active, sort_order — footer social icons |
 | `site_content` | key (PK), image_url — site-level images (equipment_highlight, learning_path) |
 | `admin_users` | email, added_by |
+| `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — OTC payment destinations shown in BUY modal |
+| `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 
@@ -118,6 +126,10 @@ Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`
 | `masters/{id}/cover` | Master photos |
 | `aliados/{id}/cover` | Partner logos |
 | `site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
+| `comprobantes/pending/{privyUserIdHash}-{timestamp}.{ext}` | Payment receipt — temporary path before order ID exists |
+| `comprobantes/{orderId}/receipt.{ext}` | Payment receipt — moved here after order is created (jpg/png/webp/pdf) |
+
+**Comprobante uploads** go through `/api/user/upload-comprobante` (Privy user auth, NOT admin-only). The file is uploaded to the pending path first, then `move()`d to the final order path by `/api/user/token-orders`. Accepts jpg/png/webp/pdf only, 5MB max.
 
 Social media brand icons live in `/public/socialmedia/` as static PNGs — not uploaded, shipped with the app.
 
@@ -133,6 +145,7 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 | `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/(protected)/layout.tsx`, `src/app/app/(protected)/layout.tsx` |
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
 | `.claude/skills/cloudflare-stream.md` | `src/lib/stream.ts`, `src/app/api/user/stream-token/**`, `src/app/api/admin/stream-upload-url/**`, academia content work |
+| `.claude/skills/otc-purchase-flow.md` | `src/components/perfil/BuyTokensWizard.tsx`, `src/components/perfil/MisOrdenes.tsx`, `src/app/api/user/token-orders/**`, `src/app/api/user/upload-comprobante/**`, `src/app/api/bank-accounts/**`, `src/app/api/admin/token-orders/**`, `src/app/api/admin/bank-accounts/**`, `src/app/admin/(protected)/token-orders/**`, `src/app/admin/(protected)/bank-accounts/**` |
 
 ---
 
