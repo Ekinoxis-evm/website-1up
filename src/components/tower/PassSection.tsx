@@ -38,7 +38,7 @@ export function PassSection({ benefits }: Props) {
           </div>
 
           <a
-            href="#contact"
+            href={`${process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org"}/pass`}
             className="inline-block bg-primary-container text-white font-headline font-black text-lg px-10 py-4 skew-fix hover:neo-shadow-pink transition-all"
           >
             <span className="block skew-content">OBTENER MI PASS</span>

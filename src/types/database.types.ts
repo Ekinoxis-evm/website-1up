@@ -553,6 +553,132 @@ export type Database = {
         }
         Relationships: []
       }
+      pass_config: {
+        Row: {
+          duration_days: number
+          id: number
+          is_active: boolean
+          price_token: number
+          recipient_address: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          duration_days?: number
+          id?: number
+          is_active?: boolean
+          price_token?: number
+          recipient_address?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          duration_days?: number
+          id?: number
+          is_active?: boolean
+          price_token?: number
+          recipient_address?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      pass_orders: {
+        Row: {
+          admin_notes: string | null
+          block_number: number | null
+          created_at: string
+          discount_pct_applied: number
+          discount_rule_id: number | null
+          duration_days: number
+          email: string | null
+          expires_at: string | null
+          failure_reason: string | null
+          id: number
+          last_verified_at: string | null
+          paid_at: string | null
+          privy_user_id: string
+          recipient_address: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["pass_order_status"]
+          token_amount_paid: number
+          token_price_at_purchase: number
+          tx_hash: string
+          updated_at: string
+          user_profile_id: number
+          verification_attempts: number
+          wallet_address: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          block_number?: number | null
+          created_at?: string
+          discount_pct_applied?: number
+          discount_rule_id?: number | null
+          duration_days?: number
+          email?: string | null
+          expires_at?: string | null
+          failure_reason?: string | null
+          id?: number
+          last_verified_at?: string | null
+          paid_at?: string | null
+          privy_user_id: string
+          recipient_address: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pass_order_status"]
+          token_amount_paid: number
+          token_price_at_purchase: number
+          tx_hash: string
+          updated_at?: string
+          user_profile_id: number
+          verification_attempts?: number
+          wallet_address: string
+        }
+        Update: {
+          admin_notes?: string | null
+          block_number?: number | null
+          created_at?: string
+          discount_pct_applied?: number
+          discount_rule_id?: number | null
+          duration_days?: number
+          email?: string | null
+          expires_at?: string | null
+          failure_reason?: string | null
+          id?: number
+          last_verified_at?: string | null
+          paid_at?: string | null
+          privy_user_id?: string
+          recipient_address?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pass_order_status"]
+          token_amount_paid?: number
+          token_price_at_purchase?: number
+          tx_hash?: string
+          updated_at?: string
+          user_profile_id?: number
+          verification_attempts?: number
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pass_orders_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pass_orders_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string | null
@@ -851,6 +977,11 @@ export type Database = {
     Enums: {
       discount_applies_to: "courses" | "pass" | "all"
       discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
+      pass_order_status:
+        | "pending_tx"
+        | "confirmed"
+        | "failed"
+        | "expired_unverified"
       payment_status: "pending" | "approved" | "rejected" | "cancelled"
       product_type: "course" | "pass"
       tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT"
@@ -984,6 +1115,12 @@ export const Constants = {
     Enums: {
       discount_applies_to: ["courses", "pass", "all"],
       discount_trigger: ["comfenalco", "promo_code", "manual", "auto"],
+      pass_order_status: [
+        "pending_tx",
+        "confirmed",
+        "failed",
+        "expired_unverified",
+      ],
       payment_status: ["pending", "approved", "rejected", "cancelled"],
       product_type: ["course", "pass"],
       tipo_documento: ["CC", "CE", "TI", "PP", "NIT"],
@@ -1012,3 +1149,6 @@ export type SiteContent      = Database["public"]["Tables"]["site_content"]["Row
 export type BankAccount      = Database["public"]["Tables"]["bank_accounts"]["Row"];
 export type TokenPurchaseOrder  = Database["public"]["Tables"]["token_purchase_orders"]["Row"];
 export type TokenPurchaseStatus = Database["public"]["Enums"]["token_purchase_status"];
+export type PassConfig       = Database["public"]["Tables"]["pass_config"]["Row"];
+export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"];
+export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];

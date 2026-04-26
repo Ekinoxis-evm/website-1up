@@ -1,25 +1,80 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import type { PassBenefit, DiscountRule, Enrollment } from "@/types/database.types";
+import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
+import { AdminPassConfigCard } from "./AdminPassConfigCard";
+import type { PassBenefit, PassConfig } from "@/types/database.types";
 
 interface Props {
-  benefits: PassBenefit[];
-  discounts: DiscountRule[];
-  enrollments: Enrollment[];
+  config:         PassConfig | null;
+  benefits:       PassBenefit[];
+  confirmedCount: number;
+  activeNow:      number;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  approved:  "bg-tertiary/20 text-tertiary",
-  pending:   "bg-outline/10 text-outline",
-  rejected:  "bg-error/20 text-error",
-  cancelled: "bg-outline/10 text-outline",
-};
+const EMPTY = { title: "", description: "", sortOrder: "0" };
 
-export function Admin1PassClient({ benefits, discounts, enrollments }: Props) {
-  const totalRevenue = enrollments
-    .filter((e) => e.payment_status === "approved")
-    .reduce((sum, e) => sum + e.final_price_cop, 0);
+export function Admin1PassClient({ config, benefits, confirmedCount, activeNow }: Props) {
+  const { getAccessToken } = usePrivy();
+  const router = useRouter();
+
+  const [modalOpen, setModalOpen]   = useState(false);
+  const [editing, setEditing]       = useState<PassBenefit | null>(null);
+  const [form, setForm]             = useState(EMPTY);
+  const [saving, setSaving]         = useState(false);
+  const [saveError, setSaveError]   = useState<string | null>(null);
+
+  async function authHeaders() {
+    const token = await getAccessToken();
+    return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  }
+
+  function openNew() {
+    setEditing(null);
+    setForm(EMPTY);
+    setSaveError(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(b: PassBenefit) {
+    setEditing(b);
+    setForm({ title: b.title, description: b.description ?? "", sortOrder: String(b.sort_order ?? 0) });
+    setSaveError(null);
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!form.title.trim()) { setSaveError("El título es requerido."); return; }
+    setSaving(true);
+    const method = editing ? "PUT" : "POST";
+    const body = {
+      title:       form.title.trim(),
+      description: form.description.trim() || null,
+      sortOrder:   Number(form.sortOrder),
+      ...(editing ? { id: editing.id } : {}),
+    };
+    const res = await fetch("/api/admin/pass-benefits", {
+      method,
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    setSaving(false);
+    if (!res.ok) { setSaveError("Error al guardar. Intenta de nuevo."); return; }
+    setModalOpen(false);
+    router.refresh();
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("¿Eliminar este beneficio?")) return;
+    await fetch("/api/admin/pass-benefits", {
+      method: "DELETE",
+      headers: await authHeaders(),
+      body: JSON.stringify({ id }),
+    });
+    router.refresh();
+  }
 
   return (
     <div className="space-y-10">
@@ -31,133 +86,172 @@ export function Admin1PassClient({ benefits, discounts, enrollments }: Props) {
         <div className="h-1 w-16 bg-primary-container mt-2" />
       </div>
 
-      {/* Stat cards */}
+      {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-surface-container p-6 border-l-4 border-primary-container">
           <p className="font-headline text-xs uppercase tracking-widest text-outline mb-2">Passes Vendidos</p>
-          <p className="font-headline font-black text-4xl text-on-surface">
-            {enrollments.filter((e) => e.payment_status === "approved").length}
-          </p>
+          <p className="font-headline font-black text-4xl">{confirmedCount}</p>
         </div>
         <div className="bg-surface-container p-6 border-l-4 border-secondary-container">
-          <p className="font-headline text-xs uppercase tracking-widest text-outline mb-2">Revenue Total</p>
-          <p className="font-headline font-black text-4xl text-on-surface">
-            ${totalRevenue.toLocaleString("es-CO")} <span className="text-sm text-outline">COP</span>
-          </p>
+          <p className="font-headline text-xs uppercase tracking-widest text-outline mb-2">Activos Ahora</p>
+          <p className="font-headline font-black text-4xl">{activeNow}</p>
         </div>
-        <div className="bg-surface-container p-6 border-l-4 border-tertiary">
-          <p className="font-headline text-xs uppercase tracking-widest text-outline mb-2">Precio del Pass</p>
-          <div className="flex items-end gap-3">
-            <p className="font-headline font-black text-2xl text-on-surface/40 uppercase tracking-tighter">Pendiente</p>
-            <span className="bg-tertiary/20 text-tertiary font-headline text-[9px] px-2 py-0.5 uppercase mb-1">
-              Próximamente
-            </span>
+        <div className="bg-surface-container p-6 border-l-4 border-tertiary flex items-center justify-between">
+          <div>
+            <p className="font-headline text-xs uppercase tracking-widest text-outline mb-2">Historial de Compras</p>
+            <p className="font-headline font-black text-sm text-on-surface/60">Ver todas las órdenes</p>
           </div>
+          <Link
+            href="/admin/pass-orders"
+            className="flex items-center gap-1 font-headline font-bold text-xs uppercase text-secondary hover:text-secondary-container transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            Ver
+          </Link>
         </div>
       </div>
 
-      {/* Benefits section */}
+      {/* Pass config */}
+      {config ? (
+        <AdminPassConfigCard config={config} />
+      ) : (
+        <div className="bg-surface-container p-6 border-l-4 border-error">
+          <p className="font-body text-sm text-error">Error cargando la configuración del pass.</p>
+        </div>
+      )}
+
+      {/* Benefits — inline CRUD */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-headline font-black text-xl uppercase tracking-tighter">
             Beneficios <span className="text-primary-container">({benefits.length})</span>
           </h2>
-          <Link
-            href="/admin/pass-benefits"
-            className="text-secondary font-headline font-bold text-xs uppercase hover:text-secondary-container transition-colors flex items-center gap-1"
+          <button
+            onClick={openNew}
+            className="flex items-center gap-1 bg-primary-container text-white font-headline font-black text-xs uppercase px-4 py-2"
           >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            Gestionar
-          </Link>
+            <span className="material-symbols-outlined text-sm">add</span>
+            Agregar
+          </button>
         </div>
+
         <div className="space-y-2">
           {benefits.map((b) => (
-            <div key={b.id} className="bg-surface-container p-4 border-l-4 border-primary-container flex items-start gap-3">
-              <span className="material-symbols-outlined text-primary-container text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check_circle
-              </span>
-              <div>
-                <p className="font-headline font-bold text-sm text-on-background">{b.title}</p>
-                {b.description && <p className="font-body text-xs text-outline mt-0.5">{b.description}</p>}
+            <div
+              key={b.id}
+              className="bg-surface-container p-4 border-l-4 border-primary-container flex items-start justify-between gap-4"
+            >
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <span
+                  className="material-symbols-outlined text-primary-container text-base mt-0.5 shrink-0"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  check_circle
+                </span>
+                <div className="min-w-0">
+                  <p className="font-headline font-bold text-sm text-on-background">{b.title}</p>
+                  {b.description && (
+                    <p className="font-body text-xs text-outline mt-0.5">{b.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 shrink-0">
+                <button
+                  onClick={() => openEdit(b)}
+                  className="text-secondary font-headline font-bold text-xs uppercase hover:text-secondary-container transition-colors"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(b.id)}
+                  className="text-error font-headline font-bold text-xs uppercase hover:opacity-80 transition-opacity"
+                >
+                  Eliminar
+                </button>
               </div>
             </div>
           ))}
           {benefits.length === 0 && (
-            <p className="text-outline font-body text-sm py-6 text-center">
-              Sin beneficios — <Link href="/admin/pass-benefits" className="text-primary underline">agregar ahora</Link>
+            <p className="text-outline font-body text-sm py-8 text-center">
+              Sin beneficios configurados. Agrega el primero.
             </p>
           )}
         </div>
       </div>
 
-      {/* Pass-specific discounts */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-headline font-black text-xl uppercase tracking-tighter">
-            Descuentos del Pass <span className="text-primary-container">({discounts.length})</span>
-          </h2>
-          <Link
-            href="/admin/discounts"
-            className="text-secondary font-headline font-bold text-xs uppercase hover:text-secondary-container transition-colors flex items-center gap-1"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            Gestionar
-          </Link>
-        </div>
-        <div className="space-y-2">
-          {discounts.map((d) => (
-            <div key={d.id} className="bg-surface-container p-4 flex items-center gap-4 border-l-4 border-secondary-container">
-              <div className="flex-1">
-                <p className="font-headline font-bold text-sm text-on-background">{d.name}</p>
-                <p className="font-body text-xs text-outline mt-0.5 uppercase">{d.trigger_type}</p>
-              </div>
-              <span className="font-headline font-black text-2xl text-primary">{d.discount_pct}%</span>
-              <span className={`font-headline text-[10px] px-2 py-0.5 uppercase ${d.is_active ? "bg-tertiary/20 text-tertiary" : "bg-outline/10 text-outline"}`}>
-                {d.is_active ? "Activo" : "Inactivo"}
-              </span>
+      {/* Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-surface-container-high">
+              <h2 className="font-headline font-black text-xl uppercase tracking-tighter">
+                {editing ? "Editar Beneficio" : "Nuevo Beneficio"}
+              </h2>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-outline hover:text-on-surface transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
             </div>
-          ))}
-          {discounts.length === 0 && (
-            <p className="text-outline font-body text-sm py-6 text-center">Sin descuentos configurados para el pass.</p>
-          )}
-        </div>
-      </div>
 
-      {/* Pass enrollments log */}
-      <div>
-        <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-4">
-          Historial de Compras <span className="text-primary-container">({enrollments.length})</span>
-        </h2>
-        <div className="space-y-2">
-          {enrollments.map((e) => (
-            <div key={e.id} className="bg-surface-container p-4 grid grid-cols-2 md:grid-cols-4 gap-4 items-center border-l-4 border-outline-variant/20">
+            <div className="p-6 space-y-3">
               <div>
-                <p className="text-[10px] font-headline uppercase text-outline mb-1">Usuario</p>
-                <p className="font-body text-sm text-on-background">#{e.user_profile_id}</p>
+                <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
+                  Título *
+                </label>
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="Ej: Acceso a todas las zonas"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40"
+                />
               </div>
               <div>
-                <p className="text-[10px] font-headline uppercase text-outline mb-1">Precio Final</p>
-                <p className="font-headline font-bold text-on-background">${e.final_price_cop.toLocaleString("es-CO")}</p>
+                <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Descripción opcional"
+                  rows={2}
+                  className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40 resize-none"
+                />
               </div>
               <div>
-                <p className="text-[10px] font-headline uppercase text-outline mb-1">Estado</p>
-                <span className={`font-headline text-[10px] px-2 py-0.5 uppercase ${STATUS_STYLE[e.payment_status ?? "pending"]}`}>
-                  {e.payment_status}
-                </span>
+                <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
+                  Orden
+                </label>
+                <input
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+                  className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
+                />
               </div>
-              <div>
-                <p className="text-[10px] font-headline uppercase text-outline mb-1">Fecha</p>
-                <p className="font-body text-xs text-on-background/60">
-                  {e.created_at ? new Date(e.created_at).toLocaleDateString("es-CO") : "—"}
-                </p>
+
+              {saveError && <p className="font-body text-sm text-error">{saveError}</p>}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 bg-primary-container text-white font-headline font-black uppercase tracking-tighter py-3 disabled:opacity-50"
+                >
+                  {saving ? "Guardando…" : "Guardar"}
+                </button>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="flex-1 bg-surface-container-high text-on-surface font-headline font-black uppercase tracking-tighter py-3"
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
-          ))}
-          {enrollments.length === 0 && (
-            <p className="text-outline font-body text-sm py-6 text-center">Sin compras de pass aún.</p>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

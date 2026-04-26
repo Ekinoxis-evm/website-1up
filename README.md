@@ -71,6 +71,7 @@ src/
     privy.ts          # Token verification + email resolution
     admin.ts          # isAdmin check (env + DB)
     viem.ts           # Public client + ERC-20 ABIs ($1UP token)
+    passVerifier.ts   # On-chain pass tx verification — getTransactionReceipt + decodeEventLog
     socialIcons.ts    # Platform → /public/socialmedia/ icon path mapping
     comfenalco.ts     # Comfenalco API client (stub — awaiting credentials)
     mercadopago.ts    # MP preference creation + webhook signature
@@ -146,6 +147,9 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
 8. `create_site_content` — `site_content` table seeded with `equipment_highlight` and `learning_path` rows
 9. `extend_user_profiles_v1_6` — adds `nombre`, `apellidos`, `username`, `phone_country`, `phone_number`, `game_ids` to `user_profiles`; unique partial index on `username WHERE username IS NOT NULL`
+10. `create_bank_accounts` + `create_token_purchase_orders` — OTC $1UP purchase tables + `token_purchase_status` enum; unique partial index on `user_profile_id WHERE status = 'pending'`
+11. `create_pass_config` — single-row config table; seeded with initial price (30,000 $1UP), recipient address, 30-day duration
+12. `create_pass_orders` — pass purchase records + `pass_order_status` enum (`pending_tx | confirmed | failed | expired_unverified`); unique index on `tx_hash`
 
 ### 4. Start the dev server
 
@@ -207,8 +211,8 @@ npm run dev
 | `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
 | `/admin/courses` | Academia course CRUD (image, master assignment, category) |
 | `/admin/academia-content` | Video/doc/quiz content per course (published toggle) |
-| `/admin/1pass` | 1UP Pass overview — benefits, discounts, purchase history |
-| `/admin/pass-benefits` | 1UP Pass benefits CRUD |
+| `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
+| `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
@@ -225,7 +229,7 @@ npm run dev
 
 ## Auth & Admin
 
-- **Login methods**: email, Google, Discord (via Privy)
+- **Login methods**: email, Google (via Privy) — Discord disabled
 - **Admin guard**: `src/app/admin/(protected)/layout.tsx` — verifies Privy cookie token + `isAdmin`
 - **API protection**: every `/api/admin/*` calls `verifyToken` + `isAdmin` — no exceptions
 - **User APIs**: `/api/user/*` require Privy Bearer token (not admin)
@@ -257,6 +261,8 @@ npm run dev
 | `admin_users` | DB-stored admins (env var admins always override) |
 | `bank_accounts` | OTC payment destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
 | `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
+| `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
+| `pass_orders` | On-chain pass purchases — `tx_hash` (unique), `status` (confirmed/failed/…), `expires_at` (stacks on renewal), `block_number`, `paid_at` |
 
 ---
 

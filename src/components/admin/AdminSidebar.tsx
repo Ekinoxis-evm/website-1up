@@ -22,7 +22,6 @@ const GROUPS = [
       { href: "/admin/courses",          icon: "school",          label: "Cursos"        },
       { href: "/admin/academia-content", icon: "play_circle",     label: "Contenido"     },
       { href: "/admin/1pass",            icon: "card_membership", label: "1UP Pass"      },
-      { href: "/admin/pass-benefits",    icon: "checklist",       label: "Pass Benefits" },
       { href: "/admin/discounts",        icon: "local_offer",     label: "Descuentos"    },
       { href: "/admin/enrollments",      icon: "receipt_long",    label: "Inscripciones" },
     ],
@@ -32,6 +31,7 @@ const GROUPS = [
     items: [
       { href: "/admin/token-orders",  icon: "currency_exchange", label: "Órdenes 1UP"   },
       { href: "/admin/bank-accounts", icon: "account_balance",   label: "Cuentas Banco" },
+      { href: "/admin/pass-orders",   icon: "verified",          label: "Compras Pass"  },
     ],
   },
   {

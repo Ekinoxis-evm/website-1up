@@ -62,6 +62,10 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/admin/upload` | isAdmin | Image upload → Supabase Storage |
 | `GET\|PATCH /api/admin/token-orders` | isAdmin | List OTC orders / approve or reject |
 | `POST\|PUT\|DELETE /api/admin/bank-accounts` | isAdmin | Bank account CRUD |
+| `GET /api/user/pass-config` | Public | Pass price, recipient address, duration |
+| `GET\|POST /api/user/pass-orders` | Privy user | List own pass orders / submit after confirmed tx |
+| `GET\|PUT /api/admin/pass-config` | isAdmin | Read/update pass price, recipient wallet, duration, active flag |
+| `GET\|PATCH /api/admin/pass-orders` | isAdmin | List all pass orders / update admin notes |
 
 ---
 
@@ -88,6 +92,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `admin_users` | email, added_by |
 | `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — OTC payment destinations shown in BUY modal |
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
+| `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
+| `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, tx_hash (unique), status (confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at — stacks on renewal |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 
@@ -146,6 +152,7 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
 | `.claude/skills/cloudflare-stream.md` | `src/lib/stream.ts`, `src/app/api/user/stream-token/**`, `src/app/api/admin/stream-upload-url/**`, academia content work |
 | `.claude/skills/otc-purchase-flow.md` | `src/components/perfil/BuyTokensWizard.tsx`, `src/components/perfil/MisOrdenes.tsx`, `src/app/api/user/token-orders/**`, `src/app/api/user/upload-comprobante/**`, `src/app/api/bank-accounts/**`, `src/app/api/admin/token-orders/**`, `src/app/api/admin/bank-accounts/**`, `src/app/admin/(protected)/token-orders/**`, `src/app/admin/(protected)/bank-accounts/**` |
+| `.claude/skills/pass-purchase-flow.md` | `src/components/perfil/BuyPassWizard.tsx`, `src/components/perfil/MisPassOrders.tsx`, `src/components/perfil/PassPurchasePanel.tsx`, `src/lib/passVerifier.ts`, `src/app/api/user/pass-orders/**`, `src/app/api/user/pass-config/**`, `src/app/api/admin/pass-orders/**`, `src/app/api/admin/pass-config/**`, `src/app/admin/(protected)/pass-orders/**`, `src/app/app/(protected)/pass/**` |
 
 ---
 

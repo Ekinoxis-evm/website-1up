@@ -5,6 +5,41 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.9.1] — 2026-04-26
+
+### Changed
+- **Benefits CRUD consolidated into `/admin/1pass`** — add/edit/delete pass benefits now lives inline on the 1UP Pass admin page via a modal. Removes the need to navigate to a separate page.
+- **Admin sidebar** — "Pass Benefits" link removed from "Academia & App" group. Benefits are managed from "1UP Pass".
+
+---
+
+## [1.9.0] — 2026-04-26
+
+### Added
+- **1UP Pass on-chain purchase flow** — users buy the 1UP Pass by sending $1UP tokens directly on Base mainnet. No discounts; full price only.
+  - **`BuyPassWizard`** — single-confirm modal: user reviews price → Privy `useSendTransaction` encodes ERC20 transfer calldata → waits for `waitForTransactionReceipt` → POSTs confirmed tx hash to backend → shows expiry date.
+  - **`MisPassOrders`** — compact history panel showing status (Activo/Expirado) and BaseScan link per order.
+  - **`PassPurchasePanel`** — Client Component on `/app/pass` page: shows active pass with expiry, price info, "OBTENER / RENOVAR" button, benefits list, and order history.
+  - **`AdminPassConfigCard`** — inline-edit card for price, recipient wallet, duration, and active toggle. Embedded in `/admin/1pass`.
+  - **`AdminPassOrdersClient`** — admin table at `/admin/pass-orders` with KPIs (total, confirmed, active now, failed), filter pills, BaseScan TX link, active/expired badge, admin notes editor.
+- **New tables**: `pass_config` (single-row: price_token, recipient_address, duration_days, is_active) · `pass_orders` (tx_hash unique, stacking expiry, block_number, verification_attempts).
+- **New API routes**:
+  - `GET  /api/user/pass-config` — public, returns price/recipient/duration
+  - `GET  /api/admin/pass-config` · `PUT /api/admin/pass-config` — admin config CRUD
+  - `GET  /api/user/pass-orders` — user's own orders
+  - `POST /api/user/pass-orders` — verifies tx on-chain via `passVerifier.ts`, stacks expiry, inserts confirmed order
+  - `GET  /api/admin/pass-orders` — admin list with user_profiles join; `?status=` filter
+  - `PATCH /api/admin/pass-orders` — admin notes update
+- **`src/lib/passVerifier.ts`** — server-side on-chain verification: `getTransactionReceipt` + `decodeEventLog` to confirm ERC20 Transfer(from, to, value ≥ expected).
+- **Admin sidebar** — "Compras Pass" entry added to "Tokens $1UP" group.
+
+### Changed
+- **`/app/pass` page** — replaced placeholder with real `PassPurchasePanel` (Server Component fetches config + benefits, Client Component handles purchase).
+- **`/admin/1pass` page** — replaced enrollment/discount sections with `AdminPassConfigCard` + live KPIs from `pass_orders`.
+- **TypeScript types** — `database.types.ts` updated with `pass_config`, `pass_orders`, `pass_order_status` enum; new aliases `PassConfig`, `PassOrder`, `PassOrderStatus`.
+
+---
+
 ## [1.8.0] — 2026-04-24
 
 ### Added

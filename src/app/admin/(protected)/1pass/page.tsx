@@ -1,28 +1,29 @@
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { Admin1PassClient } from "@/components/admin/Admin1PassClient";
 
+export const metadata = { title: "1UP Pass — Admin" };
+
 export default async function Admin1PassPage() {
-  const [
-    { data: benefits },
-    { data: discounts },
-    { data: enrollments },
-  ] = await Promise.all([
-    supabase.from("pass_benefits").select("*").order("sort_order"),
-    supabase.from("discount_rules")
-      .select("*")
-      .in("applies_to", ["pass", "all"])
-      .order("created_at", { ascending: false }),
-    supabaseAdmin.from("enrollments")
-      .select("*")
-      .eq("product_type", "pass")
-      .order("created_at", { ascending: false }),
+  const [{ data: config }, { data: benefits }, { data: passOrders }] = await Promise.all([
+    supabaseAdmin.from("pass_config").select("*").eq("id", 1).single(),
+    supabaseAdmin.from("pass_benefits").select("*").order("sort_order").order("id"),
+    supabaseAdmin
+      .from("pass_orders")
+      .select("id, status, expires_at")
+      .eq("status", "confirmed"),
   ]);
+
+  const confirmedCount = passOrders?.length ?? 0;
+  const activeNow = (passOrders ?? []).filter(
+    (o) => o.expires_at && new Date(o.expires_at) > new Date()
+  ).length;
 
   return (
     <Admin1PassClient
+      config={config ?? null}
       benefits={benefits ?? []}
-      discounts={discounts ?? []}
-      enrollments={enrollments ?? []}
+      confirmedCount={confirmedCount}
+      activeNow={activeNow}
     />
   );
 }
