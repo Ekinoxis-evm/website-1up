@@ -193,6 +193,7 @@ npm run dev
 | `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code) |
 | `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
+| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_year, juegos, referral code |
 | `/app/pass` | 1UP Pass status + purchase |
 | `/app/academia` | My enrolled courses + content access |
 | `/app/settings` | Linked accounts management |
@@ -220,6 +221,7 @@ npm run dev
 | `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, approve/reject with tx hash |
 | `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
+| `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
 | `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
 | `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
 | `/admin/submissions` | Recruitment form submissions (read-only) |
@@ -263,6 +265,7 @@ npm run dev
 | `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | On-chain pass purchases — `tx_hash` (unique), `status` (confirmed/failed/…), `expires_at` (stacks on renewal), `block_number`, `paid_at` |
+| `referral_codes` | Codes required at onboarding: `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
 
 ---
 

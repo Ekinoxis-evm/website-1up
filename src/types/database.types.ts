@@ -910,9 +910,44 @@ export type Database = {
           },
         ]
       }
+      referral_codes: {
+        Row: {
+          id: number
+          code: string
+          description: string | null
+          is_active: boolean
+          max_uses: number | null
+          used_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          code: string
+          description?: string | null
+          is_active?: boolean
+          max_uses?: number | null
+          used_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          code?: string
+          description?: string | null
+          is_active?: boolean
+          max_uses?: number | null
+          used_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           apellidos: string | null
+          barrio: string | null
+          birth_year: number | null
           comfenalco_afiliado: boolean | null
           comfenalco_verified_at: string | null
           created_at: string | null
@@ -921,9 +956,11 @@ export type Database = {
           id: number
           nombre: string | null
           numero_documento: string | null
+          onboarding_completed_at: string | null
           phone_country: string | null
           phone_number: string | null
           privy_user_id: string
+          referred_by_code: string | null
           tipo_documento: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at: string | null
           username: string | null
@@ -931,6 +968,8 @@ export type Database = {
         }
         Insert: {
           apellidos?: string | null
+          barrio?: string | null
+          birth_year?: number | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
           created_at?: string | null
@@ -939,9 +978,11 @@ export type Database = {
           id?: number
           nombre?: string | null
           numero_documento?: string | null
+          onboarding_completed_at?: string | null
           phone_country?: string | null
           phone_number?: string | null
           privy_user_id: string
+          referred_by_code?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at?: string | null
           username?: string | null
@@ -949,6 +990,8 @@ export type Database = {
         }
         Update: {
           apellidos?: string | null
+          barrio?: string | null
+          birth_year?: number | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
           created_at?: string | null
@@ -957,9 +1000,11 @@ export type Database = {
           id?: number
           nombre?: string | null
           numero_documento?: string | null
+          onboarding_completed_at?: string | null
           phone_country?: string | null
           phone_number?: string | null
           privy_user_id?: string
+          referred_by_code?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at?: string | null
           username?: string | null
@@ -1152,3 +1197,4 @@ export type TokenPurchaseStatus = Database["public"]["Enums"]["token_purchase_st
 export type PassConfig       = Database["public"]["Tables"]["pass_config"]["Row"];
 export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"];
 export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
+export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];

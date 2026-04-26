@@ -5,6 +5,33 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.0.0] — 2026-04-26
+
+### Added
+- **Onboarding wizard** — mandatory 5-step flow for new users before they access any protected app page. Steps: nombre+apellidos → username+teléfono → barrio+año de nacimiento+documento → juegos favoritos → código de referido (required).
+  - `/app/onboarding` — standalone branded page (no app shell), outside `(protected)` group to avoid circular redirect.
+  - `OnboardingWizard` client component — live referral code validation (debounced 600ms), age calculation preview, game tiles multi-select, animated submit.
+  - `POST /api/user/onboarding` — validates all required fields + referral code, upserts profile atomically, sets `onboarding_completed_at`, increments `referral_codes.used_count`.
+  - `GET /api/user/referral-codes/validate?code=` — public endpoint for live code validation.
+  - Onboarding gate in `app/(protected)/layout.tsx` — queries `onboarding_completed_at`; redirects unonboarded users to `/app/onboarding` before any protected page renders.
+- **Referral codes** — admin-managed codes required at onboarding. Supports `max_uses` cap and `is_active` toggle.
+  - `referral_codes` table: code (unique), description, is_active, max_uses, used_count.
+  - `/admin/referral-codes` — admin CRUD: create codes with optional use limit, activate/deactivate inline, usage progress bar.
+  - `GET|POST|PUT /api/admin/referral-codes` — isAdmin protected.
+  - Admin sidebar — "Referidos" entry added to Sistema group.
+- **New profile fields**: `barrio` (neighborhood) and `birth_year` (year of birth — displays calculated age). Both collected during onboarding and editable later on `/app/identidad`.
+- **IdentidadTab** — new "Barrio y Edad" section for post-onboarding edits.
+
+### Changed
+- **`/api/user/profile` PUT** — now accepts `barrio` and `birthYear` fields.
+- **`database.types.ts`** — updated `user_profiles` with `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code`; added `referral_codes` table and `ReferralCode` alias.
+
+### DB Migrations (applied via Supabase MCP)
+- `create_referral_codes` — `referral_codes` table with 3 seed codes (1UP2024, EKINOXIS, GAMING).
+- `add_onboarding_fields_to_user_profiles` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`; backfills `onboarding_completed_at = now()` for existing users with `nombre IS NOT NULL`.
+
+---
+
 ## [1.9.1] — 2026-04-26
 
 ### Changed

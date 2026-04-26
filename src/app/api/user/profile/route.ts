@@ -67,6 +67,8 @@ export async function PUT(req: NextRequest) {
     phoneCountry?: string;
     phoneNumber?: string;
     gameIds?: number[];
+    barrio?: string;
+    birthYear?: number;
   };
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -107,6 +109,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "gameIds inválido." }, { status: 400 });
     }
     patch.game_ids = body.gameIds.slice(0, 20);
+  }
+  if (body.barrio !== undefined) {
+    patch.barrio = body.barrio?.trim().slice(0, 100) || null;
+  }
+  if (body.birthYear !== undefined) {
+    const y = Number(body.birthYear);
+    const currentYear = new Date().getFullYear();
+    if (body.birthYear !== null && (isNaN(y) || y < 1930 || y > currentYear - 5))
+      return NextResponse.json({ error: "Año de nacimiento inválido." }, { status: 400 });
+    patch.birth_year = body.birthYear ? y : null;
   }
 
   const { data, error } = await supabaseAdmin

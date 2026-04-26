@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyCookieToken } from "@/lib/privy";
+import { supabaseAdmin } from "@/lib/supabase";
 import { AppSidebar } from "@/components/app/AppSidebar";
 import { AppBottomNav } from "@/components/app/AppBottomNav";
 
@@ -14,6 +15,15 @@ export default async function AppProtectedLayout({ children }: { children: React
 
   const claims = await verifyCookieToken(token);
   if (!claims) redirect(`${APP_URL}/login`);
+
+  // Onboarding gate — redirect new users before they access any protected page
+  const { data: profile } = await supabaseAdmin
+    .from("user_profiles")
+    .select("onboarding_completed_at")
+    .eq("privy_user_id", claims.userId)
+    .maybeSingle();
+
+  if (!profile?.onboarding_completed_at) redirect(`${APP_URL}/onboarding`);
 
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">

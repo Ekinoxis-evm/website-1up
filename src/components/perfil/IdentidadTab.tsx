@@ -14,6 +14,8 @@ interface UserProfile {
   game_ids: number[];
   tipo_documento: string | null;
   numero_documento: string | null;
+  barrio: string | null;
+  birth_year: number | null;
 }
 
 const TIPOS_DOCUMENTO = ["CC", "CE", "TI", "PP", "NIT"] as const;
@@ -103,6 +105,11 @@ export function IdentidadTab({ games = [] }: Props) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const phoneSave = useSectionSave(getAccessToken);
 
+  // Section state — location / age
+  const [barrio, setBarrio]       = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const locationSave = useSectionSave(getAccessToken);
+
   // Section state — games
   const [selectedGames, setSelectedGames] = useState<number[]>([]);
   const gamesSave = useSectionSave(getAccessToken);
@@ -127,6 +134,8 @@ export function IdentidadTab({ games = [] }: Props) {
         setPhoneCountry(data.phone_country ?? "+57");
         setPhoneNumber(data.phone_number ?? "");
         setSelectedGames(data.game_ids ?? []);
+        setBarrio(data.barrio ?? "");
+        setBirthYear(data.birth_year ? String(data.birth_year) : "");
         setTipoDoc(data.tipo_documento ?? "CC");
         setNumDoc(data.numero_documento ?? "");
       }
@@ -253,6 +262,62 @@ export function IdentidadTab({ games = [] }: Props) {
           </button>
 
           <SectionFeedback status={personalSave.status} message={personalSave.message} />
+        </div>
+      </div>
+
+      {/* ── Barrio y edad ───────────────────────────────────────── */}
+      <div className="bg-surface-container p-6">
+        <h2 className="font-headline font-black text-lg uppercase tracking-tighter mb-1">
+          BARRIO Y EDAD
+        </h2>
+        <div className="h-0.5 w-12 bg-primary-container mb-5" />
+
+        <div className="space-y-3">
+          <div>
+            <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">Barrio</label>
+            <input
+              value={barrio}
+              onChange={(e) => setBarrio(e.target.value)}
+              placeholder="Ej: El Poblado, Ciudad Jardín…"
+              maxLength={100}
+              disabled={locationSave.status === "saving"}
+              className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40"
+            />
+          </div>
+          <div>
+            <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
+              Año de nacimiento
+            </label>
+            <input
+              type="number"
+              value={birthYear}
+              onChange={(e) => setBirthYear(e.target.value)}
+              placeholder={String(new Date().getFullYear() - 20)}
+              min={1930}
+              max={new Date().getFullYear() - 5}
+              disabled={locationSave.status === "saving"}
+              className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40"
+            />
+            {birthYear.length === 4 && (
+              <p className="font-body text-xs text-outline mt-1">
+                Edad: {new Date().getFullYear() - parseInt(birthYear)} años
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={async () => {
+              await locationSave.save({
+                barrio:    barrio || undefined,
+                birthYear: birthYear ? parseInt(birthYear) : undefined,
+              });
+            }}
+            disabled={locationSave.status === "saving"}
+            className="w-full bg-surface-container-highest text-on-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-50 hover:bg-surface-container-high transition-colors"
+          >
+            {locationSave.status === "saving" ? "GUARDANDO…" : "GUARDAR BARRIO Y EDAD"}
+          </button>
+          <SectionFeedback status={locationSave.status} message={locationSave.message} />
         </div>
       </div>
 

@@ -37,6 +37,7 @@ const GROUPS = [
   {
     label: "Sistema",
     items: [
+      { href: "/admin/referral-codes",  icon: "confirmation_number",   label: "Referidos"   },
       { href: "/admin/privy-users",    icon: "manage_accounts",       label: "Usuarios"    },
       { href: "/admin/user-profiles",  icon: "people",                label: "Perfiles App" },
       { href: "/admin/social-links",   icon: "share",                 label: "Redes"       },
