@@ -18,6 +18,7 @@ interface Props {
   getAccessToken: () => Promise<string | null>;
   prefillNombre?: string;
   prefillCelular?: string;
+  email?: string;
 }
 
 function formatCop(n: number) {
@@ -26,7 +27,7 @@ function formatCop(n: number) {
 
 const RATE = 1000;
 
-export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefillNombre = "", prefillCelular = "" }: Props) {
+export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefillNombre = "", prefillCelular = "", email = "" }: Props) {
   const [step, setStep]             = useState(1);
   const [copAmount, setCopAmount]   = useState("");
   const [bankAccounts, setBankAccounts]   = useState<BankAccount[]>([]);
@@ -387,7 +388,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
                 <div>
                   <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Email</label>
                   <div className="bg-surface-container-highest p-3 font-body text-sm text-on-surface/50">
-                    (de tu cuenta Privy)
+                    {email || "(de tu cuenta Privy)"}
                   </div>
                 </div>
                 <div>

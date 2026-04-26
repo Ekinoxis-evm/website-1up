@@ -82,7 +82,14 @@ function useSectionSave(getAccessToken: () => Promise<string | null>) {
 type Props = { games?: Game[] };
 
 export function IdentidadTab({ games = [] }: Props) {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, user } = usePrivy();
+
+  const emailAccount  = user?.linkedAccounts.find((a) => a.type === "email");
+  const googleAccount = user?.linkedAccounts.find((a) => a.type === "google_oauth");
+  const loginEmail =
+    (emailAccount  && "address" in emailAccount ? (emailAccount.address as string) : null) ??
+    (googleAccount && "email"   in googleAccount ? (googleAccount.email   as string) : null) ??
+    null;
   const [loading, setLoading] = useState(true);
 
   // Section state — personal
@@ -152,6 +159,31 @@ export function IdentidadTab({ games = [] }: Props) {
 
   return (
     <div className="max-w-xl space-y-8">
+
+      {/* ── Email de acceso ─────────────────────────────────────── */}
+      <div className="bg-surface-container p-6">
+        <h2 className="font-headline font-black text-lg uppercase tracking-tighter mb-1">
+          CORREO ELECTRÓNICO
+        </h2>
+        <div className="h-0.5 w-12 bg-secondary-container mb-5" />
+        <div>
+          <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
+            Email de inicio de sesión
+          </label>
+          <div className="bg-surface-container-lowest p-3 flex items-center gap-3">
+            <span className="material-symbols-outlined text-sm text-on-surface/30">mail</span>
+            <span className="font-body text-sm text-on-surface/70">
+              {loginEmail ?? "—"}
+            </span>
+            <span className="ml-auto text-[10px] font-headline uppercase text-on-surface/30 tracking-widest">
+              Solo lectura
+            </span>
+          </div>
+          <p className="font-body text-xs text-on-surface/30 mt-2">
+            Este es el correo vinculado a tu cuenta. No se puede cambiar desde aquí.
+          </p>
+        </div>
+      </div>
 
       {/* ── Datos personales ────────────────────────────────────── */}
       <div className="bg-surface-container p-6">

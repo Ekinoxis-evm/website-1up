@@ -12,7 +12,7 @@ export function PrivyClientProvider({ children }: { children: React.ReactNode })
           accentColor: "#ff4d80",
           logo: "/1up.png",
         },
-        loginMethods: ["email", "google", "discord"],
+        loginMethods: ["email", "google"],
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" },
         },

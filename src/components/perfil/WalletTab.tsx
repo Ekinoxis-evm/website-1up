@@ -188,12 +188,10 @@ export function WalletTab() {
 
   const googleAccount = user?.linkedAccounts.find((a) => a.type === "google_oauth");
   const emailAccount  = user?.linkedAccounts.find((a) => a.type === "email");
-  const displayName   =
-    (googleAccount && "name" in googleAccount ? (googleAccount.name as string) : null) ??
+  const userEmail =
     (emailAccount  && "address" in emailAccount ? (emailAccount.address as string) : null) ??
-    "GAMER";
-
-  void displayName;
+    (googleAccount && "email"   in googleAccount ? (googleAccount.email   as string) : null) ??
+    "";
 
   return (
     <div className="space-y-8">
@@ -523,6 +521,7 @@ export function WalletTab() {
           walletAddress={walletAddress}
           onClose={() => setBuyOpen(false)}
           getAccessToken={getAccessToken}
+          email={userEmail}
         />
       )}
 
