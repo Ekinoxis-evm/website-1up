@@ -5,6 +5,30 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.2.0] — 2026-04-26
+
+### Added
+- **Admin users table — sort & game filter** — `/admin/privy-users` table now supports client-side sorting by $1UP balance (↑/↓), name (A–Z), and registration date (newest/oldest), plus multi-select game filter pills derived from users' `game_ids`. Sort defaults to $1UP descending. Filter is OR-logic (shows users who play any selected game). Count badge reflects combined search + game filter result.
+  - `AdminPrivyUsersClient.tsx` — `SortKey` type, `SORT_OPTIONS`, `tokenBigInt` helper (BigInt comparison for wei strings), `allGames` derived from user data, `gameFilter` state, sort/filter row UI.
+- **Referral code in Identidad** — users who skipped the referral code during onboarding can now add it later on `/app/identidad`. Existing code is shown as a read-only green pill (locked, one-time only). New section added at the bottom of the page.
+  - `IdentidadTab.tsx` — `referralInput`, `referralStatus`, debounced live validation (600ms), save button enabled only when code is `"valid"`.
+  - `PUT /api/user/profile` — now accepts `referralCode`; guards against overwriting an existing code; validates against `referral_codes` table and increments `used_count`.
+
+### Changed
+- **Birth date** — replaced `birth_year` (integer) with `birth_date` (full DATE: YYYY-MM-DD). Onboarding wizard and Identidad page now show a 3-column day/month/year picker with real calendar validation (round-trip Date check) and age preview. Minimum age 5 years enforced on both frontend and backend.
+  - `OnboardingWizard.tsx` — three separate states (`birthDay`, `birthMonth`, `birthYear`), `MONTHS` array, `calcAge` helper, `birthDateStr` derived.
+  - `IdentidadTab.tsx` — same 3-field picker; `fetchProfile` splits `birth_date` on `-` to pre-fill fields.
+  - `POST /api/user/onboarding` — `parseBirthDate` validates YYYY-MM-DD format + real date + age.
+  - `PUT /api/user/profile` — same validation; stores `birth_date`.
+  - `database.types.ts` — `birth_date: string | null` replaces `birth_year: number | null` on Row/Insert/Update.
+- **Referral code optional at onboarding** — step 5 of the wizard is no longer a hard gate. Users can skip it and add a code later via Identidad. `step5Valid` now passes when field is empty or valid (blocks only on `"invalid"` or `"checking"`). API skips validation entirely when no code is sent.
+- **Base L2 as default Privy chain** — `PrivyClientProvider` now sets `defaultChain: base` and `supportedChains: [base]`. External wallets (MetaMask etc.) are automatically prompted to switch to Base on connect, preventing chain-mismatch errors when the admin sends $1UP from the approve modal.
+
+### DB Migrations (applied via Supabase MCP)
+- `birth_date_replace_birth_year` — `ALTER TABLE user_profiles RENAME COLUMN birth_year TO birth_date; ALTER TABLE user_profiles ALTER COLUMN birth_date TYPE DATE USING NULL; UPDATE ... SET birth_date = (birth_year::text || '-01-01')::date WHERE birth_year IS NOT NULL;` (best-effort backfill).
+
+---
+
 ## [2.1.0] — 2026-04-26
 
 ### Changed

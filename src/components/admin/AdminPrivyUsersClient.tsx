@@ -33,6 +33,8 @@ export type MergedUser = {
   blockscoutAvailable: boolean;
 };
 
+type SortKey = "tokens-desc" | "tokens-asc" | "name" | "date-new" | "date-old";
+
 function formatBalance(raw: string | null): string {
   if (!raw || raw === "0") return "0";
   const len = raw.length;
@@ -78,12 +80,33 @@ function totalTokens(users: MergedUser[]): string {
   return n.toLocaleString("es-CO");
 }
 
+const SORT_OPTIONS: { key: SortKey; label: string; icon: string }[] = [
+  { key: "tokens-desc", label: "$1UP ↓", icon: "arrow_downward" },
+  { key: "tokens-asc",  label: "$1UP ↑", icon: "arrow_upward"   },
+  { key: "name",        label: "Nombre",  icon: "sort_by_alpha"  },
+  { key: "date-new",    label: "Reciente", icon: "schedule"      },
+  { key: "date-old",    label: "Antiguo",  icon: "history"       },
+];
+
+function tokenBigInt(raw: string | null): bigint {
+  if (!raw) return BigInt(0);
+  try { return BigInt(raw); } catch { return BigInt(0); }
+}
+
 type Props = { users: MergedUser[] };
 
 export function AdminPrivyUsersClient({ users }: Props) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch]         = useState("");
+  const [sortBy, setSortBy]         = useState<SortKey>("tokens-desc");
+  const [gameFilter, setGameFilter] = useState<string[]>([]);
 
-  const filtered = useMemo(() => {
+  const allGames = useMemo(() => {
+    const set = new Set<string>();
+    users.forEach((u) => u.gameNames.forEach((g) => set.add(g)));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }, [users]);
+
+  const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) => {
@@ -99,6 +122,34 @@ export function AdminPrivyUsersClient({ users }: Props) {
       );
     });
   }, [users, search]);
+
+  const filtered = useMemo(() => {
+    let list = searched;
+    if (gameFilter.length > 0) {
+      list = list.filter((u) => gameFilter.some((g) => u.gameNames.includes(g)));
+    }
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "tokens-desc": {
+          const diff = tokenBigInt(b.tokenBalance) - tokenBigInt(a.tokenBalance);
+          return diff > 0 ? 1 : diff < 0 ? -1 : 0;
+        }
+        case "tokens-asc": {
+          const diff = tokenBigInt(a.tokenBalance) - tokenBigInt(b.tokenBalance);
+          return diff > 0 ? 1 : diff < 0 ? -1 : 0;
+        }
+        case "name": {
+          const an = `${a.nombre ?? ""} ${a.apellidos ?? ""}`.trim().toLowerCase();
+          const bn = `${b.nombre ?? ""} ${b.apellidos ?? ""}`.trim().toLowerCase();
+          return an.localeCompare(bn, "es");
+        }
+        case "date-new":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "date-old":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+    });
+  }, [searched, sortBy, gameFilter]);
 
   const withWallet = users.filter((u) => u.walletAddress).length;
   const withProfile = users.filter((u) => u.hasProfile).length;
@@ -149,21 +200,81 @@ export function AdminPrivyUsersClient({ users }: Props) {
         </div>
       )}
 
-      {/* Search */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Email, wallet, cédula, nombre, @username…"
-            className="w-full bg-surface-container-high border-none pl-9 pr-4 py-3 font-body text-sm text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary-container focus:outline-none"
-          />
+      {/* Search + Sort + Filter */}
+      <div className="space-y-3 mb-6">
+        {/* Search row */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Email, wallet, cédula, nombre, @username…"
+              className="w-full bg-surface-container-high border-none pl-9 pr-4 py-3 font-body text-sm text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary-container focus:outline-none"
+            />
+          </div>
+          <p className="font-body text-xs text-outline whitespace-nowrap">
+            {filtered.length} de {users.length}
+          </p>
         </div>
-        <p className="font-body text-xs text-outline whitespace-nowrap">
-          {filtered.length} de {users.length}
-        </p>
+
+        {/* Sort row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline shrink-0">Ordenar:</p>
+          {SORT_OPTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSortBy(key)}
+              className={`font-headline font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 transition-colors ${
+                sortBy === key
+                  ? "bg-primary-container text-on-surface"
+                  : "bg-surface-container-high text-outline hover:text-on-surface"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Game filter row */}
+        {allGames.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline shrink-0">Juego:</p>
+            {allGames.map((g) => {
+              const active = gameFilter.includes(g);
+              return (
+                <button
+                  key={g}
+                  onClick={() =>
+                    setGameFilter((prev) =>
+                      active ? prev.filter((x) => x !== g) : [...prev, g]
+                    )
+                  }
+                  className={`font-headline font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 transition-colors flex items-center gap-1 ${
+                    active
+                      ? "bg-secondary text-on-surface"
+                      : "bg-surface-container-high text-outline hover:text-on-surface"
+                  }`}
+                >
+                  {active && (
+                    <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                  )}
+                  {g}
+                </button>
+              );
+            })}
+            {gameFilter.length > 0 && (
+              <button
+                onClick={() => setGameFilter([])}
+                className="font-headline font-bold text-[10px] uppercase tracking-wider px-2 py-1.5 text-outline hover:text-on-surface flex items-center gap-0.5"
+              >
+                <span className="material-symbols-outlined text-[11px]">close</span>
+                Limpiar
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* List */}

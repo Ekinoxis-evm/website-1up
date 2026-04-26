@@ -152,6 +152,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 12. `create_pass_orders` — pass purchase records + `pass_order_status` enum (`pending_tx | confirmed | failed | expired_unverified`); unique index on `tx_hash`
 13. `extend_user_profiles_onboarding` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`
 14. `create_referral_codes` — `referral_codes` table with `code`, `description`, `is_active`, `max_uses`, `used_count`; seeded with 3 launch codes
+15. `birth_date_replace_birth_year` — renames `birth_year` → `birth_date`, changes type to DATE; best-effort backfills existing rows as Jan 1 of that year
 
 ### 4. Start the dev server
 
@@ -195,7 +196,7 @@ npm run dev
 | `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code) |
 | `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
-| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_year, juegos, referral code |
+| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker), juegos, referral code (optional) |
 | `/app/pass` | 1UP Pass status + purchase |
 | `/app/academia` | My enrolled courses + content access |
 | `/app/settings` | Linked accounts management |
@@ -255,7 +256,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_year, game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code |
 | `aliados` | Partner organizations — name, NIT, email, API URL/key |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |
@@ -267,7 +268,7 @@ npm run dev
 | `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | On-chain pass purchases — `tx_hash` (unique), `status` (confirmed/failed/…), `expires_at` (stacks on renewal), `block_number`, `paid_at` |
-| `referral_codes` | Codes required at onboarding: `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
+| `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
 
 ---
 
