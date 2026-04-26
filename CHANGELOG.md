@@ -8,9 +8,10 @@ Format follows `.claude/skills/release-management.md`.
 ## [2.2.1] — 2026-04-26
 
 ### Changed
-- **Wallet send — gas sponsorship via Privy EIP-7702** — `WalletTab.tsx` `handleSend` now uses `useSendTransaction` from `@privy-io/react-auth` with `sponsor: true` instead of building a raw `walletClient.writeContract` call. Privy upgrades the embedded wallet to a Kernel smart contract in-place (same address, no migration) and covers gas via its paymaster. Requires gas sponsorship enabled for Base in the Privy Dashboard and TEE execution active.
-  - Removed viem `createWalletClient`, `custom`, and `viem/chains` `base` imports from `WalletTab.tsx`.
-  - Added `encodeFunctionData` (encodes the ERC-20 `transfer` calldata) and `useSendTransaction` hook.
+- **Gas sponsorship for all user $1UP sends** — both `WalletTab.tsx` (send modal) and `BuyPassWizard.tsx` (pass purchase) now pass `sponsor: true` to `useSendTransaction`. Privy upgrades the embedded wallet via EIP-7702 in-place (same address, no migration) and covers gas via its paymaster, so users with 0 ETH can transact. Requires gas sponsorship enabled for Base in the Privy Dashboard and TEE execution active.
+  - `WalletTab.tsx`: replaced raw `walletClient.writeContract` with `useSendTransaction` + `encodeFunctionData`; removed `createWalletClient`, `custom`, and `viem/chains` `base` imports.
+  - `BuyPassWizard.tsx`: added `sponsor: true` to the existing `sendTransaction` call.
+  - `.claude/skills/pass-purchase-flow.md`: updated code snippet and added gas sponsorship context note.
 - **Wallet balance — 1UP as Basescan hyperlink** — the `1UP` label beside the balance BigNumber is now an `<a>` tag linking to the token on Basescan. Hover turns `text-primary-container`.
 - **Wallet card — removed Red Base L2 badge and contract row** — the "RED / Base — L2" network chip and the "CONTRATO:" truncated address link have been removed from the balance card for a cleaner UI.
 

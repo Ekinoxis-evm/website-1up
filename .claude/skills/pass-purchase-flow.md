@@ -74,7 +74,7 @@ updated_at              TIMESTAMPTZ DEFAULT now()
 
 ## Client-side flow (`BuyPassWizard`)
 
-Uses `useSendTransaction` from `@privy-io/react-auth` — the correct Privy React SDK hook for custom ERC20 transfers (the Privy `/transfer` API only supports USDC/ETH/etc, not custom tokens).
+Uses `useSendTransaction` from `@privy-io/react-auth` — correct hook for custom ERC20 transfers (the Privy `/transfer` API only covers USDC/ETH/etc). Pass `sponsor: true` so Privy covers gas via EIP-7702 paymaster; users with 0 ETH can still send. Requires **Gas Sponsorship enabled for Base** in the Privy Dashboard and **TEE execution** active.
 
 ```ts
 import { useSendTransaction } from "@privy-io/react-auth";
@@ -90,10 +90,10 @@ const data = encodeFunctionData({
   args: [recipientAddress as `0x${string}`, parseUnits(priceToken.toString(), 18)],
 });
 
-// 2. Send via Privy embedded wallet
+// 2. Send via Privy embedded wallet — gas sponsored
 const { hash } = await sendTransaction(
   { to: ONE_UP_TOKEN.address, data, chainId: 8453 },
-  { address: walletAddress },
+  { address: walletAddress, sponsor: true },
 );
 
 // 3. Wait for on-chain confirmation

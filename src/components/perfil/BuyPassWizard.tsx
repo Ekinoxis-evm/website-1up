@@ -47,7 +47,7 @@ export function BuyPassWizard({
     try {
       const result = await sendTransaction(
         { to: ONE_UP_TOKEN.address, data, chainId: 8453 },
-        { address: walletAddress },
+        { address: walletAddress, sponsor: true },
       );
       hash = result.hash;
       setTxHash(hash);
