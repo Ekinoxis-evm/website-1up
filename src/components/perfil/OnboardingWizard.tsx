@@ -14,6 +14,23 @@ const TIPO_LABELS: Record<string, string> = {
   PP: "Pasaporte",
   NIT: "NIT",
 };
+const MONTHS = [
+  { v: "1", l: "Enero" }, { v: "2", l: "Febrero" }, { v: "3", l: "Marzo" },
+  { v: "4", l: "Abril" }, { v: "5", l: "Mayo" }, { v: "6", l: "Junio" },
+  { v: "7", l: "Julio" }, { v: "8", l: "Agosto" }, { v: "9", l: "Septiembre" },
+  { v: "10", l: "Octubre" }, { v: "11", l: "Noviembre" }, { v: "12", l: "Diciembre" },
+];
+const CURRENT_YEAR = new Date().getFullYear();
+
+function calcAge(day: string, month: string, year: string): number | null {
+  const d = parseInt(day), m = parseInt(month), y = parseInt(year);
+  if (!d || !m || !y || year.length < 4) return null;
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+  return age;
+}
+
 const PHONE_COUNTRIES = [
   { code: "+57",  label: "🇨🇴 +57 Colombia" },
   { code: "+1",   label: "🇺🇸 +1 USA / Canadá" },
@@ -27,7 +44,6 @@ const PHONE_COUNTRIES = [
   { code: "+34",  label: "🇪🇸 +34 España" },
 ];
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
-const CURRENT_YEAR = new Date().getFullYear();
 
 const STEPS = [
   { label: "Tu nombre",   icon: "person"           },
@@ -55,10 +71,12 @@ export function OnboardingWizard({ games }: Props) {
   const [phoneNumber, setPhoneNumber]   = useState("");
 
   // Step 3
-  const [tipoDoc, setTipoDoc]   = useState("CC");
-  const [numDoc, setNumDoc]     = useState("");
-  const [barrio, setBarrio]     = useState("");
-  const [birthYear, setBirthYear] = useState("");
+  const [tipoDoc, setTipoDoc] = useState("CC");
+  const [numDoc, setNumDoc]   = useState("");
+  const [barrio, setBarrio]   = useState("");
+  const [birthDay, setBirthDay]     = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear]   = useState("");
 
   // Step 4
   const [gameIds, setGameIds] = useState<number[]>([]);
@@ -77,10 +95,16 @@ export function OnboardingWizard({ games }: Props) {
     ? "Solo letras minúsculas, números y _ (3–20 caracteres)"
     : null;
 
-  const birthYearNum = parseInt(birthYear);
-  const birthYearError = birthYear && (birthYearNum < 1930 || birthYearNum > CURRENT_YEAR - 5)
-    ? `Debe estar entre 1930 y ${CURRENT_YEAR - 5}`
-    : null;
+  const birthDateError = (() => {
+    if (!birthDay || !birthMonth || birthYear.length < 4) return null;
+    const d = parseInt(birthDay), m = parseInt(birthMonth), y = parseInt(birthYear);
+    const date = new Date(y, m - 1, d);
+    if (date.getMonth() !== m - 1 || date.getDate() !== d) return "Fecha inválida";
+    if (y < 1930) return "Año muy antiguo";
+    const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 5);
+    if (date > minAge) return "Debes tener al menos 5 años";
+    return null;
+  })();
 
   // Live referral code check
   useEffect(() => {
@@ -109,10 +133,16 @@ export function OnboardingWizard({ games }: Props) {
     setGameIds((prev) => prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]);
   }
 
+  const birthDateComplete = birthDay !== "" && birthMonth !== "" && birthYear.length === 4;
+  const birthDateStr = birthDateComplete
+    ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
+    : null;
+
   const step1Valid = nombre.trim().length > 0 && apellidos.trim().length > 0;
   const step2Valid = !usernameError;
-  const step3Valid = barrio.trim().length > 0 && birthYear.length === 4 && !birthYearError;
-  const step5Valid = codeStatus === "valid";
+  const step3Valid = barrio.trim().length > 0 && birthDateComplete && !birthDateError;
+  // Referral is optional — block only if code typed but invalid or still checking
+  const step5Valid = codeStatus !== "invalid" && codeStatus !== "checking";
 
   async function handleSubmit() {
     if (!step5Valid) return;
@@ -132,9 +162,9 @@ export function OnboardingWizard({ games }: Props) {
           tipoDocumento:   numDoc.trim() ? tipoDoc : undefined,
           numeroDocumento: numDoc.trim() || undefined,
           barrio:          barrio.trim(),
-          birthYear:       birthYearNum,
+          birthDate:       birthDateStr,
           gameIds:         gameIds.length > 0 ? gameIds : undefined,
-          referralCode:    referralCode.trim().toUpperCase(),
+          referralCode:    codeStatus === "valid" ? referralCode.trim().toUpperCase() : undefined,
         }),
       });
       if (!res.ok) {
@@ -304,20 +334,39 @@ export function OnboardingWizard({ games }: Props) {
             </div>
 
             <div>
-              <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Año de nacimiento *</label>
-              <input
-                type="number"
-                value={birthYear}
-                onChange={(e) => setBirthYear(e.target.value)}
-                placeholder={String(CURRENT_YEAR - 20)}
-                min={1930}
-                max={CURRENT_YEAR - 5}
-                className="w-full bg-surface-container text-on-background p-4 font-headline font-black text-xl border-none focus:outline-none placeholder:text-outline/30"
-              />
-              {birthYearError && <p className="font-body text-xs text-error mt-1">{birthYearError}</p>}
-              {birthYear.length === 4 && !birthYearError && (
+              <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha de nacimiento *</label>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="number"
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                  placeholder="Día"
+                  min={1} max={31}
+                  className="bg-surface-container text-on-background p-4 font-headline font-black text-xl border-none focus:outline-none placeholder:text-outline/30 text-center"
+                />
+                <select
+                  value={birthMonth}
+                  onChange={(e) => setBirthMonth(e.target.value)}
+                  className="bg-surface-container text-on-background p-4 font-headline font-bold border-none appearance-none text-center"
+                >
+                  <option value="">Mes</option>
+                  {MONTHS.map((m) => (
+                    <option key={m.v} value={m.v}>{m.l}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={birthYear}
+                  onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="Año"
+                  min={1930} max={CURRENT_YEAR - 5}
+                  className="bg-surface-container text-on-background p-4 font-headline font-black text-xl border-none focus:outline-none placeholder:text-outline/30 text-center"
+                />
+              </div>
+              {birthDateError && <p className="font-body text-xs text-error mt-1">{birthDateError}</p>}
+              {birthDateComplete && !birthDateError && (
                 <p className="font-body text-xs text-secondary mt-1">
-                  Edad aproximada: {CURRENT_YEAR - birthYearNum} años
+                  Edad: {calcAge(birthDay, birthMonth, birthYear)} años
                 </p>
               )}
             </div>
@@ -418,12 +467,12 @@ export function OnboardingWizard({ games }: Props) {
           </h1>
           <div className="h-1 w-16 bg-primary-container mb-4" />
           <p className="font-body text-sm text-outline mb-6">
-            Ingresa el código que te dieron para acceder a la plataforma.
+            Si tienes un código de referido, ingrésalo aquí. Si no, puedes agregarlo después en tu perfil.
           </p>
 
           <div>
             <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">
-              Código *
+              Código <span className="text-outline/50 normal-case font-normal">(opcional)</span>
             </label>
             <div className="relative">
               <input
@@ -458,7 +507,7 @@ export function OnboardingWizard({ games }: Props) {
           <div className="flex gap-3 mt-8">
             <button
               onClick={handleSubmit}
-              disabled={!step5Valid || submitting}
+              disabled={submitting || !step5Valid}
               className="flex-1 bg-primary-container text-white font-headline font-black py-4 uppercase tracking-tighter disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {submitting ? (

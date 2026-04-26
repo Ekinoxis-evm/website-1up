@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 
 type Game = { id: number; name: string };
@@ -15,7 +15,24 @@ interface UserProfile {
   tipo_documento: string | null;
   numero_documento: string | null;
   barrio: string | null;
-  birth_year: number | null;
+  birth_date: string | null;
+  referred_by_code: string | null;
+}
+
+const MONTHS = [
+  { v: "1", l: "Enero" }, { v: "2", l: "Febrero" }, { v: "3", l: "Marzo" },
+  { v: "4", l: "Abril" }, { v: "5", l: "Mayo" }, { v: "6", l: "Junio" },
+  { v: "7", l: "Julio" }, { v: "8", l: "Agosto" }, { v: "9", l: "Septiembre" },
+  { v: "10", l: "Octubre" }, { v: "11", l: "Noviembre" }, { v: "12", l: "Diciembre" },
+];
+
+function calcAge(day: string, month: string, year: string): number | null {
+  const d = parseInt(day), m = parseInt(month), y = parseInt(year);
+  if (!d || !m || !y || year.length < 4) return null;
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+  return age;
 }
 
 const TIPOS_DOCUMENTO = ["CC", "CE", "TI", "PP", "NIT"] as const;
@@ -106,9 +123,19 @@ export function IdentidadTab({ games = [] }: Props) {
   const phoneSave = useSectionSave(getAccessToken);
 
   // Section state — location / age
-  const [barrio, setBarrio]       = useState("");
-  const [birthYear, setBirthYear] = useState("");
+  const [barrio, setBarrio]         = useState("");
+  const [birthDay, setBirthDay]     = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear]   = useState("");
   const locationSave = useSectionSave(getAccessToken);
+
+  // Section state — referral code
+  const [referredByCode, setReferredByCode] = useState<string | null>(null);
+  const [referralInput, setReferralInput]   = useState("");
+  const [referralStatus, setReferralStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [referralMessage, setReferralMessage] = useState("");
+  const referralSave = useSectionSave(getAccessToken);
+  const referralDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Section state — games
   const [selectedGames, setSelectedGames] = useState<number[]>([]);
@@ -135,7 +162,13 @@ export function IdentidadTab({ games = [] }: Props) {
         setPhoneNumber(data.phone_number ?? "");
         setSelectedGames(data.game_ids ?? []);
         setBarrio(data.barrio ?? "");
-        setBirthYear(data.birth_year ? String(data.birth_year) : "");
+        if (data.birth_date) {
+          const parts = data.birth_date.split("-");
+          setBirthYear(parts[0] ?? "");
+          setBirthMonth(parts[1] ? String(parseInt(parts[1])) : "");
+          setBirthDay(parts[2] ? String(parseInt(parts[2])) : "");
+        }
+        setReferredByCode(data.referred_by_code ?? null);
         setTipoDoc(data.tipo_documento ?? "CC");
         setNumDoc(data.numero_documento ?? "");
       }
@@ -146,6 +179,21 @@ export function IdentidadTab({ games = [] }: Props) {
   }, []);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!referralInput.trim()) { setReferralStatus("idle"); setReferralMessage(""); return; }
+    if (referralDebounce.current) clearTimeout(referralDebounce.current);
+    setReferralStatus("checking");
+    referralDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/user/referral-codes/validate?code=${encodeURIComponent(referralInput.trim().toUpperCase())}`);
+        const data = await res.json() as { valid: boolean; reason?: string };
+        setReferralStatus(data.valid ? "valid" : "invalid");
+        setReferralMessage(data.valid ? "Código válido" : (data.reason ?? "Código inválido"));
+      } catch { setReferralStatus("idle"); }
+    }, 600);
+    return () => { if (referralDebounce.current) clearTimeout(referralDebounce.current); };
+  }, [referralInput]);
 
   function toggleGame(id: number) {
     setSelectedGames((prev) =>
@@ -286,31 +334,52 @@ export function IdentidadTab({ games = [] }: Props) {
           </div>
           <div>
             <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
-              Año de nacimiento
+              Fecha de nacimiento
             </label>
-            <input
-              type="number"
-              value={birthYear}
-              onChange={(e) => setBirthYear(e.target.value)}
-              placeholder={String(new Date().getFullYear() - 20)}
-              min={1930}
-              max={new Date().getFullYear() - 5}
-              disabled={locationSave.status === "saving"}
-              className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40"
-            />
-            {birthYear.length === 4 && (
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                type="number"
+                value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                placeholder="Día"
+                min={1} max={31}
+                disabled={locationSave.status === "saving"}
+                className="bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40 text-center"
+              />
+              <select
+                value={birthMonth}
+                onChange={(e) => setBirthMonth(e.target.value)}
+                disabled={locationSave.status === "saving"}
+                className="bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold appearance-none text-center"
+              >
+                <option value="">Mes</option>
+                {MONTHS.map((m) => (
+                  <option key={m.v} value={m.v}>{m.l}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="Año"
+                min={1930} max={new Date().getFullYear() - 5}
+                disabled={locationSave.status === "saving"}
+                className="bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40 text-center"
+              />
+            </div>
+            {birthDay && birthMonth && birthYear.length === 4 && (
               <p className="font-body text-xs text-outline mt-1">
-                Edad: {new Date().getFullYear() - parseInt(birthYear)} años
+                Edad: {calcAge(birthDay, birthMonth, birthYear)} años
               </p>
             )}
           </div>
 
           <button
             onClick={async () => {
-              await locationSave.save({
-                barrio:    barrio || undefined,
-                birthYear: birthYear ? parseInt(birthYear) : undefined,
-              });
+              const bd = birthDay && birthMonth && birthYear.length === 4
+                ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
+                : undefined;
+              await locationSave.save({ barrio: barrio || undefined, birthDate: bd });
             }}
             disabled={locationSave.status === "saving"}
             className="w-full bg-surface-container-highest text-on-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-50 hover:bg-surface-container-high transition-colors"
@@ -473,6 +542,68 @@ export function IdentidadTab({ games = [] }: Props) {
             </p>
           )}
         </div>
+      </div>
+
+      {/* ── Código de referido ───────────────────────────────────── */}
+      <div className="bg-surface-container p-6">
+        <h2 className="font-headline font-black text-lg uppercase tracking-tighter mb-1">
+          CÓDIGO DE REFERIDO
+        </h2>
+        <div className="h-0.5 w-12 bg-primary-container mb-5" />
+
+        {referredByCode ? (
+          <div className="flex items-center gap-3 bg-surface-container-lowest p-4">
+            <span className="material-symbols-outlined text-secondary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
+            <div>
+              <p className="font-headline font-black text-lg tracking-widest text-secondary">{referredByCode}</p>
+              <p className="font-body text-xs text-on-surface/40 mt-0.5">Código asignado — no se puede cambiar</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="font-body text-sm text-on-surface/60">
+              No tienes un código de referido asignado. Si alguien te invitó, puedes agregarlo aquí.
+            </p>
+            <div>
+              <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">Código</label>
+              <div className="relative">
+                <input
+                  value={referralInput}
+                  onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
+                  placeholder="EJ: 1UP2024"
+                  maxLength={30}
+                  disabled={referralSave.status === "saving"}
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-black tracking-widest border-none focus:outline-none placeholder:text-outline/30 uppercase"
+                />
+                {referralStatus === "checking" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline animate-spin text-sm">refresh</span>
+                )}
+                {referralStatus === "valid" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-secondary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                )}
+                {referralStatus === "invalid" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
+                )}
+              </div>
+              {referralMessage && (
+                <p className={`font-headline text-xs mt-1 ${referralStatus === "valid" ? "text-secondary" : "text-error"}`}>
+                  {referralMessage}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={async () => {
+                const ok = await referralSave.save({ referralCode: referralInput.trim().toUpperCase() });
+                if (ok) setReferredByCode(referralInput.trim().toUpperCase());
+              }}
+              disabled={referralSave.status === "saving" || referralStatus !== "valid"}
+              className="w-full bg-surface-container-highest text-on-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-50 hover:bg-surface-container-high transition-colors"
+            >
+              {referralSave.status === "saving" ? "GUARDANDO…" : "GUARDAR CÓDIGO"}
+            </button>
+            <SectionFeedback status={referralSave.status} message={referralSave.message} />
+          </div>
+        )}
       </div>
     </div>
   );

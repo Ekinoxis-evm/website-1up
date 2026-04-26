@@ -947,7 +947,7 @@ export type Database = {
         Row: {
           apellidos: string | null
           barrio: string | null
-          birth_year: number | null
+          birth_date: string | null
           comfenalco_afiliado: boolean | null
           comfenalco_verified_at: string | null
           created_at: string | null
@@ -969,7 +969,7 @@ export type Database = {
         Insert: {
           apellidos?: string | null
           barrio?: string | null
-          birth_year?: number | null
+          birth_date?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
           created_at?: string | null
@@ -991,7 +991,7 @@ export type Database = {
         Update: {
           apellidos?: string | null
           barrio?: string | null
-          birth_year?: number | null
+          birth_date?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
           created_at?: string | null
