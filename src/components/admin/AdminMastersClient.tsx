@@ -73,7 +73,7 @@ export function AdminMastersClient({ masters, courses }: Props) {
       linkedinUrl: m.linkedin_url ?? "", kickUrl: m.kick_url ?? "",
       twitchUrl: m.twitch_url ?? "", githubUrl: m.github_url ?? "",
       categories: m.categories ?? [],
-      topicsRaw: (m.topics ?? []).join(", "),
+      topicsRaw: ((m.topics as string[] | null) ?? []).join(", "),
       sortOrder: String(m.sort_order ?? 0), isActive: m.is_active ?? true,
     });
     setOpen(true);
@@ -164,9 +164,9 @@ export function AdminMastersClient({ masters, courses }: Props) {
               )}
 
               {/* Topics */}
-              {(m.topics ?? []).length > 0 && (
+              {((m.topics as string[] | null) ?? []).length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {(m.topics ?? []).map((t) => (
+                  {((m.topics as string[] | null) ?? []).map((t) => (
                     <span key={t} className="bg-secondary-container/20 text-secondary font-headline text-[9px] px-2 py-0.5 uppercase">
                       {t}
                     </span>

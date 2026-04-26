@@ -469,10 +469,13 @@ export type Database = {
       masters: {
         Row: {
           bio: string | null
+          categories: string[] | null
           created_at: string | null
+          github_url: string | null
           id: number
           instagram_url: string | null
           is_active: boolean | null
+          kick_url: string | null
           linkedin_url: string | null
           name: string
           photo_url: string | null
@@ -480,15 +483,19 @@ export type Database = {
           specialty: string | null
           tiktok_url: string | null
           topics: Json | null
+          twitch_url: string | null
           twitter_url: string | null
           youtube_url: string | null
         }
         Insert: {
           bio?: string | null
+          categories?: string[] | null
           created_at?: string | null
+          github_url?: string | null
           id?: number
           instagram_url?: string | null
           is_active?: boolean | null
+          kick_url?: string | null
           linkedin_url?: string | null
           name: string
           photo_url?: string | null
@@ -496,15 +503,19 @@ export type Database = {
           specialty?: string | null
           tiktok_url?: string | null
           topics?: Json | null
+          twitch_url?: string | null
           twitter_url?: string | null
           youtube_url?: string | null
         }
         Update: {
           bio?: string | null
+          categories?: string[] | null
           created_at?: string | null
+          github_url?: string | null
           id?: number
           instagram_url?: string | null
           is_active?: boolean | null
+          kick_url?: string | null
           linkedin_url?: string | null
           name?: string
           photo_url?: string | null
@@ -512,6 +523,7 @@ export type Database = {
           specialty?: string | null
           tiktok_url?: string | null
           topics?: Json | null
+          twitch_url?: string | null
           twitter_url?: string | null
           youtube_url?: string | null
         }

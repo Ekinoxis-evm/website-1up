@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Add aliado_id if not already present
-  const current: number[] = Array.isArray(profile.verified_aliados) ? profile.verified_aliados : [];
+  const current: number[] = Array.isArray(profile.verified_aliados)
+    ? (profile.verified_aliados as unknown as number[])
+    : [];
   if (!current.includes(aliado_id)) {
     await supabaseAdmin
       .from("user_profiles")

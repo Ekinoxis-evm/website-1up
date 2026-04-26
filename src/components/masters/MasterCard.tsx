@@ -75,9 +75,9 @@ export function MasterCard({ master, courses }: Props) {
         )}
 
         {/* Topics */}
-        {(master.topics ?? []).length > 0 && (
+        {((master.topics as string[] | null) ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {(master.topics ?? []).map((t) => (
+            {((master.topics as string[] | null) ?? []).map((t) => (
               <span
                 key={t}
                 className="bg-surface-container-high text-on-surface/50 font-headline text-[9px] px-2 py-0.5 uppercase tracking-wider"
