@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction, useWallets, useConnectWallet } from "@privy-io/react-auth";
+import { encodeFunctionData, parseUnits } from "viem";
+import { publicClient, ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import type { TokenPurchaseOrder, TokenPurchaseStatus } from "@/types/database.types";
 
 type OrderWithJoins = TokenPurchaseOrder & {
@@ -46,13 +48,18 @@ function truncate(addr: string) {
 export function AdminTokenOrdersClient({ orders }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
+  const { sendTransaction } = useSendTransaction();
+  const { wallets } = useWallets();
+  const { connectWallet } = useConnectWallet();
   const [filter, setFilter] = useState("");
   const [approveModal, setApproveModal] = useState<OrderWithJoins | null>(null);
   const [rejectModal, setRejectModal]   = useState<OrderWithJoins | null>(null);
-  const [txHash, setTxHash]             = useState("");
+  const [sendStep, setSendStep]         = useState<"idle" | "sending" | "waiting" | "done">("idle");
+  const [capturedHash, setCapturedHash] = useState<string | null>(null);
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes]     = useState("");
-  const [loading, setLoading]           = useState(false);
+  const [rejectLoading, setRejectLoading] = useState(false);
   const [actionError, setActionError]   = useState<string | null>(null);
   const [lightbox, setLightbox]         = useState<string | null>(null);
   const [copiedWallet, setCopiedWallet] = useState<number | null>(null);
@@ -68,25 +75,66 @@ export function AdminTokenOrdersClient({ orders }: Props) {
   const totalApproved1up = orders.filter((o) => o.status === "approved").reduce((s, o) => s + parseFloat(String(o.token_amount ?? 0)), 0);
   const pendingCount     = orders.filter((o) => o.status === "pending").length;
 
-  async function handleApprove() {
-    if (!approveModal || !txHash.trim()) return;
-    setLoading(true); setActionError(null);
+  async function handleSendApprove() {
+    if (!approveModal) return;
+    const walletAddr = selectedWalletAddress || wallets[0]?.address;
+    if (!walletAddr) { setActionError("Conecta una wallet primero."); return; }
+
+    const tokenAmount = parseFloat(String(approveModal.token_amount ?? 0));
+    if (tokenAmount <= 0) { setActionError("Monto de tokens inválido."); return; }
+
+    setSendStep("sending"); setActionError(null);
+    let hash: string;
+    try {
+      const data = encodeFunctionData({
+        abi: ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args: [
+          approveModal.wallet_address as `0x${string}`,
+          parseUnits(String(tokenAmount), ONE_UP_TOKEN.decimals),
+        ],
+      });
+      const result = await sendTransaction(
+        { to: ONE_UP_TOKEN.address, data, chainId: 8453 },
+        { address: walletAddr }
+      );
+      hash = result.hash;
+      setCapturedHash(hash);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Error al enviar la transacción.");
+      setSendStep("idle"); return;
+    }
+
+    setSendStep("waiting");
+    try {
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}`, timeout: 120_000 });
+    } catch {
+      setActionError(`TX enviada pero confirmación tardó demasiado. Hash: ${hash} — guárdalo y aprueba manualmente si es necesario.`);
+      setSendStep("idle"); return;
+    }
+
     const res = await fetch("/api/admin/token-orders", {
       method: "PATCH",
       headers: await authHeaders(),
-      body: JSON.stringify({ id: approveModal.id, action: "approve", txHash: txHash.trim(), adminNotes: adminNotes.trim() }),
+      body: JSON.stringify({ id: approveModal.id, action: "approve", txHash: hash, adminNotes: adminNotes.trim() }),
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setActionError(d.error ?? "Error al aprobar");
-      setLoading(false); return;
+      setActionError(d.error ?? "Error al registrar aprobación.");
+      setSendStep("idle"); return;
     }
-    setApproveModal(null); setTxHash(""); setAdminNotes(""); setLoading(false); router.refresh();
+
+    setSendStep("done");
+    setTimeout(() => {
+      setApproveModal(null); setSendStep("idle"); setCapturedHash(null);
+      setAdminNotes(""); setSelectedWalletAddress(""); setActionError(null);
+      router.refresh();
+    }, 2000);
   }
 
   async function handleReject() {
     if (!rejectModal || !rejectionReason.trim()) return;
-    setLoading(true); setActionError(null);
+    setRejectLoading(true); setActionError(null);
     const res = await fetch("/api/admin/token-orders", {
       method: "PATCH",
       headers: await authHeaders(),
@@ -95,9 +143,9 @@ export function AdminTokenOrdersClient({ orders }: Props) {
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       setActionError(d.error ?? "Error al rechazar");
-      setLoading(false); return;
+      setRejectLoading(false); return;
     }
-    setRejectModal(null); setRejectionReason(""); setAdminNotes(""); setLoading(false); router.refresh();
+    setRejectModal(null); setRejectionReason(""); setAdminNotes(""); setRejectLoading(false); router.refresh();
   }
 
   function copyWallet(id: number, addr: string) {
@@ -247,7 +295,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   {order.status === "pending" && (
                     <div className="flex gap-1.5">
                       <button
-                        onClick={() => { setApproveModal(order); setTxHash(""); setAdminNotes(""); setActionError(null); }}
+                        onClick={() => { setApproveModal(order); setSendStep("idle"); setCapturedHash(null); setAdminNotes(""); setSelectedWalletAddress(wallets[0]?.address ?? ""); setActionError(null); }}
                         className="bg-tertiary/20 text-tertiary font-headline font-bold text-[10px] uppercase px-3 py-1.5 hover:bg-tertiary/30 transition-colors"
                       >
                         APROBAR
@@ -279,39 +327,129 @@ export function AdminTokenOrdersClient({ orders }: Props) {
         <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-container border-4 border-tertiary p-8 w-full max-w-md">
             <h2 className="font-headline font-black text-xl uppercase mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-tertiary">check_circle</span>
-              APROBAR ORDEN #{approveModal.id}
+              <span className="material-symbols-outlined text-tertiary">
+                {sendStep === "done" ? "check_circle" : "send"}
+              </span>
+              ENVIAR $1UP — ORDEN #{approveModal.id}
             </h2>
-            <p className="font-body text-sm text-on-surface/50 mb-6">
-              {approveModal.nombre} · {formatCop(approveModal.cop_amount ?? 0)} · {parseFloat(String(approveModal.token_amount ?? 0)).toLocaleString()} 1UP
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">TX Hash (Base L2) *</label>
-                <input
-                  value={txHash} onChange={(e) => setTxHash(e.target.value)}
-                  placeholder="0x..."
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none focus:outline-none"
-                />
+
+            {/* Order summary */}
+            <div className="bg-surface-container-lowest p-4 mb-6 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-headline text-xs uppercase tracking-widest text-on-surface/50">Destinatario</span>
+                <span className="font-mono text-xs text-on-surface">{truncate(approveModal.wallet_address)}</span>
               </div>
-              <div>
-                <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Notas (opcional)</label>
-                <textarea
-                  value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={2}
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none"
-                />
+              <div className="flex justify-between items-center">
+                <span className="font-headline text-xs uppercase tracking-widest text-on-surface/50">Monto</span>
+                <span className="font-headline font-black text-tertiary">
+                  {parseFloat(String(approveModal.token_amount ?? 0)).toLocaleString()} 1UP
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-headline text-xs uppercase tracking-widest text-on-surface/50">Pago COP</span>
+                <span className="font-headline font-bold text-on-surface text-sm">{formatCop(approveModal.cop_amount ?? 0)}</span>
               </div>
             </div>
+
+            {sendStep === "done" ? (
+              <div className="bg-tertiary/10 p-4 mb-4 text-center">
+                <span className="material-symbols-outlined text-4xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <p className="font-headline font-black text-tertiary uppercase mt-2">¡Tokens enviados!</p>
+                {capturedHash && (
+                  <a
+                    href={`https://basescan.org/tx/${capturedHash}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="block font-mono text-[10px] text-tertiary/70 hover:text-tertiary mt-1 underline"
+                  >
+                    {truncate(capturedHash)}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Wallet selector */}
+                <div>
+                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-2">Wallet del admin</label>
+                  {wallets.length === 0 ? (
+                    <button
+                      onClick={() => connectWallet()}
+                      className="w-full bg-primary-container/20 text-primary-container font-headline font-bold text-xs uppercase py-3 hover:bg-primary-container/30 transition-colors"
+                    >
+                      + CONECTAR WALLET
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      {wallets.map((w) => (
+                        <button
+                          key={w.address}
+                          onClick={() => setSelectedWalletAddress(w.address)}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                            (selectedWalletAddress || wallets[0]?.address) === w.address
+                              ? "bg-tertiary/20 text-tertiary"
+                              : "bg-surface-container-lowest text-on-surface/60 hover:bg-surface-container-high"
+                          }`}
+                        >
+                          <span className="font-mono text-xs">{w.address}</span>
+                          <span className="font-headline text-[10px] uppercase ml-2 text-on-surface/30">{w.walletClientType}</span>
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => connectWallet()}
+                        className="w-full text-center font-headline text-[10px] uppercase tracking-widest text-on-surface/40 hover:text-on-surface/70 py-1.5 transition-colors"
+                      >
+                        + Conectar otra wallet
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Send status indicator */}
+                {sendStep !== "idle" && (
+                  <div className="flex items-center gap-2 bg-tertiary/10 px-4 py-3">
+                    <span className="material-symbols-outlined text-tertiary animate-spin text-sm">progress_activity</span>
+                    <span className="font-headline text-xs uppercase text-tertiary">
+                      {sendStep === "sending" ? "Confirmando en wallet..." : "Esperando confirmación en cadena..."}
+                    </span>
+                  </div>
+                )}
+
+                {/* Admin notes */}
+                <div>
+                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Notas (opcional)</label>
+                  <textarea
+                    value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={2}
+                    className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+            )}
+
             {actionError && <p className="text-error font-body text-sm mt-3">{actionError}</p>}
-            <div className="flex gap-3 mt-6">
-              <button onClick={handleApprove} disabled={loading || !txHash.trim()} className="flex-1 bg-tertiary text-background font-headline font-black py-3 disabled:opacity-50">
-                {loading ? "APROBANDO..." : "CONFIRMAR APROBACIÓN"}
-              </button>
-              <button onClick={() => setApproveModal(null)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">
-                CANCELAR
-              </button>
-            </div>
+
+            {sendStep !== "done" && (
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleSendApprove}
+                  disabled={sendStep !== "idle" || wallets.length === 0}
+                  className="flex-1 bg-tertiary text-background font-headline font-black py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendStep === "idle" ? (
+                    <>
+                      <span className="material-symbols-outlined text-base">send</span>
+                      ENVIAR {parseFloat(String(approveModal.token_amount ?? 0)).toLocaleString()} $1UP
+                    </>
+                  ) : sendStep === "sending" ? "AGUARDA EN TU WALLET..." : "ESPERANDO CONFIRMACIÓN..."}
+                </button>
+                <button
+                  onClick={() => { setApproveModal(null); setSendStep("idle"); setCapturedHash(null); setActionError(null); }}
+                  disabled={sendStep !== "idle"}
+                  className="flex-1 bg-surface-container-highest font-headline font-black py-3 disabled:opacity-40"
+                >
+                  CANCELAR
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -348,8 +486,8 @@ export function AdminTokenOrdersClient({ orders }: Props) {
             </div>
             {actionError && <p className="text-error font-body text-sm mt-3">{actionError}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={handleReject} disabled={loading || !rejectionReason.trim()} className="flex-1 bg-error text-white font-headline font-black py-3 disabled:opacity-50">
-                {loading ? "RECHAZANDO..." : "CONFIRMAR RECHAZO"}
+              <button onClick={handleReject} disabled={rejectLoading || !rejectionReason.trim()} className="flex-1 bg-error text-white font-headline font-black py-3 disabled:opacity-50">
+                {rejectLoading ? "RECHAZANDO..." : "CONFIRMAR RECHAZO"}
               </button>
               <button onClick={() => setRejectModal(null)} className="flex-1 bg-surface-container-highest font-headline font-black py-3">
                 CANCELAR

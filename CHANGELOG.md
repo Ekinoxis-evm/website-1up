@@ -5,6 +5,14 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.1.0] — 2026-04-26
+
+### Changed
+- **Admin approve $1UP orders** — replaced manual TX hash input with a live on-chain send flow. Admin modal now shows all connected Privy wallets (embedded + external), lets admin select which one to send from, encodes an ERC-20 `transfer` call via viem, submits via `useSendTransaction`, waits for Base L2 receipt, then auto-records the captured hash in the DB. Fallback: if receipt timeout, hash is shown so admin can approve manually.
+  - `AdminTokenOrdersClient.tsx` — new `handleSendApprove`, wallet selector, send step indicator (`idle → sending → waiting → done`).
+
+---
+
 ## [2.0.0] — 2026-04-26
 
 ### Added
