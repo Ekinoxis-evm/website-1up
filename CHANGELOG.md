@@ -5,6 +5,36 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [1.8.0] — 2026-04-24
+
+### Added
+- **OTC $1UP purchase flow** — complete COP-based token buying system replacing the old Uniswap swap button.
+  - **`BuyTokensWizard`** — 4-step modal: (1) Enter COP amount with live $1UP equivalent (rate: 1 $1UP = 1,000 COP), (2) Select active bank account with copy-to-clipboard, (3) Upload payment proof (comprobante — jpg/png/webp/pdf, max 5MB) + contact details, (4) Order confirmation with ID.
+  - **`MisOrdenes`** — panel below wallet showing user's last 10 purchase orders with status badge and cancel button for pending orders.
+  - **Bank accounts admin** (`/admin/bank-accounts`) — full CRUD for configuring bank accounts visible to users. Fields: bank name, type (ahorros/corriente), account number, holder name/document, free-text instructions, active flag, sort order.
+  - **Token orders admin** (`/admin/token-orders`) — table with filter pills (Todos/Pendientes/Aprobados/Rechazados/Cancelados), KPI header (total COP approved, $1UP approved, pending count), comprobante thumbnail/lightbox, approve modal (requires Base L2 tx hash), reject modal (requires reason).
+- **New API routes**:
+  - `POST /api/user/upload-comprobante` — Privy auth, multipart file upload to `comprobantes/pending/` in Supabase Storage
+  - `GET  /api/bank-accounts` — returns active bank accounts ordered by sort_order
+  - `GET  /api/user/token-orders` — user's order history (last 20)
+  - `POST /api/user/token-orders` — creates order, moves comprobante to `comprobantes/{orderId}/receipt.{ext}`
+  - `POST /api/user/token-orders/cancel` — cancels own pending order
+  - `GET  /api/admin/token-orders` — admin list with joins; `?status=` filter
+  - `PATCH /api/admin/token-orders` — approve (requires txHash) or reject (requires rejectionReason)
+  - `POST|PUT|DELETE /api/admin/bank-accounts` — bank account CRUD
+- **Storage helpers in `src/lib/blob.ts`**: `uploadComprobante(file, privyUserId)` and `moveComprobanteToOrder(pendingPath, orderId, ext)`
+- **Admin sidebar** — new "Tokens $1UP" group with "Órdenes 1UP" and "Cuentas Banco" entries.
+
+### Changed
+- **WalletTab BUY button** — replaced Uniswap swap modal with `BuyTokensWizard` OTC flow.
+
+### DB Migrations (applied via Supabase MCP)
+- `bank_accounts` table created (id, bank_name, account_type, account_number, holder_name, holder_document, instructions, is_active, sort_order, created_at, updated_at)
+- `token_purchase_orders` table created with `token_purchase_status` enum (pending/approved/rejected/cancelled); unique partial index `WHERE status = 'pending'` enforces one pending order per user
+- `src/types/database.types.ts` regenerated with new tables + convenience type aliases `BankAccount`, `TokenPurchaseOrder`, `TokenPurchaseStatus`
+
+---
+
 ## [1.7.0] — 2026-04-25
 
 ### Added

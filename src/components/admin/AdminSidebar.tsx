@@ -28,6 +28,13 @@ const GROUPS = [
     ],
   },
   {
+    label: "Tokens $1UP",
+    items: [
+      { href: "/admin/token-orders",  icon: "currency_exchange", label: "Órdenes 1UP"   },
+      { href: "/admin/bank-accounts", icon: "account_balance",   label: "Cuentas Banco" },
+    ],
+  },
+  {
     label: "Sistema",
     items: [
       { href: "/admin/privy-users",    icon: "manage_accounts",       label: "Usuarios"    },

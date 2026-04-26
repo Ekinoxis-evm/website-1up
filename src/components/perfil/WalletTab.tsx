@@ -8,8 +8,9 @@ import { base } from "viem/chains";
 import { use1upBalance } from "@/hooks/use1upBalance";
 import { ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import { QRCodeSVG } from "qrcode.react";
+import { BuyTokensWizard } from "@/components/perfil/BuyTokensWizard";
+import { MisOrdenes } from "@/components/perfil/MisOrdenes";
 
-const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 type TxItem = {
   hash: string;
@@ -39,7 +40,7 @@ function truncate(addr: string) {
 }
 
 export function WalletTab() {
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [copied, setCopied] = useState(false);
 
@@ -62,9 +63,7 @@ export function WalletTab() {
   const [receiveCopied, setReceiveCopied] = useState(false);
 
   // Buy modal state
-  const [buyOpen, setBuyOpen]       = useState(false);
-  const [swapAsset, setSwapAsset]   = useState("USDC");
-  const [swapAmount, setSwapAmount] = useState("");
+  const [buyOpen, setBuyOpen] = useState(false);
 
   // QR scanner state
   const [scanOpen, setScanOpen]   = useState(false);
@@ -173,15 +172,6 @@ export function WalletTab() {
     }
   }
 
-  function handleSwap() {
-    const url = new URL("https://app.uniswap.org/swap");
-    url.searchParams.set("chain", "base");
-    url.searchParams.set("outputCurrency", ONE_UP_TOKEN.address);
-    if (swapAsset === "USDC") url.searchParams.set("inputCurrency", USDC_BASE);
-    if (swapAmount) url.searchParams.set("exactAmount", swapAmount);
-    window.open(url.toString(), "_blank", "noopener,noreferrer");
-  }
-
   function copyAddress() {
     if (!walletAddress) return;
     navigator.clipboard.writeText(walletAddress);
@@ -285,7 +275,7 @@ export function WalletTab() {
                   <span className="block skew-content">RECIBIR</span>
                 </button>
                 <button
-                  onClick={() => { setBuyOpen(true); setSwapAmount(""); }}
+                  onClick={() => setBuyOpen(true)}
                   className="flex items-center justify-center gap-1.5 bg-tertiary/20 border border-tertiary/30 text-tertiary font-headline font-black text-xs py-3 skew-fix hover:bg-tertiary/30 transition-all"
                 >
                   <span className="material-symbols-outlined text-sm">bolt</span>
@@ -527,80 +517,17 @@ export function WalletTab() {
         </div>
       )}
 
-      {/* ── Buy Modal ───────────────────────────────────────────── */}
-      {buyOpen && (
-        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container border-4 border-tertiary/60 p-8 w-full max-w-md">
-            <h2 className="font-headline font-black text-xl uppercase mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-tertiary">bolt</span>
-              COMPRAR $1UP
-            </h2>
-            <p className="font-body text-sm text-on-surface/50 mb-6">
-              Elige el activo y el monto. Serás redirigido a Uniswap para completar el swap en la red Base.
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-2">
-                  Asset a depositar
-                </label>
-                <div className="relative">
-                  <select
-                    value={swapAsset}
-                    onChange={(e) => setSwapAsset(e.target.value)}
-                    className="w-full bg-surface-container-lowest text-on-surface p-4 font-bold appearance-none border-none"
-                  >
-                    <option value="USDC">USDC (Base)</option>
-                    <option value="ETH">ETH (Base)</option>
-                  </select>
-                  <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface/50">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-2">
-                  Monto
-                </label>
-                <input
-                  type="number"
-                  value={swapAmount}
-                  onChange={(e) => setSwapAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="0"
-                  step="any"
-                  className="w-full bg-surface-container-lowest text-on-surface p-4 font-headline text-xl font-black border-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-surface-container-lowest">
-                <span className="text-xs font-headline uppercase text-on-surface/50">
-                  $1UP estimados a recibir
-                </span>
-                <span className="font-headline font-bold text-primary/60">≈ — 1UP</span>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleSwap}
-                  className="flex-1 bg-tertiary/20 border border-tertiary/50 text-tertiary font-headline font-black py-4 uppercase tracking-tighter hover:bg-tertiary/30 transition-colors flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-base">open_in_new</span>
-                  SWAP POR $1UP
-                </button>
-                <button onClick={() => setBuyOpen(false)} className="flex-1 bg-surface-container-highest font-headline font-black py-4">
-                  CANCELAR
-                </button>
-              </div>
-
-              <p className="text-[10px] font-body text-on-surface/30 text-center">
-                La transacción se completa en Uniswap. Red: Base (L2).
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* ── Buy Wizard ──────────────────────────────────────────── */}
+      {buyOpen && walletAddress && (
+        <BuyTokensWizard
+          walletAddress={walletAddress}
+          onClose={() => setBuyOpen(false)}
+          getAccessToken={getAccessToken}
+        />
       )}
+
+      {/* ── Purchase Orders ─────────────────────────────────────── */}
+      <MisOrdenes getAccessToken={getAccessToken} />
 
       {/* ── QR Scanner Modal ────────────────────────────────────── */}
       {scanOpen && (

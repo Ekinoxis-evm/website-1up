@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_content: {
+        Row: {
+          content_type: string
+          course_id: number
+          created_at: string | null
+          description: string | null
+          id: number
+          is_published: boolean | null
+          sort_order: number | null
+          title: string
+          url: string | null
+        }
+        Insert: {
+          content_type: string
+          course_id: number
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_published?: boolean | null
+          sort_order?: number | null
+          title: string
+          url?: string | null
+        }
+        Update: {
+          content_type?: string
+          course_id?: number
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_published?: boolean | null
+          sort_order?: number | null
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_content_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_users: {
         Row: {
           added_by: string | null
@@ -32,6 +76,84 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: number
+        }
+        Relationships: []
+      }
+      aliados: {
+        Row: {
+          api_key: string | null
+          api_url: string | null
+          created_at: string | null
+          email: string | null
+          id: number
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          nit: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          api_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: number
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          nit?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          api_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: number
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          nit?: string | null
+        }
+        Relationships: []
+      }
+      bank_accounts: {
+        Row: {
+          account_number: string
+          account_type: string
+          bank_name: string
+          created_at: string
+          holder_document: string | null
+          holder_name: string
+          id: number
+          instructions: string | null
+          is_active: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          account_number: string
+          account_type: string
+          bank_name: string
+          created_at?: string
+          holder_document?: string | null
+          holder_name: string
+          id?: number
+          instructions?: string | null
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string
+          account_type?: string
+          bank_name?: string
+          created_at?: string
+          holder_document?: string | null
+          holder_name?: string
+          id?: number
+          instructions?: string | null
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -84,8 +206,8 @@ export type Database = {
           duration_hours: number | null
           id: number
           image_url: string | null
-          master_id: number | null
           is_active: boolean | null
+          master_id: number | null
           name: string
           price_cop: number | null
           sort_order: number | null
@@ -97,8 +219,8 @@ export type Database = {
           duration_hours?: number | null
           id?: number
           image_url?: string | null
-          master_id?: number | null
           is_active?: boolean | null
+          master_id?: number | null
           name: string
           price_cop?: number | null
           sort_order?: number | null
@@ -110,8 +232,8 @@ export type Database = {
           duration_hours?: number | null
           id?: number
           image_url?: string | null
-          master_id?: number | null
           is_active?: boolean | null
+          master_id?: number | null
           name?: string
           price_cop?: number | null
           sort_order?: number | null
@@ -128,103 +250,104 @@ export type Database = {
       }
       discount_rules: {
         Row: {
-          id: number
-          name: string
-          description: string | null
-          trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
-          discount_pct: number
-          applies_to: "courses" | "pass" | "all"
           aliado_id: number | null
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          discount_pct: number
+          id: number
           is_active: boolean | null
+          name: string
+          trigger_type: Database["public"]["Enums"]["discount_trigger"]
           valid_from: string | null
           valid_until: string | null
-          created_by: string | null
-          created_at: string | null
         }
         Insert: {
-          id?: number
-          name: string
+          aliado_id?: number | null
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
-          trigger_type: "comfenalco" | "promo_code" | "manual" | "auto"
           discount_pct: number
-          applies_to: "courses" | "pass" | "all"
-          aliado_id?: number | null
+          id?: number
           is_active?: boolean | null
+          name: string
+          trigger_type: Database["public"]["Enums"]["discount_trigger"]
           valid_from?: string | null
           valid_until?: string | null
-          created_by?: string | null
-          created_at?: string | null
         }
         Update: {
-          id?: number
-          name?: string
+          aliado_id?: number | null
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
-          trigger_type?: "comfenalco" | "promo_code" | "manual" | "auto"
           discount_pct?: number
-          applies_to?: "courses" | "pass" | "all"
-          aliado_id?: number | null
+          id?: number
           is_active?: boolean | null
+          name?: string
+          trigger_type?: Database["public"]["Enums"]["discount_trigger"]
           valid_from?: string | null
           valid_until?: string | null
-          created_by?: string | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      enrollments: {
-        Row: {
-          id: number
-          user_profile_id: number
-          product_type: "course" | "pass"
-          course_id: number | null
-          original_price_cop: number
-          discount_rule_id: number | null
-          discount_pct_applied: number | null
-          final_price_cop: number
-          mp_preference_id: string | null
-          mp_payment_id: string | null
-          payment_status: "pending" | "approved" | "rejected" | "cancelled" | null
-          paid_at: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          user_profile_id: number
-          product_type: "course" | "pass"
-          course_id?: number | null
-          original_price_cop: number
-          discount_rule_id?: number | null
-          discount_pct_applied?: number | null
-          final_price_cop: number
-          mp_preference_id?: string | null
-          mp_payment_id?: string | null
-          payment_status?: "pending" | "approved" | "rejected" | "cancelled" | null
-          paid_at?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          user_profile_id?: number
-          product_type?: "course" | "pass"
-          course_id?: number | null
-          original_price_cop?: number
-          discount_rule_id?: number | null
-          discount_pct_applied?: number | null
-          final_price_cop?: number
-          mp_preference_id?: string | null
-          mp_payment_id?: string | null
-          payment_status?: "pending" | "approved" | "rejected" | "cancelled" | null
-          paid_at?: string | null
-          created_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "enrollments_user_profile_id_fkey"
-            columns: ["user_profile_id"]
+            foreignKeyName: "discount_rules_aliado_id_fkey"
+            columns: ["aliado_id"]
             isOneToOne: false
-            referencedRelation: "user_profiles"
+            referencedRelation: "aliados"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      enrollments: {
+        Row: {
+          course_id: number | null
+          created_at: string | null
+          discount_pct_applied: number | null
+          discount_rule_id: number | null
+          final_price_cop: number
+          id: number
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          original_price_cop: number
+          paid_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          product_type: Database["public"]["Enums"]["product_type"]
+          user_profile_id: number
+        }
+        Insert: {
+          course_id?: number | null
+          created_at?: string | null
+          discount_pct_applied?: number | null
+          discount_rule_id?: number | null
+          final_price_cop: number
+          id?: number
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          original_price_cop: number
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          product_type: Database["public"]["Enums"]["product_type"]
+          user_profile_id: number
+        }
+        Update: {
+          course_id?: number | null
+          created_at?: string | null
+          discount_pct_applied?: number | null
+          discount_rule_id?: number | null
+          final_price_cop?: number
+          id?: number
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          original_price_cop?: number
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          product_type?: Database["public"]["Enums"]["product_type"]
+          user_profile_id?: number
+        }
+        Relationships: [
           {
             foreignKeyName: "enrollments_course_id_fkey"
             columns: ["course_id"]
@@ -239,64 +362,14 @@ export type Database = {
             referencedRelation: "discount_rules"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "enrollments_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
         ]
-      }
-      user_profiles: {
-        Row: {
-          id: number
-          privy_user_id: string
-          email: string | null
-          nombre: string | null
-          apellidos: string | null
-          username: string | null
-          phone_country: string | null
-          phone_number: string | null
-          game_ids: number[]
-          tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT" | null
-          numero_documento: string | null
-          comfenalco_afiliado: boolean | null
-          comfenalco_verified_at: string | null
-          verified_aliados: number[] | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: number
-          privy_user_id: string
-          email?: string | null
-          nombre?: string | null
-          apellidos?: string | null
-          username?: string | null
-          phone_country?: string | null
-          phone_number?: string | null
-          game_ids?: number[]
-          tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
-          numero_documento?: string | null
-          comfenalco_afiliado?: boolean | null
-          comfenalco_verified_at?: string | null
-          verified_aliados?: number[] | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: number
-          privy_user_id?: string
-          email?: string | null
-          nombre?: string | null
-          apellidos?: string | null
-          username?: string | null
-          phone_country?: string | null
-          phone_number?: string | null
-          game_ids?: number[]
-          tipo_documento?: "CC" | "CE" | "TI" | "PP" | "NIT" | null
-          numero_documento?: string | null
-          comfenalco_afiliado?: boolean | null
-          comfenalco_verified_at?: string | null
-          verified_aliados?: number[] | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       floor_info: {
         Row: {
@@ -393,6 +466,57 @@ export type Database = {
           },
         ]
       }
+      masters: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          id: number
+          instagram_url: string | null
+          is_active: boolean | null
+          linkedin_url: string | null
+          name: string
+          photo_url: string | null
+          sort_order: number | null
+          specialty: string | null
+          tiktok_url: string | null
+          topics: Json | null
+          twitter_url: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          id?: number
+          instagram_url?: string | null
+          is_active?: boolean | null
+          linkedin_url?: string | null
+          name: string
+          photo_url?: string | null
+          sort_order?: number | null
+          specialty?: string | null
+          tiktok_url?: string | null
+          topics?: Json | null
+          twitter_url?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          id?: number
+          instagram_url?: string | null
+          is_active?: boolean | null
+          linkedin_url?: string | null
+          name?: string
+          photo_url?: string | null
+          sort_order?: number | null
+          specialty?: string | null
+          tiktok_url?: string | null
+          topics?: Json | null
+          twitter_url?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       pass_benefits: {
         Row: {
           created_at: string | null
@@ -462,176 +586,6 @@ export type Database = {
         }
         Relationships: []
       }
-      masters: {
-        Row: {
-          id: number
-          name: string
-          specialty: string | null
-          bio: string | null
-          photo_url: string | null
-          instagram_url: string | null
-          tiktok_url: string | null
-          twitter_url: string | null
-          youtube_url: string | null
-          linkedin_url: string | null
-          kick_url: string | null
-          twitch_url: string | null
-          github_url: string | null
-          categories: string[] | null
-          topics: string[] | null
-          sort_order: number | null
-          is_active: boolean | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          name: string
-          specialty?: string | null
-          bio?: string | null
-          photo_url?: string | null
-          instagram_url?: string | null
-          tiktok_url?: string | null
-          twitter_url?: string | null
-          youtube_url?: string | null
-          linkedin_url?: string | null
-          kick_url?: string | null
-          twitch_url?: string | null
-          github_url?: string | null
-          categories?: string[] | null
-          topics?: string[] | null
-          sort_order?: number | null
-          is_active?: boolean | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          name?: string
-          specialty?: string | null
-          bio?: string | null
-          photo_url?: string | null
-          instagram_url?: string | null
-          tiktok_url?: string | null
-          twitter_url?: string | null
-          youtube_url?: string | null
-          linkedin_url?: string | null
-          kick_url?: string | null
-          twitch_url?: string | null
-          github_url?: string | null
-          categories?: string[] | null
-          topics?: string[] | null
-          sort_order?: number | null
-          is_active?: boolean | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      aliados: {
-        Row: {
-          id: number
-          name: string
-          nit: string | null
-          email: string | null
-          api_url: string | null
-          api_key: string | null
-          logo_url: string | null
-          is_active: boolean | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          name: string
-          nit?: string | null
-          email?: string | null
-          api_url?: string | null
-          api_key?: string | null
-          logo_url?: string | null
-          is_active?: boolean | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          name?: string
-          nit?: string | null
-          email?: string | null
-          api_url?: string | null
-          api_key?: string | null
-          logo_url?: string | null
-          is_active?: boolean | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      academia_content: {
-        Row: {
-          id: number
-          course_id: number
-          content_type: string
-          title: string
-          description: string | null
-          url: string | null
-          sort_order: number | null
-          is_published: boolean | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          course_id: number
-          content_type: string
-          title: string
-          description?: string | null
-          url?: string | null
-          sort_order?: number | null
-          is_published?: boolean | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          course_id?: number
-          content_type?: string
-          title?: string
-          description?: string | null
-          url?: string | null
-          sort_order?: number | null
-          is_published?: boolean | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "academia_content_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      social_links: {
-        Row: {
-          id: number
-          platform: string
-          url: string | null
-          is_active: boolean | null
-          sort_order: number | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: number
-          platform: string
-          url?: string | null
-          is_active?: boolean | null
-          sort_order?: number | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: number
-          platform?: string
-          url?: string | null
-          is_active?: boolean | null
-          sort_order?: number | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
       recruitment_submissions: {
         Row: {
           category_id: number | null
@@ -691,19 +645,187 @@ export type Database = {
       }
       site_content: {
         Row: {
-          key: string
           image_url: string | null
+          key: string
           updated_at: string | null
         }
         Insert: {
-          key: string
           image_url?: string | null
+          key: string
           updated_at?: string | null
         }
         Update: {
-          key?: string
           image_url?: string | null
+          key?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      social_links: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          platform: string
+          sort_order: number | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          platform: string
+          sort_order?: number | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          platform?: string
+          sort_order?: number | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      token_purchase_orders: {
+        Row: {
+          admin_notes: string | null
+          approved_tx_hash: string | null
+          bank_account_id: number | null
+          celular_contacto: string
+          comprobante_url: string
+          cop_amount: number
+          created_at: string
+          email: string
+          exchange_rate_cop: number
+          id: number
+          nombre: string
+          privy_user_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["token_purchase_status"]
+          token_amount: number
+          updated_at: string
+          user_profile_id: number
+          wallet_address: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_tx_hash?: string | null
+          bank_account_id?: number | null
+          celular_contacto: string
+          comprobante_url: string
+          cop_amount: number
+          created_at?: string
+          email: string
+          exchange_rate_cop?: number
+          id?: number
+          nombre: string
+          privy_user_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["token_purchase_status"]
+          token_amount: number
+          updated_at?: string
+          user_profile_id: number
+          wallet_address: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_tx_hash?: string | null
+          bank_account_id?: number | null
+          celular_contacto?: string
+          comprobante_url?: string
+          cop_amount?: number
+          created_at?: string
+          email?: string
+          exchange_rate_cop?: number
+          id?: number
+          nombre?: string
+          privy_user_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["token_purchase_status"]
+          token_amount?: number
+          updated_at?: string
+          user_profile_id?: number
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_purchase_orders_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_purchase_orders_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          apellidos: string | null
+          comfenalco_afiliado: boolean | null
+          comfenalco_verified_at: string | null
+          created_at: string | null
+          email: string | null
+          game_ids: number[]
+          id: number
+          nombre: string | null
+          numero_documento: string | null
+          phone_country: string | null
+          phone_number: string | null
+          privy_user_id: string
+          tipo_documento: Database["public"]["Enums"]["tipo_documento"] | null
+          updated_at: string | null
+          username: string | null
+          verified_aliados: Json | null
+        }
+        Insert: {
+          apellidos?: string | null
+          comfenalco_afiliado?: boolean | null
+          comfenalco_verified_at?: string | null
+          created_at?: string | null
+          email?: string | null
+          game_ids?: number[]
+          id?: number
+          nombre?: string | null
+          numero_documento?: string | null
+          phone_country?: string | null
+          phone_number?: string | null
+          privy_user_id: string
+          tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
+          updated_at?: string | null
+          username?: string | null
+          verified_aliados?: Json | null
+        }
+        Update: {
+          apellidos?: string | null
+          comfenalco_afiliado?: boolean | null
+          comfenalco_verified_at?: string | null
+          created_at?: string | null
+          email?: string | null
+          game_ids?: number[]
+          id?: number
+          nombre?: string | null
+          numero_documento?: string | null
+          phone_country?: string | null
+          phone_number?: string | null
+          privy_user_id?: string
+          tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
+          updated_at?: string | null
+          username?: string | null
+          verified_aliados?: Json | null
         }
         Relationships: []
       }
@@ -715,7 +837,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      discount_applies_to: "courses" | "pass" | "all"
+      discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
+      payment_status: "pending" | "approved" | "rejected" | "cancelled"
+      product_type: "course" | "pass"
+      tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT"
+      token_purchase_status: "pending" | "approved" | "rejected" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -724,6 +851,7 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
@@ -841,24 +969,34 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      discount_applies_to: ["courses", "pass", "all"],
+      discount_trigger: ["comfenalco", "promo_code", "manual", "auto"],
+      payment_status: ["pending", "approved", "rejected", "cancelled"],
+      product_type: ["course", "pass"],
+      tipo_documento: ["CC", "CE", "TI", "PP", "NIT"],
+      token_purchase_status: ["pending", "approved", "rejected", "cancelled"],
+    },
   },
 } as const
 
-// Convenience type aliases — matches Supabase snake_case column names
-export type GameCategory  = Database["public"]["Tables"]["game_categories"]["Row"];
-export type Game          = Database["public"]["Tables"]["games"]["Row"];
-export type Player        = Database["public"]["Tables"]["players"]["Row"];
-export type Competition   = Database["public"]["Tables"]["competitions"]["Row"];
-export type Course        = Database["public"]["Tables"]["courses"]["Row"];
-export type PassBenefit   = Database["public"]["Tables"]["pass_benefits"]["Row"];
-export type FloorInfo     = Database["public"]["Tables"]["floor_info"]["Row"];
-export type Submission    = Database["public"]["Tables"]["recruitment_submissions"]["Row"];
-export type UserProfile     = Database["public"]["Tables"]["user_profiles"]["Row"];
-export type DiscountRule    = Database["public"]["Tables"]["discount_rules"]["Row"];
-export type Enrollment      = Database["public"]["Tables"]["enrollments"]["Row"];
-export type Master          = Database["public"]["Tables"]["masters"]["Row"];
-export type Aliado          = Database["public"]["Tables"]["aliados"]["Row"];
-export type AcademiaContent = Database["public"]["Tables"]["academia_content"]["Row"];
-export type SocialLink      = Database["public"]["Tables"]["social_links"]["Row"];
-export type SiteContent     = Database["public"]["Tables"]["site_content"]["Row"];
+// Convenience type aliases
+export type GameCategory     = Database["public"]["Tables"]["game_categories"]["Row"];
+export type Game             = Database["public"]["Tables"]["games"]["Row"];
+export type Player           = Database["public"]["Tables"]["players"]["Row"];
+export type Competition      = Database["public"]["Tables"]["competitions"]["Row"];
+export type Course           = Database["public"]["Tables"]["courses"]["Row"];
+export type PassBenefit      = Database["public"]["Tables"]["pass_benefits"]["Row"];
+export type FloorInfo        = Database["public"]["Tables"]["floor_info"]["Row"];
+export type Submission       = Database["public"]["Tables"]["recruitment_submissions"]["Row"];
+export type UserProfile      = Database["public"]["Tables"]["user_profiles"]["Row"];
+export type DiscountRule     = Database["public"]["Tables"]["discount_rules"]["Row"];
+export type Enrollment       = Database["public"]["Tables"]["enrollments"]["Row"];
+export type Master           = Database["public"]["Tables"]["masters"]["Row"];
+export type Aliado           = Database["public"]["Tables"]["aliados"]["Row"];
+export type AcademiaContent  = Database["public"]["Tables"]["academia_content"]["Row"];
+export type SocialLink       = Database["public"]["Tables"]["social_links"]["Row"];
+export type SiteContent      = Database["public"]["Tables"]["site_content"]["Row"];
+export type BankAccount      = Database["public"]["Tables"]["bank_accounts"]["Row"];
+export type TokenPurchaseOrder  = Database["public"]["Tables"]["token_purchase_orders"]["Row"];
+export type TokenPurchaseStatus = Database["public"]["Enums"]["token_purchase_status"];
