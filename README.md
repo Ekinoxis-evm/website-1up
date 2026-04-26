@@ -150,6 +150,8 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 10. `create_bank_accounts` + `create_token_purchase_orders` — OTC $1UP purchase tables + `token_purchase_status` enum; unique partial index on `user_profile_id WHERE status = 'pending'`
 11. `create_pass_config` — single-row config table; seeded with initial price (30,000 $1UP), recipient address, 30-day duration
 12. `create_pass_orders` — pass purchase records + `pass_order_status` enum (`pending_tx | confirmed | failed | expired_unverified`); unique index on `tx_hash`
+13. `extend_user_profiles_onboarding` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`
+14. `create_referral_codes` — `referral_codes` table with `code`, `description`, `is_active`, `max_uses`, `used_count`; seeded with 3 launch codes
 
 ### 4. Start the dev server
 
@@ -218,7 +220,7 @@ npm run dev
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
 | `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
-| `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, approve/reject with tx hash |
+| `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
 | `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
@@ -253,7 +255,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — nombre, apellidos, username, phone, game_ids[], document, Comfenalco status, verified_aliados[] |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_year, game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code |
 | `aliados` | Partner organizations — name, NIT, email, API URL/key |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |

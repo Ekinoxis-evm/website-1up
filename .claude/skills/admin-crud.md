@@ -85,9 +85,17 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | Academia content | `/academia`, `/admin/academia-content` |
 | Discounts | `/academia`, `/admin/discounts` |
 | Floor info | `/gaming-tower`, `/admin/floors` |
-| Pass benefits | `/gaming-tower`, `/admin/pass-benefits` |
+| Pass benefits | `/gaming-tower`, `/admin/1pass` |
 | Games | `/`, `/juegos`, `/admin/games` |
 | Game categories | `/`, `/juegos`, `/admin/games` |
+| Social links | `revalidatePath("/", "layout")` — footer is in shared layout, must bust all public pages |
+| Site content (images) | `/`, `/gaming-tower`, `/academia`, `/admin/site-images` |
+| Bank accounts | `/admin/bank-accounts`, `/app` |
+| Token purchase orders | `/admin/token-orders`, `/app` |
+| Pass config | `/gaming-tower`, `/admin/1pass` |
+| Pass orders | `/admin/pass-orders`, `/app/pass` |
+| Referral codes | `/admin/referral-codes` |
+| User onboarding | `/app`, `/admin/referral-codes` |
 
 ## All admin routes
 
@@ -101,11 +109,17 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/masters` | `AdminMastersClient` | `/api/admin/masters` | POST/PUT/DELETE |
 | `/admin/courses` | `AdminCoursesClient` | `/api/admin/courses` | POST/PUT/DELETE |
 | `/admin/academia-content` | `AdminAcademiaContentClient` | `/api/admin/academia-content` | POST/PUT/DELETE |
-| `/admin/1pass` | `Admin1PassClient` | — (read-only aggregate) | — |
-| `/admin/pass-benefits` | `AdminPassBenefitsClient` | `/api/admin/pass-benefits` | POST/PUT/DELETE |
+| `/admin/1pass` | `Admin1PassClient` | `/api/admin/pass-config` + `/api/admin/pass-benefits` | GET/PUT + POST/PUT/DELETE |
+| `/admin/pass-orders` | `AdminPassOrdersClient` | `/api/admin/pass-orders` | GET/PATCH |
 | `/admin/discounts` | `AdminDiscountsClient` | `/api/admin/discounts` | POST/PUT/DELETE |
 | `/admin/enrollments` | read-only table | — | — |
 | `/admin/aliados` | `AdminAliadosClient` | `/api/admin/aliados` | POST/PUT/DELETE |
+| `/admin/token-orders` | `AdminTokenOrdersClient` | `/api/admin/token-orders` | GET/PATCH (approve via wallet-send / reject) |
+| `/admin/bank-accounts` | `AdminBankAccountsClient` | `/api/admin/bank-accounts` | POST/PUT/DELETE |
+| `/admin/site-images` | `AdminSiteImagesClient` | `/api/admin/upload` | POST (image upload) |
+| `/admin/referral-codes` | `AdminReferralCodesClient` | `/api/admin/referral-codes` | GET/POST/PUT |
+| `/admin/social-links` | `AdminSocialLinksClient` | `/api/admin/social-links` | PUT |
+| `/admin/privy-users` | read-only merged view | — | — |
 | `/admin/user-profiles` | `AdminUserProfilesClient` | — (read-only) | — |
 | `/admin/submissions` | read-only table | — | — |
 | `/admin/users` | `AdminUsersClient` | `/api/admin/users` | GET/POST/DELETE |
@@ -117,13 +131,16 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 
 ## Admin sidebar groups (AdminSidebar.tsx)
 
-Sidebar is organized into 3 labeled groups:
+Sidebar is organized into 4 labeled groups:
 
 | Group | Items |
 |-------|-------|
-| **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters |
-| **Academia & App** | Cursos, Contenido, 1UP Pass, Pass Benefits, Descuentos, Inscripciones |
-| **Sistema** | Usuarios, Aliados, Solicitudes, Admins |
+| **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters, Imágenes del Sitio, Links Sociales |
+| **Academia & App** | Cursos, Contenido, 1UP Pass, Descuentos, Inscripciones |
+| **OTC / Tokens** | Órdenes $1UP, Cuentas Bancarias |
+| **Sistema** | Usuarios Privy, Referidos, Aliados, Solicitudes, Admins |
+
+> `Pass Benefits` was removed as a standalone page — benefits are now managed inline inside `/admin/1pass`.
 
 When adding a new admin section, add its `{ href, icon, label }` to the appropriate group in `GROUPS` in `src/components/admin/AdminSidebar.tsx`.
 

@@ -11,10 +11,11 @@ filePattern: src/components/perfil/BuyTokensWizard.tsx, src/components/perfil/Mi
 
 - Exchange rate: **1 $1UP = 1,000 COP** (fixed; frozen at order time in `exchange_rate_cop`).
 - User pays by bank transfer (offline). They upload a receipt (comprobante) and submit an order.
-- Admin reviews, enters the Base L2 tx hash on approval, and manually sends tokens.
+- Admin reviews the comprobante, then sends $1UP tokens **directly from their connected Privy wallet** — no manual TX hash entry. The hash is auto-captured and stored.
 - **One pending order per user at a time** — enforced by unique partial index.
 - COP amount must be a positive integer multiple of 1,000.
 - File upload: jpg / png / webp / pdf only, 5MB max.
+- `nombre` and `celular_contacto` are stored on the order but are **pulled server-side from `user_profiles`** — the user never enters them in the wizard.
 
 ---
 
@@ -131,10 +132,12 @@ Both use `supabaseAdmin.storage.from("images")`. Extension is kept (not stripped
 - Buttons: ATRÁS / YA TRANSFERÍ →
 
 **Step 3 — Upload comprobante + confirm:**
-- Drop-zone file input (`accept="image/jpeg,image/png,image/webp,application/pdf"`, max 5MB)
+- Shows a **copyable bank details card** with per-field copy buttons: banco, tipo de cuenta, número de cuenta, titular, documento (NIT/CC)
+- Amount reminder pill: "Debes transferir {formatCop(copAmount)}"
+- Drop-zone file input only (`accept="image/jpeg,image/png,image/webp,application/pdf"`, max 5MB)
 - On file select: immediately POST to `/api/user/upload-comprobante`; show preview
-- Editable fields: `nombre`, `celular` (pre-filled from profile); `email` and `walletAddress` shown read-only
-- Submit disabled until: comprobante uploaded + nombre + celular filled + walletAddress present
+- Submit disabled only while upload is in progress or no comprobante uploaded — no other fields required
+- `nombre` and `celular` are **not collected here** — the API route pulls them from `user_profiles` server-side
 - On `409`: "Ya tienes una orden pendiente" + link to Mis Órdenes
 - On success: advance to step 4
 
@@ -152,8 +155,15 @@ Panel rendered below the tx history in `WalletTab`. Fetches `GET /api/user/token
 - Status filter pills: Todos / Pendientes / Aprobados / Rechazados / Cancelados
 - Header KPIs: total approved COP, total approved $1UP, pending count
 - Table: #, Usuario (email + nombre), Wallet (truncated + copy), COP, 1UP, Banco, Comprobante (thumbnail → lightbox), Estado badge, Fecha, Acciones
-- Approve modal: requires `txHash`; optional `adminNotes`
-- Reject modal: requires `rejectionReason`; optional `adminNotes`
+- **Approve modal — wallet-send flow:**
+  - Shows order summary: recipient wallet, $1UP amount, COP paid
+  - Wallet selector: lists all connected Privy wallets (`useWallets`) with type label; "Conectar otra wallet" button via `useConnectWallet`
+  - `handleSendApprove`: `encodeFunctionData(ERC20_TRANSFER_ABI, "transfer")` + `useSendTransaction` + `publicClient.waitForTransactionReceipt` → auto-captures hash → `PATCH /api/admin/token-orders`
+  - Send steps: `idle → sending → waiting → done` (animated status indicator during sending/waiting)
+  - If receipt times out after 120s: error shows captured hash so admin can approve manually if needed
+  - Does NOT require manual TX hash entry — hash is always captured from the actual on-chain TX
+- **Reject modal:** requires `rejectionReason`; optional `adminNotes`
+- Imports: `useSendTransaction`, `useWallets`, `useConnectWallet` from `@privy-io/react-auth`; `encodeFunctionData`, `parseUnits` from `viem`; `publicClient`, `ONE_UP_TOKEN`, `ERC20_TRANSFER_ABI` from `@/lib/viem`
 
 ### `src/components/admin/AdminBankAccountsClient.tsx`
 Standard CRUD list + modal. Form fields: `bankName`, `accountType` (select), `accountNumber`, `holderName`, `holderDocument`, `instructions` (textarea), `isActive`, `sortOrder`.
@@ -185,7 +195,9 @@ Standard CRUD list + modal. Form fields: `bankName`, `accountType` (select), `ac
 | File over 5MB | Server rejects `400 "Archivo demasiado grande (máx 5MB)"` |
 | Storage `move()` fails | Order set to `cancelled`; `502` returned; user retries |
 | Non-multiple of 1,000 COP | Client gates step 1; server rejects `400` |
-| Admin approves without `txHash` | Server returns `400` |
+| Admin's wallet TX fails or is rejected | `sendTransaction` throws; error shown; step resets to `idle` |
+| Receipt confirmation times out (120s) | Error shown with captured hash so admin can fall back to manual record if needed |
+| Admin has no wallets connected | Button disabled; "Conectar wallet" shown |
 | Admin rejects without `rejectionReason` | Server returns `400` |
 | Actioning a non-pending order | Server checks status first → `409` |
 | Bank account deactivated mid-flow | Server re-validates `is_active = true` on order POST → `400 "Cuenta no disponible"` |

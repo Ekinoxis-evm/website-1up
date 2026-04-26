@@ -79,6 +79,30 @@ if (!await isAdmin(email)) redirect("/");
 
 > The layout inlines the email resolution manually (same logic as `resolveUserEmail`). API routes use the helper.
 
+## App layout auth + onboarding gate
+
+`src/app/app/(protected)/layout.tsx` has TWO sequential guards:
+
+1. **Auth check** — `verifyCookieToken` → redirect to login if not authenticated
+2. **Onboarding gate** — if `onboarding_completed_at` is null → redirect to `/app/onboarding`
+
+```ts
+// Auth guard
+const token = cookieStore.get("privy-token")?.value;
+const claims = await verifyCookieToken(token);
+if (!claims) redirect(`${APP_URL}/login`);
+
+// Onboarding gate — uses supabaseAdmin (not anon) to bypass RLS
+const { data: profile } = await supabaseAdmin
+  .from("user_profiles")
+  .select("onboarding_completed_at")
+  .eq("privy_user_id", claims.userId)
+  .maybeSingle();
+if (!profile?.onboarding_completed_at) redirect(`${APP_URL}/onboarding`);
+```
+
+**Critical:** `/app/onboarding` is placed at `src/app/app/onboarding/page.tsx` — **outside** the `(protected)` folder. If it were inside `(protected)`, the layout would redirect to onboarding, which would trigger the layout again → infinite loop. The onboarding page has its own auth check via `verifyCookieToken`.
+
 ## Client-side token
 
 ```ts

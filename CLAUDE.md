@@ -33,7 +33,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page for app subdomain |
-| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) — AppSidebar on desktop, AppBottomNav on mobile |
+| `app/onboarding` | `app/` | Mandatory first-time wizard (outside `(protected)` to avoid circular redirect) — own auth check |
+| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) — AppSidebar on desktop, AppBottomNav on mobile. Layout redirects unonboarded users to `/app/onboarding`. |
 | `admin/login` | `admin/` | Public login page for admin subdomain |
 | `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
 
@@ -155,7 +156,8 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 | `.claude/skills/auth.md` | `src/lib/privy.ts`, `src/lib/admin.ts`, `src/app/admin/(protected)/layout.tsx`, `src/app/app/(protected)/layout.tsx` |
 | `.claude/skills/release-management.md` | `CHANGELOG.md`, `README.md`, any version/delivery task |
 | `.claude/skills/cloudflare-stream.md` | `src/lib/stream.ts`, `src/app/api/user/stream-token/**`, `src/app/api/admin/stream-upload-url/**`, academia content work |
-| `.claude/skills/otc-purchase-flow.md` | `src/components/perfil/BuyTokensWizard.tsx`, `src/components/perfil/MisOrdenes.tsx`, `src/app/api/user/token-orders/**`, `src/app/api/user/upload-comprobante/**`, `src/app/api/bank-accounts/**`, `src/app/api/admin/token-orders/**`, `src/app/api/admin/bank-accounts/**`, `src/app/admin/(protected)/token-orders/**`, `src/app/admin/(protected)/bank-accounts/**` |
+| `.claude/skills/otc-purchase-flow.md` | `src/components/perfil/BuyTokensWizard.tsx`, `src/components/perfil/MisOrdenes.tsx`, `src/app/api/user/token-orders/**`, `src/app/api/user/upload-comprobante/**`, `src/app/api/bank-accounts/**`, `src/app/api/admin/token-orders/**`, `src/app/api/admin/bank-accounts/**`, `src/app/admin/(protected)/token-orders/**`, `src/app/admin/(protected)/bank-accounts/**`, `src/components/admin/AdminTokenOrdersClient.tsx` |
+| `.claude/skills/onboarding-flow.md` | `src/app/app/onboarding/**`, `src/components/perfil/OnboardingWizard.tsx`, `src/app/api/user/onboarding/**`, `src/app/api/user/referral-codes/**`, `src/app/api/admin/referral-codes/**`, `src/app/admin/(protected)/referral-codes/**`, `src/components/admin/AdminReferralCodesClient.tsx` |
 | `.claude/skills/pass-purchase-flow.md` | `src/components/perfil/BuyPassWizard.tsx`, `src/components/perfil/MisPassOrders.tsx`, `src/components/perfil/PassPurchasePanel.tsx`, `src/lib/passVerifier.ts`, `src/app/api/user/pass-orders/**`, `src/app/api/user/pass-config/**`, `src/app/api/admin/pass-orders/**`, `src/app/api/admin/pass-config/**`, `src/app/admin/(protected)/pass-orders/**`, `src/app/app/(protected)/pass/**` |
 
 ---
