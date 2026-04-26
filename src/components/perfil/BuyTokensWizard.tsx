@@ -16,9 +16,6 @@ interface Props {
   walletAddress: string;
   onClose: () => void;
   getAccessToken: () => Promise<string | null>;
-  prefillNombre?: string;
-  prefillCelular?: string;
-  email?: string;
 }
 
 function formatCop(n: number) {
@@ -27,14 +24,12 @@ function formatCop(n: number) {
 
 const RATE = 1000;
 
-export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefillNombre = "", prefillCelular = "", email = "" }: Props) {
+export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Props) {
   const [step, setStep]             = useState(1);
   const [copAmount, setCopAmount]   = useState("");
   const [bankAccounts, setBankAccounts]   = useState<BankAccount[]>([]);
   const [selectedBank, setSelectedBank]   = useState<BankAccount | null>(null);
-  const [copiedAccount, setCopiedAccount] = useState(false);
-  const [nombre, setNombre]         = useState(prefillNombre);
-  const [celular, setCelular]       = useState(prefillCelular);
+  const [copiedField, setCopiedField]     = useState<string | null>(null);
   const [comprobantePath, setComprobantePath]   = useState<string | null>(null);
   const [comprobanteUrl, setComprobanteUrl]     = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
@@ -64,10 +59,10 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
     setStep(2);
   }
 
-  function copyAccountNumber(num: string) {
-    navigator.clipboard.writeText(num);
-    setCopiedAccount(true);
-    setTimeout(() => setCopiedAccount(false), 2000);
+  function copyField(key: string, value: string) {
+    navigator.clipboard.writeText(value);
+    setCopiedField(key);
+    setTimeout(() => setCopiedField(null), 2000);
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -124,8 +119,6 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
         bankAccountId: selectedBank.id,
         comprobantePath,
         comprobanteUrl,
-        nombre: nombre.trim(),
-        celular: celular.trim(),
       }),
     });
 
@@ -143,7 +136,6 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
   function handleClose() {
     setStep(1); setCopAmount(""); setSelectedBank(null); setBankAccounts([]);
     setComprobantePath(null); setComprobanteUrl(null); setComprobantePreview(null);
-    setNombre(prefillNombre); setCelular(prefillCelular);
     setSubmitError(null); setUploadError(null); setOrderId(null);
     onClose();
   }
@@ -265,11 +257,11 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
                           <span className="font-mono text-xs text-on-surface/60">{bank.account_number}</span>
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); copyAccountNumber(bank.account_number); }}
+                            onClick={(e) => { e.stopPropagation(); copyField("sel-" + bank.id, bank.account_number); }}
                             className="text-on-surface/30 hover:text-tertiary transition-colors"
                           >
                             <span className="material-symbols-outlined text-xs">
-                              {copiedAccount ? "check" : "content_copy"}
+                              {copiedField === "sel-" + bank.id ? "check" : "content_copy"}
                             </span>
                           </button>
                         </div>
@@ -312,91 +304,103 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
             </div>
           )}
 
-          {/* ── Step 3: Upload comprobante + confirm ── */}
+          {/* ── Step 3: Payment details + Upload comprobante ── */}
           {step === 3 && (
             <div>
               <h2 className="font-headline font-black text-xl uppercase mb-1 flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary">upload_file</span>
                 SUBE EL COMPROBANTE
               </h2>
-              <p className="font-body text-sm text-on-surface/50 mb-6">
-                Completa tus datos de contacto y adjunta el comprobante.
+              <p className="font-body text-sm text-on-surface/50 mb-5">
+                Copia los datos y realiza la transferencia. Luego sube el comprobante.
               </p>
 
-              <div className="space-y-4 mb-6">
-                {/* File drop zone */}
-                <div>
-                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-2">
-                    Comprobante *
-                  </label>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="w-full bg-surface-container-lowest border-2 border-dashed border-outline-variant/30 p-6 text-center hover:border-tertiary/50 transition-colors"
-                  >
-                    {uploadLoading ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="material-symbols-outlined text-3xl text-tertiary animate-pulse">upload</span>
-                        <span className="font-headline text-xs uppercase text-on-surface/40">Subiendo…</span>
+              {/* Payment details — all fields copyable */}
+              {selectedBank && (
+                <div className="bg-surface-container-lowest mb-5">
+                  <div className="bg-tertiary/10 px-4 py-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-tertiary text-sm">account_balance</span>
+                    <span className="font-headline font-black text-xs uppercase tracking-widest text-tertiary">
+                      Datos para transferir
+                    </span>
+                  </div>
+                  <div className="divide-y divide-outline-variant/10">
+                    {[
+                      { key: "banco",   label: "Banco",              value: selectedBank.bank_name },
+                      { key: "tipo",    label: "Tipo de cuenta",     value: selectedBank.account_type ?? "" },
+                      { key: "numero",  label: "Número de cuenta",   value: selectedBank.account_number },
+                      { key: "titular", label: "Titular",            value: selectedBank.holder_name },
+                      { key: "doc",     label: "Documento titular",  value: selectedBank.holder_document ?? "" },
+                    ].filter((r) => r.value).map(({ key, label, value }) => (
+                      <div key={key} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="font-headline text-[10px] uppercase tracking-widest text-on-surface/40">{label}</p>
+                          <p className="font-headline font-bold text-sm text-on-surface">{value}</p>
+                        </div>
+                        <button
+                          onClick={() => copyField(key, value)}
+                          className="shrink-0 flex items-center gap-1 text-xs font-headline uppercase text-on-surface/40 hover:text-tertiary transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {copiedField === key ? "check" : "content_copy"}
+                          </span>
+                          {copiedField === key ? "Copiado" : "Copiar"}
+                        </button>
                       </div>
-                    ) : comprobantePreview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={comprobantePreview} alt="preview" className="max-h-32 mx-auto object-contain" />
-                    ) : comprobanteUrl ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="material-symbols-outlined text-3xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                        <span className="font-headline text-xs uppercase text-tertiary">PDF subido</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="material-symbols-outlined text-3xl text-on-surface/20">upload_file</span>
-                        <span className="font-headline text-xs uppercase text-on-surface/40">Toca para seleccionar</span>
-                        <span className="font-body text-[10px] text-on-surface/30">jpg · png · webp · pdf · máx 5MB</span>
+                    ))}
+                    {selectedBank.instructions && (
+                      <div className="px-4 py-3 bg-secondary-container/10">
+                        <p className="font-body text-xs text-secondary/80 italic">{selectedBank.instructions}</p>
                       </div>
                     )}
-                  </button>
-                  {uploadError && <p className="font-body text-xs text-error mt-1">{uploadError}</p>}
-                </div>
-
-                {/* Nombre */}
-                <div>
-                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Nombre completo *</label>
-                  <input
-                    value={nombre} onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Carlos Gómez"
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
-                  />
-                </div>
-
-                {/* Celular */}
-                <div>
-                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Celular de contacto *</label>
-                  <input
-                    value={celular} onChange={(e) => setCelular(e.target.value)}
-                    placeholder="3001234567"
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
-                  />
-                </div>
-
-                {/* Read-only fields */}
-                <div>
-                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Email</label>
-                  <div className="bg-surface-container-highest p-3 font-body text-sm text-on-surface/50">
-                    {email || "(de tu cuenta Privy)"}
                   </div>
                 </div>
-                <div>
-                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Wallet</label>
-                  <div className="bg-surface-container-highest p-3 font-mono text-xs text-on-surface/50 truncate">
-                    {walletAddress}
-                  </div>
-                </div>
+              )}
+
+              {/* Amount reminder */}
+              <div className="bg-tertiary/10 border border-tertiary/30 px-4 py-3 mb-5 flex items-center justify-between">
+                <span className="font-headline text-xs text-on-surface/60">Monto a transferir</span>
+                <span className="font-headline font-black text-lg text-tertiary">{formatCop(copInt)}</span>
+              </div>
+
+              {/* File upload */}
+              <div className="mb-5">
+                <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-2">
+                  Comprobante de pago *
+                </label>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full bg-surface-container-lowest border-2 border-dashed border-outline-variant/30 p-6 text-center hover:border-tertiary/50 transition-colors"
+                >
+                  {uploadLoading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-tertiary animate-pulse">upload</span>
+                      <span className="font-headline text-xs uppercase text-on-surface/40">Subiendo…</span>
+                    </div>
+                  ) : comprobantePreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={comprobantePreview} alt="preview" className="max-h-32 mx-auto object-contain" />
+                  ) : comprobanteUrl ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                      <span className="font-headline text-xs uppercase text-tertiary">Archivo subido</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-on-surface/20">upload_file</span>
+                      <span className="font-headline text-xs uppercase text-on-surface/40">Toca para seleccionar</span>
+                      <span className="font-body text-[10px] text-on-surface/30">jpg · png · webp · pdf · máx 5MB</span>
+                    </div>
+                  )}
+                </button>
+                {uploadError && <p className="font-body text-xs text-error mt-1">{uploadError}</p>}
               </div>
 
               {submitError && (
@@ -408,7 +412,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, prefil
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmit}
-                  disabled={submitLoading || !comprobanteUrl || !nombre.trim() || !celular.trim()}
+                  disabled={submitLoading || !comprobanteUrl}
                   className="flex-1 bg-tertiary text-background font-headline font-black py-3 uppercase disabled:opacity-40"
                 >
                   {submitLoading ? "ENVIANDO..." : "ENVIAR ORDEN"}

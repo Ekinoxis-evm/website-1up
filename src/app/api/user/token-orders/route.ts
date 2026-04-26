@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     celular?: string;
   };
 
-  const { walletAddress, copAmount, bankAccountId, comprobantePath, comprobanteUrl, nombre, celular } = body;
+  const { walletAddress, copAmount, bankAccountId, comprobantePath, comprobanteUrl } = body;
 
   if (!walletAddress || !isAddress(walletAddress))
     return NextResponse.json({ error: "Wallet inválida" }, { status: 400 });
@@ -63,12 +63,6 @@ export async function POST(req: NextRequest) {
   if (!comprobantePath || !comprobanteUrl)
     return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
 
-  if (!nombre?.trim())
-    return NextResponse.json({ error: "Nombre requerido" }, { status: 400 });
-
-  if (!celular?.trim())
-    return NextResponse.json({ error: "Celular requerido" }, { status: 400 });
-
   const { data: bankAccount } = await supabaseAdmin
     .from("bank_accounts")
     .select("id")
@@ -79,20 +73,20 @@ export async function POST(req: NextRequest) {
   if (!bankAccount)
     return NextResponse.json({ error: "Cuenta no disponible" }, { status: 400 });
 
-  // Ensure profile exists
+  // Ensure profile exists, pull nombre/phone if available
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
     .upsert(
       { privy_user_id: user.userId, email: user.email ?? null },
       { onConflict: "privy_user_id", ignoreDuplicates: true },
     )
-    .select("id")
+    .select("id, nombre, apellidos, phone_number")
     .single();
 
   const profileId: number | null = profile?.id ?? (
     await supabaseAdmin
       .from("user_profiles")
-      .select("id")
+      .select("id, nombre, apellidos, phone_number")
       .eq("privy_user_id", user.userId)
       .single()
       .then((r) => r.data?.id ?? null)
@@ -100,6 +94,11 @@ export async function POST(req: NextRequest) {
 
   if (!profileId)
     return NextResponse.json({ error: "Perfil no encontrado" }, { status: 500 });
+
+  const profileNombre = profile
+    ? [profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || null
+    : null;
+  const profileCelular = profile?.phone_number ?? null;
 
   const tokenAmount = copAmount / 1000;
   const ext = comprobantePath.split(".").pop() || "jpg";
@@ -110,8 +109,8 @@ export async function POST(req: NextRequest) {
       user_profile_id:  profileId,
       privy_user_id:    user.userId,
       email:            user.email ?? "",
-      nombre:           nombre.trim(),
-      celular_contacto: celular.trim(),
+      nombre:           profileNombre ?? "",
+      celular_contacto: profileCelular ?? "",
       wallet_address:   walletAddress.toLowerCase(),
       cop_amount:       copAmount,
       token_amount:     tokenAmount,

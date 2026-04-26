@@ -521,7 +521,6 @@ export function WalletTab() {
           walletAddress={walletAddress}
           onClose={() => setBuyOpen(false)}
           getAccessToken={getAccessToken}
-          email={userEmail}
         />
       )}
 
