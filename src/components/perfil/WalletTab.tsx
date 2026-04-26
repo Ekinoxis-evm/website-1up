@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
-import { createWalletClient, custom, parseUnits, formatUnits, isAddress } from "viem";
-import { base } from "viem/chains";
+import { parseUnits, formatUnits, isAddress, encodeFunctionData } from "viem";
 import { use1upBalance } from "@/hooks/use1upBalance";
 import { ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import { QRCodeSVG } from "qrcode.react";
@@ -49,6 +48,7 @@ export function WalletTab() {
   const walletAddress  = activeWallet?.address as `0x${string}` | undefined;
 
   const { balance, loading: balanceLoading } = use1upBalance(walletAddress);
+  const { sendTransaction } = useSendTransaction();
 
   // Send modal state
   const [sendOpen, setSendOpen]       = useState(false);
@@ -145,7 +145,7 @@ export function WalletTab() {
   }, [scanOpen]);
 
   async function handleSend() {
-    if (!activeWallet || !walletAddress) return;
+    if (!walletAddress) return;
     if (!isAddress(sendTo)) { setSendError("Dirección inválida"); return; }
     const amt = parseFloat(sendAmount);
     if (isNaN(amt) || amt <= 0) { setSendError("Monto inválido"); return; }
@@ -154,15 +154,22 @@ export function WalletTab() {
     setSendError(null);
     setSendTxHash(null);
     try {
-      const provider = await activeWallet.getEthereumProvider();
-      const walletClient = createWalletClient({ chain: base, transport: custom(provider) });
-      const hash = await walletClient.writeContract({
-        address:      ONE_UP_TOKEN.address,
-        abi:          ERC20_TRANSFER_ABI,
-        functionName: "transfer",
-        args:         [sendTo as `0x${string}`, parseUnits(sendAmount, ONE_UP_TOKEN.decimals)],
-        account:      walletAddress,
-      });
+      const { hash } = await sendTransaction(
+        {
+          to: ONE_UP_TOKEN.address,
+          value: BigInt(0),
+          chainId: 8453,
+          data: encodeFunctionData({
+            abi:          ERC20_TRANSFER_ABI,
+            functionName: "transfer",
+            args:         [sendTo as `0x${string}`, parseUnits(sendAmount, ONE_UP_TOKEN.decimals)],
+          }),
+        },
+        {
+          address: walletAddress,
+          sponsor: true,
+        }
+      );
       setSendTxHash(hash);
       setSendTo(""); setSendAmount("");
     } catch (e: unknown) {
@@ -208,28 +215,29 @@ export function WalletTab() {
         {/* ── Left: Balance ─────────────────────────────────────── */}
         <div className="lg:col-span-7">
           <div className="bg-surface-container-low border-l-8 border-primary-container p-8 shadow-[12px_12px_0px_rgba(0,0,0,0.35)]">
-            <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
-              <div>
-                <p className="font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-1">
-                  BALANCE ACTUAL
-                </p>
-                <h2 className="font-headline font-black text-5xl text-on-surface">
-                  {balanceLoading ? (
-                    <span className="text-on-surface/30 text-3xl">cargando…</span>
-                  ) : balance !== null ? (
-                    <>
-                      {balance}{" "}
-                      <span className="text-2xl text-primary font-bold">1UP</span>
-                    </>
-                  ) : (
-                    <span className="text-on-surface/30 text-3xl">—</span>
-                  )}
-                </h2>
-              </div>
-              <div className="bg-secondary-container/10 px-4 py-2 border border-secondary-container/30 shrink-0">
-                <p className="font-headline text-[10px] text-secondary uppercase tracking-widest">RED</p>
-                <p className="font-bold text-secondary text-sm uppercase">Base — L2</p>
-              </div>
+            <div className="mb-8">
+              <p className="font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-1">
+                BALANCE ACTUAL
+              </p>
+              <h2 className="font-headline font-black text-5xl text-on-surface">
+                {balanceLoading ? (
+                  <span className="text-on-surface/30 text-3xl">cargando…</span>
+                ) : balance !== null ? (
+                  <>
+                    {balance}{" "}
+                    <a
+                      href={`https://basescan.org/token/${ONE_UP_TOKEN.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-2xl text-primary font-bold hover:text-primary-container transition-colors"
+                    >
+                      1UP
+                    </a>
+                  </>
+                ) : (
+                  <span className="text-on-surface/30 text-3xl">—</span>
+                )}
+              </h2>
             </div>
 
             {walletAddress ? (
@@ -282,17 +290,6 @@ export function WalletTab() {
               </div>
             )}
 
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-[10px] font-headline uppercase text-on-surface/30 tracking-widest">CONTRATO:</span>
-              <a
-                href={`https://basescan.org/token/${ONE_UP_TOKEN.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-[10px] text-secondary/50 hover:text-secondary transition-colors"
-              >
-                {truncate(ONE_UP_TOKEN.address)}
-              </a>
-            </div>
           </div>
         </div>
 
