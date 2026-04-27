@@ -195,6 +195,42 @@ npm run lint       # ESLint
 
 ---
 
+## Gas Sponsorship
+
+All $1UP token sends from embedded wallets use **Privy native gas sponsorship (EIP-7702)**. Privy upgrades the embedded wallet to a Kernel smart contract in-place — same address, no migration — and its paymaster covers the gas fee.
+
+**Pattern — always use this for embedded wallet sends:**
+```ts
+const { sendTransaction } = useSendTransaction(); // from @privy-io/react-auth
+
+const { hash } = await sendTransaction(
+  {
+    to: ONE_UP_TOKEN.address,
+    value: BigInt(0),
+    chainId: 8453,
+    data: encodeFunctionData({ abi: ERC20_TRANSFER_ABI, functionName: "transfer", args: [...] }),
+  },
+  { address: walletAddress, sponsor: true }  // ← sponsor: true is mandatory
+);
+```
+
+**Files that use this pattern:**
+- `src/components/perfil/WalletTab.tsx` — user send modal
+- `src/components/perfil/BuyPassWizard.tsx` — pass purchase
+- `src/components/admin/AdminTokenOrdersClient.tsx` — admin approve OTC order
+
+**Dashboard requirements (one-time setup):**
+- Privy Dashboard → Gas Sponsorship tab → enable for **Base mainnet**
+- Settings → Wallet Infrastructure → confirm **TEE execution** is active (not MPC legacy)
+
+**Transaction history** — use Blockscout API v2, not Privy (Privy has no list-transactions endpoint):
+```
+GET https://base.blockscout.com/api/v2/addresses/{wallet}/token-transfers?token={ONE_UP_TOKEN.address}
+```
+Do NOT append `&limit=N` — Blockscout v2 rejects unknown query params and returns an error with no `items`.
+
+---
+
 ## Payment Flow Rules
 
 - **Never hardcode prices** — always read `courses.price_cop` from DB at checkout time.

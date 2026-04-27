@@ -158,7 +158,7 @@ Panel rendered below the tx history in `WalletTab`. Fetches `GET /api/user/token
 - **Approve modal — wallet-send flow:**
   - Shows order summary: recipient wallet, $1UP amount, COP paid
   - Wallet selector: lists all connected Privy wallets (`useWallets`) with type label; "Conectar otra wallet" button via `useConnectWallet`
-  - `handleSendApprove`: `encodeFunctionData(ERC20_TRANSFER_ABI, "transfer")` + `useSendTransaction` + `publicClient.waitForTransactionReceipt` → auto-captures hash → `PATCH /api/admin/token-orders`
+  - `handleSendApprove`: `encodeFunctionData(ERC20_TRANSFER_ABI, "transfer")` + `useSendTransaction` with `sponsor: true` + `publicClient.waitForTransactionReceipt` → auto-captures hash → `PATCH /api/admin/token-orders`
   - Send steps: `idle → sending → waiting → done` (animated status indicator during sending/waiting)
   - If receipt times out after 120s: error shows captured hash so admin can approve manually if needed
   - Does NOT require manual TX hash entry — hash is always captured from the actual on-chain TX
