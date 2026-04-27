@@ -82,7 +82,7 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | Courses | `/academia`, `/admin/courses` |
 | Masters | `/masters`, `/academia`, `/admin/masters` |
 | Aliados | `/admin/aliados` |
-| Academia content | `/academia`, `/admin/academia-content` |
+| Academia content | `/academia`, `/admin/courses` |
 | Discounts | `/academia`, `/admin/discounts` |
 | Floor info | `/gaming-tower`, `/admin/floors` |
 | Pass benefits | `/gaming-tower`, `/admin/1pass` |
@@ -107,8 +107,7 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/players` | `AdminPlayersClient` | `/api/admin/players` | POST/PUT/DELETE |
 | `/admin/competitions` | `AdminCompetitionsClient` | `/api/admin/competitions` | POST/PUT/DELETE |
 | `/admin/masters` | `AdminMastersClient` | `/api/admin/masters` | POST/PUT/DELETE |
-| `/admin/courses` | `AdminCoursesClient` | `/api/admin/courses` | POST/PUT/DELETE |
-| `/admin/academia-content` | `AdminAcademiaContentClient` | `/api/admin/academia-content` | POST/PUT/DELETE |
+| `/admin/courses` | `AdminCoursesClient` | `/api/admin/courses` + `/api/admin/academia-content` | POST/PUT/DELETE — course CRUD + inline content CRUD (content sub-modal inside course edit modal at z-60) |
 | `/admin/1pass` | `Admin1PassClient` | `/api/admin/pass-config` + `/api/admin/pass-benefits` | GET/PUT + POST/PUT/DELETE |
 | `/admin/pass-orders` | `AdminPassOrdersClient` | `/api/admin/pass-orders` | GET/PATCH |
 | `/admin/discounts` | `AdminDiscountsClient` | `/api/admin/discounts` | POST/PUT/DELETE |
@@ -136,7 +135,7 @@ Sidebar is organized into 4 labeled groups:
 | Group | Items |
 |-------|-------|
 | **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters, Imágenes del Sitio, Links Sociales |
-| **Academia & App** | Cursos, Contenido, 1UP Pass, Descuentos, Inscripciones |
+| **Academia & App** | Cursos (includes inline content management), 1UP Pass, Descuentos, Inscripciones |
 | **OTC / Tokens** | Órdenes $1UP, Cuentas Bancarias |
 | **Sistema** | Usuarios Privy, Referidos, Aliados, Solicitudes, Admins |
 

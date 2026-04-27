@@ -36,7 +36,7 @@ src/
       login/          #   Public login page (Privy, redirects to dashboard)
       (protected)/    #   Auth-gated group — requires privy-token cookie
         layout.tsx    #     Auth guard + AppSidebar + AppBottomNav (mobile)
-        page.tsx      #     Wallet ($1UP balance, send/receive/buy + live tx history)
+        page.tsx      #     Wallet ($1UP balance card → HISTORIAL/ÓRDENES tab toggle — send/receive/buy + Blockscout tx history + purchase orders)
         identidad/    #     Personal data form (nombre, apellidos, username, phone, games, document)
         beneficios/   #     Aliado verification — unlock discounts by checking affiliation
         pass/         #     1UP Pass status + purchase
@@ -60,7 +60,7 @@ src/
     team/             # Team + Hall of Fame (PlayerCard with social PNG icons)
     masters/          # Masters page (HeroMasters, MasterCard, MasterGrid)
     academia/         # Course catalog + PaymentFeedback
-    perfil/           # WalletTab (send/receive/buy + Blockscout tx history), SettingsTab, IdentidadTab, BeneficiosTab
+    perfil/           # WalletTab (balance card + HISTORIAL/ÓRDENES tabs — send/receive/buy, Blockscout tx history, purchase orders), SettingsTab, IdentidadTab, BeneficiosTab
     app/              # App shell (AppSidebar — desktop, AppBottomNav — mobile)
     admin/            # Admin panel components
     layout/           # TopAppBar, Footer (reads social_links from DB), MobileBottomNav
@@ -213,8 +213,7 @@ npm run dev
 | `/admin/players` | Team roster CRUD (photo upload, social links) |
 | `/admin/competitions` | Hall of Fame CRUD |
 | `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
-| `/admin/courses` | Academia course CRUD (image, master assignment, category) |
-| `/admin/academia-content` | Video/doc/quiz content per course (published toggle) |
+| `/admin/courses` | Academia course CRUD (image, master assignment, category) + inline content management (video/doc/quiz per course, published toggle) — content sub-modal at z-60 inside course edit modal |
 | `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
 | `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |

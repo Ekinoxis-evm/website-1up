@@ -149,7 +149,7 @@ Both use `supabaseAdmin.storage.from("images")`. Extension is kept (not stripped
 **Reset on close:** `buyStep → 1`, clear all inputs.
 
 ### `src/components/perfil/MisOrdenes.tsx`
-Panel rendered below the tx history in `WalletTab`. Fetches `GET /api/user/token-orders` on mount. Shows last 5–10 orders with status badge, amounts, date. Each `pending` row has a CANCELAR button → `POST /api/user/token-orders/cancel`.
+Panel rendered inside the **ÓRDENES** tab in `WalletTab` (tab toggle: HISTORIAL | ÓRDENES, sits below the balance card). Fetches `GET /api/user/token-orders` on mount. Shows last 5–10 orders with status badge, amounts, date. Each `pending` row has a CANCELAR button → `POST /api/user/token-orders/cancel`.
 
 ### `src/components/admin/AdminTokenOrdersClient.tsx`
 - Status filter pills: Todos / Pendientes / Aprobados / Rechazados / Cancelados

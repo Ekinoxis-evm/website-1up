@@ -28,7 +28,7 @@ This skill activates when working on video content delivery, academia content ac
 
 ```
 ADMIN UPLOAD
-Admin clicks "Subir Video" in /admin/academia-content
+Admin opens a course in /admin/courses → opens a content item in the inline content sub-modal
   → POST /api/admin/stream-upload-url         (isAdmin)
     → calls CF API: POST /accounts/{id}/stream/direct_upload
     → returns { uploadURL, uid }
