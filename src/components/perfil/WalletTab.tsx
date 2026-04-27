@@ -79,7 +79,7 @@ export function WalletTab() {
     if (!walletAddress) return;
     setTxLoading(true);
     fetch(
-      `https://base.blockscout.com/api/v2/addresses/${walletAddress}/token-transfers?token=${ONE_UP_TOKEN.address}&limit=15`
+      `https://base.blockscout.com/api/v2/addresses/${walletAddress}/token-transfers?token=${ONE_UP_TOKEN.address}`
     )
       .then((r) => r.json())
       .then((data) => {
@@ -383,22 +383,6 @@ export function WalletTab() {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Promo banner */}
-      <div className="bg-surface-container-highest overflow-hidden relative flex items-center h-48">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-container/20 to-secondary-container/10" />
-        <div className="relative z-10 px-10">
-          <h4 className="font-headline font-black text-3xl md:text-4xl text-white mb-2 italic tracking-tighter">
-            LEVEL UP YOUR EXPERIENCE
-          </h4>
-          <p className="font-body text-on-surface/60 max-w-md text-sm mb-5">
-            Acumula $1UP para acceder a torneos exclusivos, coaching pro y beneficios del Gaming Tower.
-          </p>
-          <span className="inline-block border border-primary/40 text-primary font-headline text-xs uppercase tracking-widest px-6 py-2">
-            PRÓXIMAMENTE
-          </span>
         </div>
       </div>
 

@@ -96,7 +96,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
       });
       const result = await sendTransaction(
         { to: ONE_UP_TOKEN.address, data, chainId: 8453 },
-        { address: walletAddr }
+        { address: walletAddr, sponsor: true }
       );
       hash = result.hash;
       setCapturedHash(hash);

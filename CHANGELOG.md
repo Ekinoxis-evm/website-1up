@@ -5,6 +5,15 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.2.2] — 2026-04-26
+
+### Changed
+- **Wallet — removed promo banner** — "LEVEL UP YOUR EXPERIENCE / PRÓXIMAMENTE" block removed from `WalletTab.tsx`.
+- **Wallet — tx history fixed** — Blockscout API call had an invalid `limit` query param that caused the endpoint to return an error (no `items`), leaving history always empty. Removed `&limit=15`; API now returns results correctly.
+- **Admin token orders — gas sponsored** — `AdminTokenOrdersClient.tsx` `handleSendApprove` now passes `sponsor: true`, consistent with user-side sends. Admin embedded wallet shares the same Privy app and TEE infrastructure.
+
+---
+
 ## [2.2.1] — 2026-04-26
 
 ### Changed
