@@ -5,6 +5,16 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.2.3] — 2026-04-26
+
+### Changed
+- **Wallet page — layout redesign** — transaction history moved above the balance card (both full-width, stacked). History tiles render in a responsive grid (1 → 2 → 3 cols) instead of a narrow side column.
+- **Admin courses — merged content management** — `AdminAcademiaContentClient` folded into `AdminCoursesClient`. Opening a course now shows a two-section panel: course settings on top + inline content list (sorted by order) below, with a content sub-modal (z-60) for add/edit. New "Contenido" count badge added to the course table row. "Contenido" link removed from the admin sidebar.
+  - `courses/page.tsx` now fetches `academia_content` and passes it as `content` prop.
+  - `AdminSidebar.tsx` — removed `/admin/academia-content` nav item.
+
+---
+
 ## [2.2.2] — 2026-04-26
 
 ### Changed

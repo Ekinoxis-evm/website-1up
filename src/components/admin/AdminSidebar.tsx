@@ -20,7 +20,6 @@ const GROUPS = [
     label: "Academia & App",
     items: [
       { href: "/admin/courses",          icon: "school",          label: "Cursos"        },
-      { href: "/admin/academia-content", icon: "play_circle",     label: "Contenido"     },
       { href: "/admin/1pass",            icon: "card_membership", label: "1UP Pass"      },
       { href: "/admin/discounts",        icon: "local_offer",     label: "Descuentos"    },
       { href: "/admin/enrollments",      icon: "receipt_long",    label: "Inscripciones" },

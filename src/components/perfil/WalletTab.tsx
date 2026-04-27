@@ -210,10 +210,98 @@ export function WalletTab() {
         <div className="h-1 w-16 bg-secondary-container mt-3" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="space-y-6">
 
-        {/* ── Left: Balance ─────────────────────────────────────── */}
-        <div className="lg:col-span-7">
+        {/* ── Transaction History ───────────────────────────────── */}
+        <div className="bg-surface-container-low border-t-8 border-secondary-container">
+          <div className="p-6 flex justify-between items-center">
+            <h3 className="font-headline font-bold text-lg uppercase tracking-wider text-on-surface">
+              Historial
+            </h3>
+            <a
+              href={walletAddress ? `https://basescan.org/address/${walletAddress}` : "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-headline uppercase text-secondary border border-secondary/40 px-2 py-1 hover:bg-secondary-container hover:text-white transition-colors"
+            >
+              Basescan
+            </a>
+          </div>
+
+          {txLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <span className="material-symbols-outlined text-primary text-3xl animate-spin">refresh</span>
+            </div>
+          ) : txHistory.length === 0 ? (
+            <div className="px-6 pb-10 flex flex-col items-center justify-center gap-3 text-center">
+              <span
+                className="material-symbols-outlined text-on-surface/15 text-5xl"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                receipt_long
+              </span>
+              <p className="text-xs font-headline uppercase tracking-widest text-on-surface/30">
+                Sin transacciones
+              </p>
+              <p className="text-xs font-body text-on-surface/20 max-w-[200px]">
+                Aquí aparecerá tu historial de $1UP
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-y md:divide-y-0 divide-outline-variant/10">
+              {txHistory.map((tx) => (
+                <a
+                  key={tx.hash}
+                  href={`https://basescan.org/tx/${tx.hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-6 py-3.5 hover:bg-surface-container transition-colors group"
+                >
+                  <div
+                    className={`w-8 h-8 flex items-center justify-center shrink-0 ${
+                      tx.direction === "send"
+                        ? "bg-primary-container/15 text-primary-container"
+                        : "bg-secondary-container/15 text-secondary"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      {tx.direction === "send" ? "arrow_upward" : "arrow_downward"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className={`font-headline font-black text-xs uppercase ${
+                        tx.direction === "send" ? "text-primary-container" : "text-secondary"
+                      }`}>
+                        {tx.direction === "send" ? "ENVIADO" : "RECIBIDO"}
+                      </span>
+                      <span className={`font-headline font-bold text-sm ${
+                        tx.direction === "send" ? "text-on-surface/60" : "text-on-surface"
+                      }`}>
+                        {tx.direction === "send" ? "−" : "+"}{formatTxAmount(tx.amount)}{" "}
+                        <span className="text-[10px] text-primary/60">1UP</span>
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                      <span className="font-mono text-[10px] text-on-surface/30 truncate">
+                        {truncate(tx.direction === "send" ? tx.to : tx.from)}
+                      </span>
+                      <span className="font-body text-[10px] text-on-surface/30 shrink-0">
+                        {new Date(tx.timestamp).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-[14px] text-on-surface/20 group-hover:text-on-surface/50 transition-colors shrink-0">
+                    open_in_new
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Balance ───────────────────────────────────────────── */}
+        <div>
           <div className="bg-surface-container-low border-l-8 border-primary-container p-8 shadow-[12px_12px_0px_rgba(0,0,0,0.35)]">
             <div className="mb-8">
               <p className="font-headline text-xs uppercase tracking-widest text-on-surface/50 mb-1">
@@ -293,97 +381,6 @@ export function WalletTab() {
           </div>
         </div>
 
-        {/* ── Right: Transaction History ────────────────────────── */}
-        <div className="lg:col-span-5">
-          <div className="bg-surface-container-low border-t-8 border-secondary-container h-full">
-            <div className="p-6 flex justify-between items-center">
-              <h3 className="font-headline font-bold text-lg uppercase tracking-wider text-on-surface">
-                Historial
-              </h3>
-              <a
-                href={walletAddress ? `https://basescan.org/address/${walletAddress}` : "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] font-headline uppercase text-secondary border border-secondary/40 px-2 py-1 hover:bg-secondary-container hover:text-white transition-colors"
-              >
-                Basescan
-              </a>
-            </div>
-
-            {txLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <span className="material-symbols-outlined text-primary text-3xl animate-spin">refresh</span>
-              </div>
-            ) : txHistory.length === 0 ? (
-              <div className="px-6 pb-10 flex flex-col items-center justify-center gap-3 text-center">
-                <span
-                  className="material-symbols-outlined text-on-surface/15 text-5xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  receipt_long
-                </span>
-                <p className="text-xs font-headline uppercase tracking-widest text-on-surface/30">
-                  Sin transacciones
-                </p>
-                <p className="text-xs font-body text-on-surface/20 max-w-[200px]">
-                  Aquí aparecerá tu historial de $1UP
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-outline-variant/10">
-                {txHistory.map((tx) => (
-                  <a
-                    key={tx.hash}
-                    href={`https://basescan.org/tx/${tx.hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-6 py-3.5 hover:bg-surface-container transition-colors group"
-                  >
-                    <div
-                      className={`w-8 h-8 flex items-center justify-center shrink-0 ${
-                        tx.direction === "send"
-                          ? "bg-primary-container/15 text-primary-container"
-                          : "bg-secondary-container/15 text-secondary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-base">
-                        {tx.direction === "send" ? "arrow_upward" : "arrow_downward"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className={`font-headline font-black text-xs uppercase ${
-                          tx.direction === "send" ? "text-primary-container" : "text-secondary"
-                        }`}>
-                          {tx.direction === "send" ? "ENVIADO" : "RECIBIDO"}
-                        </span>
-                        <span className={`font-headline font-bold text-sm ${
-                          tx.direction === "send" ? "text-on-surface/60" : "text-on-surface"
-                        }`}>
-                          {tx.direction === "send" ? "−" : "+"}{formatTxAmount(tx.amount)}{" "}
-                          <span className="text-[10px] text-primary/60">1UP</span>
-                        </span>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-2 mt-0.5">
-                        <span className="font-mono text-[10px] text-on-surface/30 truncate">
-                          {truncate(tx.direction === "send" ? tx.to : tx.from)}
-                        </span>
-                        <span className="font-body text-[10px] text-on-surface/30 shrink-0">
-                          {new Date(tx.timestamp).toLocaleDateString("es-CO", {
-                            day: "numeric", month: "short",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="material-symbols-outlined text-[14px] text-on-surface/20 group-hover:text-on-surface/50 transition-colors shrink-0">
-                      open_in_new
-                    </span>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ── Send Modal ─────────────────────────────────────────── */}
