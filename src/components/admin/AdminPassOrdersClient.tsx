@@ -9,7 +9,7 @@ type Order = {
   id: number;
   status: PassOrderStatus;
   wallet_address: string;
-  tx_hash: string;
+  tx_hash: string | null;
   token_amount_paid: number;
   token_price_at_purchase: number;
   duration_days: number;
@@ -22,10 +22,11 @@ type Order = {
 };
 
 const STATUS_LABELS: Record<PassOrderStatus, string> = {
-  pending_tx:         "Pendiente",
+  pending_tx:         "Pendiente TX",
   confirmed:          "Confirmado",
   failed:             "Fallido",
   expired_unverified: "No Verificado",
+  pending_bank:       "Pendiente Banco",
 };
 
 const STATUS_COLORS: Record<PassOrderStatus, string> = {
@@ -33,6 +34,7 @@ const STATUS_COLORS: Record<PassOrderStatus, string> = {
   confirmed:          "bg-tertiary/20 text-tertiary",
   failed:             "bg-error/20 text-error",
   expired_unverified: "bg-outline/10 text-on-surface/40",
+  pending_bank:       "bg-secondary-container/40 text-secondary",
 };
 
 const FILTER_OPTIONS: { label: string; value: PassOrderStatus | "all" }[] = [
@@ -183,14 +185,18 @@ export function AdminPassOrdersClient({ orders }: Props) {
                 {/* TX hash */}
                 <div>
                   <p className="text-[10px] font-headline uppercase text-outline mb-0.5">TX</p>
-                  <a
-                    href={`${BASESCAN}${o.tx_hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-xs text-primary hover:underline"
-                  >
-                    {o.tx_hash.slice(0, 10)}…{o.tx_hash.slice(-6)}
-                  </a>
+                  {o.tx_hash ? (
+                    <a
+                      href={`${BASESCAN}${o.tx_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-primary hover:underline"
+                    >
+                      {o.tx_hash.slice(0, 10)}…{o.tx_hash.slice(-6)}
+                    </a>
+                  ) : (
+                    <span className="font-body text-xs text-outline">Banco</span>
+                  )}
                 </div>
 
                 {/* Actions */}

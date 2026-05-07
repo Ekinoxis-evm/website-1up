@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import type { PassOrder, PassOrderStatus } from "@/types/database.types";
 
 const STATUS_LABELS: Record<PassOrderStatus, string> = {
-  pending_tx:         "Pendiente",
+  pending_tx:         "Pendiente TX",
   confirmed:          "Confirmado",
   failed:             "Fallido",
   expired_unverified: "No Verificado",
+  pending_bank:       "En revisión",
 };
 
 const STATUS_COLORS: Record<PassOrderStatus, string> = {
@@ -15,6 +16,7 @@ const STATUS_COLORS: Record<PassOrderStatus, string> = {
   confirmed:          "bg-tertiary/20 text-tertiary",
   failed:             "bg-error/20 text-error",
   expired_unverified: "bg-outline/10 text-on-surface/40",
+  pending_bank:       "bg-secondary-container/40 text-secondary",
 };
 
 const BASESCAN = "https://basescan.org/tx/";
@@ -82,14 +84,18 @@ export function MisPassOrders({ getAccessToken }: Props) {
                 </p>
               )}
             </div>
-            <a
-              href={`${BASESCAN}${o.tx_hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:underline shrink-0"
-            >
-              {o.tx_hash.slice(0, 8)}…
-            </a>
+            {o.tx_hash ? (
+              <a
+                href={`${BASESCAN}${o.tx_hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs text-primary hover:underline shrink-0"
+              >
+                {o.tx_hash.slice(0, 8)}…
+              </a>
+            ) : (
+              <span className="font-headline text-[10px] uppercase text-outline shrink-0">Banco</span>
+            )}
           </div>
         );
       })}

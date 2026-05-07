@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { BuyPassWizard } from "./BuyPassWizard";
+import { BuyPassBankWizard } from "./BuyPassBankWizard";
 import { MisPassOrders } from "./MisPassOrders";
 import type { PassConfig, PassBenefit, PassOrder } from "@/types/database.types";
 
@@ -16,6 +17,7 @@ export function PassPurchasePanel({ config, benefits }: Props) {
   const { wallets } = useWallets();
 
   const [buyOpen, setBuyOpen]         = useState(false);
+  const [buyBankOpen, setBuyBankOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<PassOrder | null>(null);
   const [ordersKey, setOrdersKey]     = useState(0);
 
@@ -107,12 +109,22 @@ export function PassPurchasePanel({ config, benefits }: Props) {
         )}
 
         {canBuy && !walletLoading && (
-          <button
-            onClick={() => setBuyOpen(true)}
-            className="bg-primary-container text-white px-12 py-4 font-headline font-black text-xl uppercase tracking-tighter hover:opacity-90 transition-opacity"
-          >
-            {activeOrder ? "RENOVAR PASS" : "OBTENER 1UP PASS"}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setBuyOpen(true)}
+              className="bg-primary-container text-white px-8 py-4 font-headline font-black text-lg uppercase tracking-tighter hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>token</span>
+              {activeOrder ? "RENOVAR CON $1UP" : "PAGAR CON $1UP"}
+            </button>
+            <button
+              onClick={() => setBuyBankOpen(true)}
+              className="bg-surface-container-high text-on-background border-2 border-primary-container/40 px-8 py-4 font-headline font-black text-lg uppercase tracking-tighter hover:border-primary-container transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">account_balance</span>
+              PAGAR CON BANCO
+            </button>
+          </div>
         )}
 
         {!config?.is_active && (
@@ -158,7 +170,7 @@ export function PassPurchasePanel({ config, benefits }: Props) {
         </div>
       )}
 
-      {/* Wizard modal */}
+      {/* Token wizard */}
       {buyOpen && config && walletAddress ? (
         <BuyPassWizard
           priceToken={config.price_token}
@@ -167,6 +179,18 @@ export function PassPurchasePanel({ config, benefits }: Props) {
           walletAddress={walletAddress}
           getAccessToken={getAccessToken}
           onClose={() => setBuyOpen(false)}
+          onSuccess={handleSuccess}
+        />
+      ) : null}
+
+      {/* Bank transfer wizard */}
+      {buyBankOpen && config && walletAddress ? (
+        <BuyPassBankWizard
+          priceToken={config.price_token}
+          durationDays={config.duration_days}
+          walletAddress={walletAddress}
+          getAccessToken={getAccessToken}
+          onClose={() => setBuyBankOpen(false)}
           onSuccess={handleSuccess}
         />
       ) : null}

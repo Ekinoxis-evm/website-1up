@@ -20,8 +20,8 @@ function parseBirthDate(dateStr: string): string | null {
   if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d)
     return "Fecha de nacimiento inválida.";
   if (y < 1930) return "Año de nacimiento muy antiguo.";
-  const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 5);
-  if (date > minAge) return "Debes tener al menos 5 años.";
+  const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 14);
+  if (date > minAge) return "Debes tener al menos 14 años.";
   return null;
 }
 

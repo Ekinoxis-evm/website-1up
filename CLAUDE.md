@@ -24,8 +24,9 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 | URL | Layout group | Purpose |
 |-----|-------------|---------|
-| `/` | `(main)` | Home — Hero, Games Gallery, Recruitment |
-| `/gaming-tower` | `(main)` | 6-floor breakdown, Pass, Map |
+| `/` | `(main)` | Home — Hero, 1UP Pass section, Games Gallery, Recruitment |
+| `/gaming-tower` | `(main)` | 6-floor breakdown, Map |
+| `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/juegos` | `(main)` | Games showcase by category |
 | `/team` | `(main)` | Pro roster + Hall of Fame |
 | `/masters` | `(main)` | Masters showcase — coaches and specialists |
@@ -66,7 +67,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET /api/user/pass-config` | Public | Pass price, recipient address, duration |
 | `GET\|POST /api/user/pass-orders` | Privy user | List own pass orders / submit after confirmed tx |
 | `GET\|PUT /api/admin/pass-config` | isAdmin | Read/update pass price, recipient wallet, duration, active flag |
-| `GET\|PATCH /api/admin/pass-orders` | isAdmin | List all pass orders / update admin notes |
+| `GET\|PATCH /api/admin/pass-orders` | isAdmin | List all pass orders / update admin notes / approve or reject bank-transfer pass orders (`action: "approve" | "reject"`) |
 | `POST /api/user/onboarding` | Privy user | Complete onboarding — saves all profile fields, validates referral code, sets onboarding_completed_at |
 | `GET /api/user/referral-codes/validate` | Public | Validate a referral code (returns `{ valid, reason }`) |
 | `GET\|POST\|PUT /api/admin/referral-codes` | isAdmin | Referral code CRUD (create, toggle active, update description/max_uses) |
@@ -98,7 +99,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — OTC payment destinations shown in BUY modal |
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
 | `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
-| `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, tx_hash (unique), status (confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at — stacks on renewal |
+| `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 
@@ -190,6 +191,8 @@ npm run lint       # ESLint
 | `COMFENALCO_API_URL` | Pending — Comfenalco API endpoint |
 | `COMFENALCO_API_KEY` | Pending — Comfenalco API key |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Optional — Base L2 RPC (defaults to mainnet.base.org) |
+| `RESEND_API_KEY` | Resend dashboard → API Keys |
+| `ADMIN_NOTIFICATION_EMAIL` | Email that receives purchase notifications (usually same as ADMIN_EMAILS) |
 
 > `BLOB_READ_WRITE_TOKEN` is **not needed** — image storage migrated to Supabase Storage.
 

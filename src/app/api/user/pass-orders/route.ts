@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { verifyPassTransfer } from "@/lib/passVerifier";
 import { revalidatePath } from "next/cache";
+import { moveComprobanteToOrder } from "@/lib/blob";
+import { sendPassTokenEmails, sendPassBankEmails } from "@/lib/email";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -50,8 +52,24 @@ export async function POST(req: NextRequest) {
   if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { txHash, walletAddress } = body as { txHash?: string; walletAddress?: string };
+  const { txHash, walletAddress, paymentMethod, bankAccountId, comprobantePath, comprobanteUrl } =
+    body as {
+      txHash?: string;
+      walletAddress?: string;
+      paymentMethod?: string;
+      bankAccountId?: number;
+      comprobantePath?: string;
+      comprobanteUrl?: string;
+    };
 
+  const method = paymentMethod === "bank" ? "bank" : "token";
+
+  // Bank transfer path
+  if (method === "bank") {
+    return handleBankOrder(claims.userId, walletAddress, bankAccountId, comprobantePath, comprobanteUrl);
+  }
+
+  // Token (blockchain) path
   if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
     return NextResponse.json({ error: "txHash inválido." }, { status: 400 });
   }
@@ -128,6 +146,7 @@ export async function POST(req: NextRequest) {
       email:                 email ?? null,
       wallet_address:        walletAddress,
       tx_hash:               txHash,
+      payment_method:        "token",
       status:                "confirmed",
       token_price_at_purchase: config.price_token,
       token_amount_paid:     config.price_token,
@@ -154,5 +173,98 @@ export async function POST(req: NextRequest) {
   revalidatePath("/admin/1pass");
   revalidatePath("/admin/pass-orders");
 
+  if (email && order) {
+    sendPassTokenEmails({
+      userEmail:    email,
+      userName:     email,
+      orderId:      order.id,
+      tokenAmount:  config.price_token,
+      durationDays: config.duration_days,
+      expiresAt:    expiresAt.toISOString(),
+      txHash:       txHash!,
+    }).catch(() => null);
+  }
+
   return NextResponse.json(order, { status: 201 });
+}
+
+async function handleBankOrder(
+  privyUserId: string,
+  walletAddress: string | undefined,
+  bankAccountId: number | undefined,
+  comprobantePath: string | undefined,
+  comprobanteUrl: string | undefined,
+): Promise<NextResponse> {
+  if (!walletAddress) return NextResponse.json({ error: "walletAddress es requerido." }, { status: 400 });
+  if (!bankAccountId) return NextResponse.json({ error: "Cuenta bancaria requerida." }, { status: 400 });
+  if (!comprobantePath || !comprobanteUrl) return NextResponse.json({ error: "Comprobante requerido." }, { status: 400 });
+
+  const { data: bankAccount } = await supabaseAdmin
+    .from("bank_accounts")
+    .select("id")
+    .eq("id", bankAccountId)
+    .eq("is_active", true)
+    .single();
+  if (!bankAccount) return NextResponse.json({ error: "Cuenta bancaria no disponible." }, { status: 400 });
+
+  const { data: config } = await supabaseAdmin.from("pass_config").select("*").eq("id", 1).single();
+  if (!config?.is_active) return NextResponse.json({ error: "La venta del 1UP Pass está desactivada." }, { status: 400 });
+
+  const email = await resolveUserEmail(privyUserId);
+  const profile = await getOrCreateProfile(privyUserId, email ?? undefined);
+  if (!profile) return NextResponse.json({ error: "No se pudo crear el perfil." }, { status: 500 });
+
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("pass_orders")
+    .insert({
+      user_profile_id:         profile.id,
+      privy_user_id:           privyUserId,
+      email:                   email ?? null,
+      wallet_address:          walletAddress,
+      payment_method:          "bank",
+      bank_account_id:         bankAccountId,
+      comprobante_url:         comprobanteUrl,
+      status:                  "pending_bank",
+      token_price_at_purchase: config.price_token,
+      token_amount_paid:       config.price_token,
+      recipient_address:       config.recipient_address,
+      duration_days:           config.duration_days,
+      discount_pct_applied:    0,
+      verification_attempts:   0,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  const ext = comprobantePath.split(".").pop() || "jpg";
+  try {
+    const finalUrl = await moveComprobanteToOrder(comprobantePath, inserted.id, ext);
+    await supabaseAdmin.from("pass_orders").update({ comprobante_url: finalUrl }).eq("id", inserted.id);
+  } catch {
+    await supabaseAdmin.from("pass_orders").update({ status: "failed" }).eq("id", inserted.id);
+    return NextResponse.json({ error: "Error al guardar el comprobante." }, { status: 502 });
+  }
+
+  revalidatePath("/app/pass");
+  revalidatePath("/admin/pass-bank-orders");
+
+  if (email) {
+    const { data: bankAccount } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("bank_name")
+      .eq("id", bankAccountId)
+      .single();
+
+    sendPassBankEmails({
+      userEmail:    email,
+      userName:     email,
+      orderId:      inserted.id,
+      tokenAmount:  config.price_token,
+      durationDays: config.duration_days,
+      bankName:     bankAccount?.bank_name ?? "—",
+    }).catch(() => null);
+  }
+
+  return NextResponse.json({ id: inserted.id, status: "pending_bank" }, { status: 201 });
 }

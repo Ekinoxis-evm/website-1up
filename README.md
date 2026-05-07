@@ -117,6 +117,10 @@ NEXT_PUBLIC_BASE_URL=https://1upesports.org
 NEXT_PUBLIC_APP_URL=https://app.1upesports.org
 NEXT_PUBLIC_ADMIN_URL=https://admin.1upesports.org
 
+# Email (Resend — resend.com)
+RESEND_API_KEY=                   # Resend dashboard → API Keys
+ADMIN_NOTIFICATION_EMAIL=         # Receives purchase/pass notifications
+
 # Comfenalco (activate when API docs are available)
 # COMFENALCO_API_URL=
 # COMFENALCO_API_KEY=
@@ -153,6 +157,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 13. `extend_user_profiles_onboarding` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`
 14. `create_referral_codes` — `referral_codes` table with `code`, `description`, `is_active`, `max_uses`, `used_count`; seeded with 3 launch codes
 15. `birth_date_replace_birth_year` — renames `birth_year` → `birth_date`, changes type to DATE; best-effort backfills existing rows as Jan 1 of that year
+16. `pass_orders_bank_transfer_support` — `tx_hash` made nullable; adds `payment_method` (default 'token'), `bank_account_id` FK to `bank_accounts`, `comprobante_url`, `rejection_reason`; adds `pending_bank` to `pass_order_status` enum
 
 ### 4. Start the dev server
 
@@ -180,8 +185,9 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — Hero, Games Gallery, Recruitment |
-| `/gaming-tower` | 6-floor breakdown, 1UP Pass, Map |
+| `/` | Home — Hero, 1UP Pass section (benefits + how to buy), Games Gallery, Recruitment |
+| `/gaming-tower` | 6-floor breakdown, Map |
+| `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Pro roster + Hall of Fame + Recruitment |
 | `/masters` | Masters showcase — coaches, courses, social links |
 | `/academia` | Course catalog + MercadoPago checkout |
@@ -196,8 +202,8 @@ npm run dev
 | `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code) |
 | `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
-| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker), juegos, referral code (optional) |
-| `/app/pass` | 1UP Pass status + purchase |
+| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), juegos, referral code (optional), privacy consent (required) |
+| `/app/pass` | 1UP Pass status + purchase — two payment methods: $1UP tokens (on-chain, instant) or bank transfer (manual admin approval, max 24h) |
 | `/app/academia` | My enrolled courses + content access |
 | `/app/settings` | Linked accounts management |
 
@@ -216,6 +222,7 @@ npm run dev
 | `/admin/courses` | Academia course CRUD (image, master assignment, category) + inline content management (video/doc/quiz per course, published toggle) — content sub-modal at z-60 inside course edit modal |
 | `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
 | `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
+| `/admin/pass-bank-orders` | Bank-transfer pass orders — approve (calculates expiry + stacking) or reject (with rejection reason). Pending orders require admin review within 24h. |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
@@ -266,7 +273,7 @@ npm run dev
 | `bank_accounts` | OTC payment destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
 | `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
-| `pass_orders` | On-chain pass purchases — `tx_hash` (unique), `status` (confirmed/failed/…), `expires_at` (stacks on renewal), `block_number`, `paid_at` |
+| `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
 
 ---

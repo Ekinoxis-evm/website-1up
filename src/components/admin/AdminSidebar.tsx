@@ -28,9 +28,10 @@ const GROUPS = [
   {
     label: "Tokens $1UP",
     items: [
-      { href: "/admin/token-orders",  icon: "currency_exchange", label: "Órdenes 1UP"   },
-      { href: "/admin/bank-accounts", icon: "account_balance",   label: "Cuentas Banco" },
-      { href: "/admin/pass-orders",   icon: "verified",          label: "Compras Pass"  },
+      { href: "/admin/token-orders",     icon: "currency_exchange", label: "Órdenes 1UP"      },
+      { href: "/admin/bank-accounts",    icon: "account_balance",   label: "Cuentas Banco"    },
+      { href: "/admin/pass-orders",      icon: "verified",          label: "Compras Pass"     },
+      { href: "/admin/pass-bank-orders", icon: "pending_actions",   label: "Pass — Banco"     },
     ],
   },
   {

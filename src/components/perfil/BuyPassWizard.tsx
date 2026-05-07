@@ -216,17 +216,19 @@ export function BuyPassWizard({
                     {order.expires_at ? new Date(order.expires_at).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }) : "—"}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-headline text-xs uppercase tracking-widest text-outline">TX</span>
-                  <a
-                    href={`${BASESCAN}${order.tx_hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-xs text-primary hover:underline"
-                  >
-                    {order.tx_hash.slice(0, 10)}…{order.tx_hash.slice(-6)}
-                  </a>
-                </div>
+                {order.tx_hash && (
+                  <div className="flex justify-between">
+                    <span className="font-headline text-xs uppercase tracking-widest text-outline">TX</span>
+                    <a
+                      href={`${BASESCAN}${order.tx_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-primary hover:underline"
+                    >
+                      {order.tx_hash.slice(0, 10)}…{order.tx_hash.slice(-6)}
+                    </a>
+                  </div>
+                )}
               </div>
 
               <button

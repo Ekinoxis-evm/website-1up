@@ -49,6 +49,12 @@ export async function Footer() {
 
       <div className="flex items-center gap-6">
         <Link
+          href="/privacidad"
+          className="font-body text-xs tracking-widest uppercase text-outline/40 hover:text-outline transition-colors"
+        >
+          Privacidad
+        </Link>
+        <Link
           href="/admin"
           className="font-body text-xs tracking-widest uppercase text-outline/40 hover:text-outline transition-colors"
         >

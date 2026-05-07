@@ -601,10 +601,14 @@ export type Database = {
           recipient_address: string
           reviewed_at: string | null
           reviewed_by: string | null
+          bank_account_id: number | null
+          comprobante_url: string | null
+          payment_method: string
+          rejection_reason: string | null
           status: Database["public"]["Enums"]["pass_order_status"]
           token_amount_paid: number
           token_price_at_purchase: number
-          tx_hash: string
+          tx_hash: string | null
           updated_at: string
           user_profile_id: number
           verification_attempts: number
@@ -612,7 +616,9 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          bank_account_id?: number | null
           block_number?: number | null
+          comprobante_url?: string | null
           created_at?: string
           discount_pct_applied?: number
           discount_rule_id?: number | null
@@ -623,14 +629,16 @@ export type Database = {
           id?: number
           last_verified_at?: string | null
           paid_at?: string | null
+          payment_method?: string
           privy_user_id: string
           recipient_address: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["pass_order_status"]
           token_amount_paid: number
           token_price_at_purchase: number
-          tx_hash: string
+          tx_hash?: string | null
           updated_at?: string
           user_profile_id: number
           verification_attempts?: number
@@ -638,7 +646,9 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          bank_account_id?: number | null
           block_number?: number | null
+          comprobante_url?: string | null
           created_at?: string
           discount_pct_applied?: number
           discount_rule_id?: number | null
@@ -649,20 +659,29 @@ export type Database = {
           id?: number
           last_verified_at?: string | null
           paid_at?: string | null
+          payment_method?: string
           privy_user_id?: string
           recipient_address?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["pass_order_status"]
           token_amount_paid?: number
           token_price_at_purchase?: number
-          tx_hash?: string
+          tx_hash?: string | null
           updated_at?: string
           user_profile_id?: number
           verification_attempts?: number
           wallet_address?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pass_orders_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pass_orders_discount_rule_id_fkey"
             columns: ["discount_rule_id"]
@@ -1027,6 +1046,7 @@ export type Database = {
         | "confirmed"
         | "failed"
         | "expired_unverified"
+        | "pending_bank"
       payment_status: "pending" | "approved" | "rejected" | "cancelled"
       product_type: "course" | "pass"
       tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT"
@@ -1165,6 +1185,7 @@ export const Constants = {
         "confirmed",
         "failed",
         "expired_unverified",
+        "pending_bank",
       ],
       payment_status: ["pending", "approved", "rejected", "cancelled"],
       product_type: ["course", "pass"],

@@ -62,6 +62,55 @@ export function PassSection({ benefits }: Props) {
           </div>
         </div>
       </div>
+
+      {/* How to buy */}
+      <div className="mt-16 pt-12 border-t-4 border-surface-container">
+        <p className="font-headline text-xs uppercase tracking-widest text-outline mb-8">¿Cómo obtener tu 1UP Pass?</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+          {/* Option A: Tokens */}
+          <div className="bg-surface-container p-8 border-r-0 md:border-r-4 border-primary-container/20">
+            <div className="inline-block bg-primary-container px-3 py-1 mb-4 skew-fix">
+              <span className="block skew-content font-headline font-black text-xs text-white uppercase tracking-widest">Opción A — $1UP Tokens</span>
+            </div>
+            <div className="space-y-4">
+              {[
+                { n: "1", icon: "account_balance_wallet", text: "Crea tu cuenta en la app de 1UP Gaming Tower." },
+                { n: "2", icon: "bolt",                   text: "Compra $1UP tokens vía transferencia bancaria en la sección Wallet." },
+                { n: "3", icon: "card_membership",        text: "Ve a tu Pass → \"Pagar con $1UP\" y confirma la transacción. Activación instantánea." },
+              ].map((s) => (
+                <div key={s.n} className="flex items-start gap-4">
+                  <div className="shrink-0 w-8 h-8 bg-primary-container flex items-center justify-center">
+                    <span className="font-headline font-black text-white text-sm">{s.n}</span>
+                  </div>
+                  <p className="font-body text-sm text-on-surface/80 pt-1">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Option B: Bank transfer */}
+          <div className="bg-surface-container-low p-8">
+            <div className="inline-block bg-secondary-container px-3 py-1 mb-4 skew-fix">
+              <span className="block skew-content font-headline font-black text-xs text-white uppercase tracking-widest">Opción B — Transferencia Bancaria</span>
+            </div>
+            <div className="space-y-4">
+              {[
+                { n: "1", icon: "account_balance_wallet", text: "Crea tu cuenta en la app de 1UP Gaming Tower." },
+                { n: "2", icon: "account_balance",        text: "Ve a tu Pass → \"Pagar con Banco\" y selecciona la cuenta bancaria del equipo." },
+                { n: "3", icon: "receipt_long",           text: "Realiza la transferencia y sube el comprobante de pago." },
+                { n: "4", icon: "schedule",               text: "El equipo revisará tu comprobante y activará tu pass en máx. 24 horas hábiles." },
+              ].map((s) => (
+                <div key={s.n} className="flex items-start gap-4">
+                  <div className="shrink-0 w-8 h-8 bg-secondary-container flex items-center justify-center">
+                    <span className="font-headline font-black text-white text-sm">{s.n}</span>
+                  </div>
+                  <p className="font-body text-sm text-on-surface/80 pt-1">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

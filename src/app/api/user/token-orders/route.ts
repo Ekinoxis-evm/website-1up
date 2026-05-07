@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { moveComprobanteToOrder } from "@/lib/blob";
 import { isAddress } from "viem";
 import { revalidatePath } from "next/cache";
+import { sendTokenOrderEmails } from "@/lib/email";
 
 async function getPrivyUser(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -145,6 +146,24 @@ export async function POST(req: NextRequest) {
 
   revalidatePath("/admin/token-orders");
   revalidatePath("/app");
+
+  if (user.email) {
+    const { data: bankAccount } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("bank_name")
+      .eq("id", bankAccountId)
+      .single();
+
+    sendTokenOrderEmails({
+      userEmail:    user.email,
+      userName:     profileNombre ?? user.email,
+      orderId:      order.id,
+      copAmount:    copAmount,
+      tokenAmount:  tokenAmount,
+      walletAddress,
+      bankName:     bankAccount?.bank_name ?? "—",
+    }).catch(() => null);
+  }
 
   return NextResponse.json({ id: order.id }, { status: 201 });
 }

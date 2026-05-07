@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.3.0] — 2026-05-06
+
+### Added
+
+- **1UP Pass — bank transfer payment method** — users can now pay for the 1UP Pass via bank transfer in addition to $1UP tokens. New two-button selector on `PassPurchasePanel` ("Pagar con $1UP" / "Pagar con Banco"). New `BuyPassBankWizard.tsx` (4 steps: summary → bank details with copy-to-clipboard → comprobante upload → success screen). Admin approves/rejects from a dedicated page.
+  - `pass_orders` table extended: `tx_hash` made nullable, new columns `payment_method` (token|bank), `bank_account_id` FK, `comprobante_url`, `rejection_reason`; new enum value `pending_bank`.
+  - `POST /api/user/pass-orders` — detects `paymentMethod: "bank"` and routes to `handleBankOrder()`, which creates a `pending_bank` order and moves the comprobante via `moveComprobanteToOrder`.
+  - `PATCH /api/admin/pass-orders` — new `action: "approve" | "reject"` param: approve calculates expiry with stacking from any active pass; reject records reason.
+  - `/admin/pass-bank-orders` — new admin page + `AdminPassBankOrdersClient.tsx`: lists bank transfer pass orders with inline approve/reject panel (notes + rejection reason fields). Added to admin sidebar under Finanzas.
+  - `database.types.ts` updated: nullable `tx_hash`, new columns, `pending_bank` enum value, `bank_accounts` relationship on `pass_orders`.
+
+- **1UP Pass section moved to Home** — `PassSection` now renders on the home page (`/`) right after `<HeroHome>`, instead of at the bottom of the Gaming Tower page. Expanded with a "¿Cómo obtener tu 1UP Pass?" two-column strip (Option A: tokens, Option B: bank transfer).
+
+- **Privacy Policy page** — `/privacidad` — comprehensive 13-section policy covering: responsible party, legal framework (Ley 1581 / Decreto 1377), data collected (identity, financial, usage, technical), processing purposes, legal basis, data subject rights, third-party transfers, retention periods, security measures, minors (14+), cookies, changes, and contact. Link added to Footer.
+
+- **Onboarding consent step** — `OnboardingWizard` now has Step 6 "Consentimiento". Users must tick the privacy checkbox (links to `/privacidad`) before submitting. Blocks submit when unchecked.
+
+- **Email notifications (Resend)** — `src/lib/email.ts` with three fire-and-forget templates:
+  - `sendTokenOrderEmails` — user + admin notified when a $1UP token purchase order is submitted.
+  - `sendPassTokenEmails` — user + admin notified when a pass is purchased via $1UP (instantaneous confirmation).
+  - `sendPassBankEmails` — user + admin notified when a bank-transfer pass request is submitted.
+  - Hooked into `POST /api/user/token-orders` and `POST /api/user/pass-orders`. Never blocks the API response.
+  - New env vars: `RESEND_API_KEY`, `ADMIN_NOTIFICATION_EMAIL`.
+
+### Changed
+
+- **Minimum age raised to 14** — both frontend (`OnboardingWizard.tsx`) and backend (`POST /api/user/onboarding`) now enforce a minimum age of 14 years (up from 5). Year input max and error messages updated accordingly.
+
+### DB Migrations (applied via Supabase MCP)
+- `pass_orders_bank_transfer_support` — `ALTER TYPE pass_order_status ADD VALUE 'pending_bank'; ALTER TABLE pass_orders ALTER COLUMN tx_hash DROP NOT NULL; ADD COLUMN payment_method text NOT NULL DEFAULT 'token'; ADD COLUMN bank_account_id integer REFERENCES bank_accounts(id); ADD COLUMN comprobante_url text; ADD COLUMN rejection_reason text;`
+
+---
+
 ## [2.2.3] — 2026-04-26
 
 ### Changed

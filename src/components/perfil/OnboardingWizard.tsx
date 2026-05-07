@@ -51,6 +51,7 @@ const STEPS = [
   { label: "Identidad",   icon: "badge"             },
   { label: "Tus juegos",  icon: "sports_esports"    },
   { label: "Referido",    icon: "confirmation_number" },
+  { label: "Consentimiento", icon: "verified_user"  },
 ] as const;
 
 interface Props { games: Game[] }
@@ -87,6 +88,9 @@ export function OnboardingWizard({ games }: Props) {
   const [codeMessage, setCodeMessage]     = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Step 6
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+
   // Submit
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -101,8 +105,8 @@ export function OnboardingWizard({ games }: Props) {
     const date = new Date(y, m - 1, d);
     if (date.getMonth() !== m - 1 || date.getDate() !== d) return "Fecha inválida";
     if (y < 1930) return "Año muy antiguo";
-    const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 5);
-    if (date > minAge) return "Debes tener al menos 5 años";
+    const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 14);
+    if (date > minAge) return "Debes tener al menos 14 años";
     return null;
   })();
 
@@ -143,6 +147,7 @@ export function OnboardingWizard({ games }: Props) {
   const step3Valid = barrio.trim().length > 0 && birthDateComplete && !birthDateError;
   // Referral is optional — block only if code typed but invalid or still checking
   const step5Valid = codeStatus !== "invalid" && codeStatus !== "checking";
+  const step6Valid = privacyConsent;
 
   async function handleSubmit() {
     if (!step5Valid) return;
@@ -359,7 +364,7 @@ export function OnboardingWizard({ games }: Props) {
                   value={birthYear}
                   onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="Año"
-                  min={1930} max={CURRENT_YEAR - 5}
+                  min={1930} max={CURRENT_YEAR - 14}
                   className="bg-surface-container text-on-background p-4 font-headline font-black text-xl border-none focus:outline-none placeholder:text-outline/30 text-center"
                 />
               </div>
@@ -500,6 +505,81 @@ export function OnboardingWizard({ games }: Props) {
             )}
           </div>
 
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setStep(6)}
+              disabled={!step5Valid}
+              className="flex-1 bg-primary-container text-white font-headline font-black py-4 uppercase tracking-tighter disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              SIGUIENTE <span className="material-symbols-outlined">arrow_forward</span>
+            </button>
+            <button onClick={() => setStep(4)} className="px-6 bg-surface-container font-headline font-black uppercase">
+              ATRÁS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 6: Consentimiento ── */}
+      {step === 6 && (
+        <div>
+          <h1 className="font-headline font-black text-4xl uppercase tracking-tighter mb-1">
+            Política de<br /><span className="text-primary-container">privacidad</span>
+          </h1>
+          <div className="h-1 w-16 bg-primary-container mb-4" />
+          <p className="font-body text-sm text-outline mb-6">
+            Para usar la plataforma debes aceptar nuestra política de tratamiento de datos personales,
+            conforme a la Ley 1581 de 2012 de Colombia.
+          </p>
+
+          <div className="bg-surface-container p-5 space-y-4 mb-6">
+            <p className="font-body text-sm text-on-surface/80">
+              Al crear tu cuenta en <strong>1UP Gaming Tower</strong>, autorizas el tratamiento de tus datos personales
+              para las finalidades descritas en nuestra{" "}
+              <a
+                href="/privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-bold"
+              >
+                Política de Privacidad
+              </a>
+              , incluyendo:
+            </p>
+            <ul className="font-body text-sm text-on-surface/70 list-disc pl-5 space-y-1">
+              <li>Gestión de tu cuenta y acceso a los servicios del Gaming Tower.</li>
+              <li>Procesamiento de pagos de tokens $1UP y del 1UP Pass.</li>
+              <li>Envío de comunicaciones transaccionales a tu correo electrónico.</li>
+              <li>Verificación de elegibilidad para descuentos con entidades aliadas.</li>
+            </ul>
+            <p className="font-body text-xs text-on-surface/50">
+              Puedes ejercer tus derechos de acceso, rectificación, supresión y revocación del consentimiento en
+              cualquier momento escribiendo a privacidad@1upesports.org.
+            </p>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={privacyConsent}
+              onChange={(e) => setPrivacyConsent(e.target.checked)}
+              className="mt-1 w-5 h-5 accent-primary-container cursor-pointer shrink-0"
+            />
+            <span className="font-headline font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+              He leído y acepto la{" "}
+              <a
+                href="/privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Política de Privacidad y Tratamiento de Datos Personales
+              </a>{" "}
+              de 1UP Gaming Tower Colombia.
+            </span>
+          </label>
+
           {submitError && (
             <p className="font-body text-sm text-error mt-4 bg-error/10 p-3">{submitError}</p>
           )}
@@ -507,7 +587,7 @@ export function OnboardingWizard({ games }: Props) {
           <div className="flex gap-3 mt-8">
             <button
               onClick={handleSubmit}
-              disabled={submitting || !step5Valid}
+              disabled={submitting || !step6Valid}
               className="flex-1 bg-primary-container text-white font-headline font-black py-4 uppercase tracking-tighter disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {submitting ? (
@@ -522,7 +602,7 @@ export function OnboardingWizard({ games }: Props) {
                 </>
               )}
             </button>
-            <button onClick={() => setStep(4)} className="px-6 bg-surface-container font-headline font-black uppercase">
+            <button onClick={() => setStep(5)} className="px-6 bg-surface-container font-headline font-black uppercase">
               ATRÁS
             </button>
           </div>
