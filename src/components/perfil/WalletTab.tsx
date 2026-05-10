@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction, useCreateWallet } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth";
 import { parseUnits, formatUnits, isAddress, encodeFunctionData } from "viem";
 import { use1upBalance } from "@/hooks/use1upBalance";
@@ -41,10 +41,13 @@ function truncate(addr: string) {
 export function WalletTab() {
   const { getAccessToken, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const { createWallet } = useCreateWallet();
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const activeWallet   = embeddedWallet ?? wallets[0];
   const walletAddress  = activeWallet?.address as `0x${string}` | undefined;
-  const walletLoading  = ready && authenticated && wallets.length === 0;
+  const walletLoading  = ready && authenticated && !walletAddress;
+
+  const [walletError, setWalletError] = useState(false);
 
   const { balance, loading: balanceLoading } = use1upBalance(walletAddress);
   const { sendTransaction } = useSendTransaction();
@@ -72,6 +75,20 @@ export function WalletTab() {
   const [scanError, setScanError] = useState<string | null>(null);
   const videoRef  = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Wallet recovery — if still no wallet after 5s, try to create it;
+  // after 15s with no result, show an error with a reload CTA.
+  useEffect(() => {
+    if (!walletLoading) { setWalletError(false); return; }
+
+    const createTimer = setTimeout(async () => {
+      try { await createWallet({ createAdditional: false }); } catch { /* already exists, privy will connect it */ }
+    }, 5000);
+
+    const errorTimer = setTimeout(() => setWalletError(true), 15000);
+
+    return () => { clearTimeout(createTimer); clearTimeout(errorTimer); };
+  }, [walletLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Transaction history
   const [txHistory, setTxHistory]   = useState<TxItem[]>([]);
@@ -226,11 +243,30 @@ export function WalletTab() {
             </div>
 
             {walletLoading ? (
-              <div className="mt-4 bg-surface-container-lowest p-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-on-surface/30 animate-spin">refresh</span>
-                <span className="text-sm font-headline text-on-surface/40 uppercase tracking-tight">
-                  Inicializando wallet…
-                </span>
+              <div className="mt-4 bg-surface-container-lowest p-4 flex items-center justify-between gap-3">
+                {walletError ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-error/60 text-sm">error</span>
+                      <span className="text-xs font-headline text-error/60 uppercase tracking-tight">
+                        La wallet tardó demasiado
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="shrink-0 text-xs font-headline font-black uppercase tracking-tight text-primary-container hover:text-primary transition-colors"
+                    >
+                      Recargar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-on-surface/30 animate-spin">refresh</span>
+                    <span className="text-sm font-headline text-on-surface/40 uppercase tracking-tight">
+                      Inicializando wallet…
+                    </span>
+                  </>
+                )}
               </div>
             ) : walletAddress ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
