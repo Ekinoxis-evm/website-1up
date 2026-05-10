@@ -10,7 +10,7 @@ Format follows `.claude/skills/release-management.md`.
 ### Fixed
 
 - **Subdomain routing confirmed working via Next.js 16 native `proxy.ts`** — Next.js 16 picks up `src/proxy.ts` automatically as its proxy/middleware layer (replaces `middleware.ts`). Confirmed build output shows `ƒ Proxy (Middleware)` — subdomain rewrites for `app.1upesports.org → /app` and `admin.1upesports.org → /admin` are active.
-- **WalletTab: no loading state for new users** — when Privy creates an embedded wallet on first login the process is asynchronous. During that window `wallets` is empty even though the user is authenticated. Added `walletLoading = ready && authenticated && wallets.length === 0` and restored the "Inicializando wallet…" spinner so new users see feedback instead of a blank balance card with no action buttons.
+- **WalletTab: wallet stuck initializing for new users** — Privy creates the embedded wallet during the login modal, but the `onboarding` redirect interrupts that flow before the wallet is fully connected in the browser session. Fixed with a three-stage recovery: (1) "Inicializando wallet…" spinner while Privy connects; (2) after 5s, automatically calls `createWallet({ createAdditional: false })` to handle the interrupted creation case; (3) after 15s, shows an error state with a "Recargar" button instead of an infinite spinner. Tightened `walletLoading` condition from `wallets.length === 0` to `!walletAddress` for correctness.
 - **WalletTab: dead code cleanup** — removed unused `user`, `userEmail`, `googleAccount`, and `emailAccount` variables that were left behind from a previous refactor. These were causing TypeScript warnings.
 
 ### Delivered by
