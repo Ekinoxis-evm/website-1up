@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 
 const MODULES = [
   { href: "/app",             icon: "account_balance_wallet", label: "Wallet"      },
@@ -14,6 +17,12 @@ const MODULES = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { logout } = usePrivy();
+
+  async function handleLogout() {
+    await logout();
+    window.location.href = `${APP_URL}/login`;
+  }
 
   return (
     <aside className="hidden md:flex flex-col w-56 min-h-screen bg-surface-container border-r border-outline-variant/20 fixed left-0 top-0 z-40 py-8 px-4">
@@ -45,7 +54,7 @@ export function AppSidebar() {
           );
         })}
       </nav>
-      <div className="mt-auto px-2">
+      <div className="mt-auto px-2 flex flex-col gap-3">
         <Link
           href={process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org"}
           className="flex items-center gap-2 text-outline hover:text-secondary text-xs font-headline uppercase tracking-widest transition-colors"
@@ -53,6 +62,13 @@ export function AppSidebar() {
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Ver Sitio
         </Link>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-error/50 hover:text-error text-xs font-headline uppercase tracking-widest transition-colors"
+        >
+          <span className="material-symbols-outlined text-sm">logout</span>
+          Cerrar Sesión
+        </button>
       </div>
     </aside>
   );
