@@ -11,11 +11,11 @@ const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports
 
 const NAV_LINKS = [
   { href: "/",             label: "Home"      },
+  { href: "/academia",     label: "Academia"  },
   { href: "/gaming-tower", label: "Tower"     },
   { href: "/juegos",       label: "Juegos"    },
   { href: "/team",         label: "Team"      },
   { href: "/masters",      label: "Masters"   },
-  { href: "/academia",     label: "Academia"  },
   { href: "/recreativo",   label: "Recreativo"},
 ];
 
@@ -29,11 +29,8 @@ export function TopAppBar() {
     <header className="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 glass-panel border-b border-outline-variant/20">
       {/* Logo + Nav */}
       <div className="flex items-center gap-8">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/1up.png" alt="1UP Gaming Tower" width={40} height={40} className="object-contain" />
-          <span className="text-2xl font-black text-primary italic tracking-tighter font-headline hidden sm:block">
-            1UP
-          </span>
+        <Link href="/">
+          <Image src="/1up.png" alt="1UP Gaming Tower" width={44} height={44} className="object-contain" />
         </Link>
 
         <nav className="hidden md:flex gap-6 items-center">
@@ -112,7 +109,7 @@ export function TopAppBar() {
           ) : (
             <a
               href={`${APP_URL}/login`}
-              className="bg-primary-container text-white px-6 py-2 font-headline font-black skew-fix hover:bg-primary hover:neo-shadow-pink transition-all active:scale-95"
+              className="bg-primary-container text-white px-6 py-2 font-headline font-black skew-fix hover:bg-secondary hover:neo-shadow-blue transition-all"
             >
               <span className="block skew-content">JOIN NOW</span>
             </a>

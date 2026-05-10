@@ -23,7 +23,7 @@
 
   /* Glassmorphism — for nav and floating panels */
   .glass-panel {
-    background: rgba(11, 19, 38, 0.6);
+    background: rgba(11, 19, 38, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }

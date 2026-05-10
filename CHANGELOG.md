@@ -5,6 +5,22 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.4.0] — 2026-05-10
+
+### Changed
+
+- **Navbar — reorder**: "Academia" moved to second position (right after "Home") so it's closer to the left edge and easier to find.
+- **Navbar — remove logo redundancy**: text "1UP" next to the logo image removed. Logo image slightly enlarged to 44px. The image already conveys the brand; the duplicate text was noise.
+- **Navbar — JOIN NOW button hover**: removed `active:scale-95` (felt like hold-on-click on mobile); hover now turns blue (`bg-secondary` + `neo-shadow-blue`) instead of pink for clear immediate feedback.
+- **Header transparency**: `glass-panel` opacity raised from 0.60 → 0.85 so the nav is consistently readable across all pages regardless of the background content behind it.
+- **Talent Pipeline section**: removed the step numbers (01–04) from the cards. Removed the "TRAINING" card entirely. Renamed "TORNEOS MUNDIALES" → "TORNEOS" with href `/torneos` (ready for the upcoming tournaments page). Updated description for the Torneos card. Grid changed from 4-col to 3-col to match the reduced card count.
+- **1UP Pass heading**: enlarged from `text-6xl` to `text-7xl`, unified to a single line ("1UP PASS" instead of two-line split).
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.3.1] — 2026-05-10
 
 ### Fixed

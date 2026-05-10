@@ -16,8 +16,8 @@ export function PassSection({ benefits }: Props) {
               MEMBERSHIP
             </span>
           </div>
-          <h2 className="font-headline font-black text-6xl leading-none tracking-tighter mb-8">
-            1UP<br /><span className="text-primary-container">PASS</span>
+          <h2 className="font-headline font-black text-7xl leading-none tracking-tighter mb-8">
+            1UP <span className="text-primary-container">PASS</span>
           </h2>
 
           <div className="space-y-3 mb-10">
