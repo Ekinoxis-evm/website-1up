@@ -5,6 +5,19 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.3.1] — 2026-05-10
+
+### Fixed
+
+- **Subdomain routing broken — `middleware.ts` was missing** — `src/proxy.ts` contained the subdomain rewrite logic but was never executed by Next.js because the file must be named `middleware.ts` and export a function named `middleware`. Created `src/middleware.ts` that re-exports `proxy as middleware, config` from `./proxy`. Without this, every request to `app.1upesports.org` and `admin.1upesports.org` was falling through without any rewrite, making the entire user app and admin panel inaccessible.
+- **WalletTab: no loading state for new users** — when Privy creates an embedded wallet on first login the process is asynchronous. During that window `wallets` is empty even though the user is authenticated. Added `walletLoading = ready && authenticated && wallets.length === 0` and restored the "Inicializando wallet…" spinner so new users see feedback instead of a blank balance card with no action buttons.
+- **WalletTab: dead code cleanup** — removed unused `user`, `userEmail`, `googleAccount`, and `emailAccount` variables that were left behind from a previous refactor. These were causing TypeScript warnings.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.3.0] — 2026-05-06
 
 ### Added

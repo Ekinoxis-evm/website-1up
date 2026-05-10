@@ -39,13 +39,12 @@ function truncate(addr: string) {
 }
 
 export function WalletTab() {
-  const { user, getAccessToken } = usePrivy();
+  const { getAccessToken, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
-  const [copied, setCopied] = useState(false);
-
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const activeWallet   = embeddedWallet ?? wallets[0];
   const walletAddress  = activeWallet?.address as `0x${string}` | undefined;
+  const walletLoading  = ready && authenticated && wallets.length === 0;
 
   const { balance, loading: balanceLoading } = use1upBalance(walletAddress);
   const { sendTransaction } = useSendTransaction();
@@ -182,26 +181,12 @@ export function WalletTab() {
     }
   }
 
-  function copyAddress() {
-    if (!walletAddress) return;
-    navigator.clipboard.writeText(walletAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   function copyReceiveAddress() {
     if (!walletAddress) return;
     navigator.clipboard.writeText(walletAddress);
     setReceiveCopied(true);
     setTimeout(() => setReceiveCopied(false), 2000);
   }
-
-  const googleAccount = user?.linkedAccounts.find((a) => a.type === "google_oauth");
-  const emailAccount  = user?.linkedAccounts.find((a) => a.type === "email");
-  const userEmail =
-    (emailAccount  && "address" in emailAccount ? (emailAccount.address as string) : null) ??
-    (googleAccount && "email"   in googleAccount ? (googleAccount.email   as string) : null) ??
-    "";
 
   return (
     <div className="space-y-8">
@@ -240,31 +225,14 @@ export function WalletTab() {
               </h2>
             </div>
 
-            {walletAddress ? (
-              <button
-                onClick={copyAddress}
-                className="w-full bg-surface-container-lowest p-4 flex items-center justify-between group border border-outline-variant/10 hover:border-primary/30 transition-colors"
-              >
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] font-headline text-on-surface/50 uppercase mb-1">WALLET ADDRESS</span>
-                  <span className="font-mono text-sm tracking-tight text-on-surface truncate max-w-[240px] md:max-w-none">
-                    {walletAddress}
-                  </span>
-                </div>
-                <span className={`material-symbols-outlined transition-colors shrink-0 ml-3 ${copied ? "text-tertiary" : "text-on-surface/30 group-hover:text-primary"}`}>
-                  {copied ? "check" : "content_copy"}
-                </span>
-              </button>
-            ) : (
-              <div className="bg-surface-container-lowest p-4 flex items-center gap-3 border border-outline-variant/10">
-                <span className="material-symbols-outlined text-on-surface/30">account_balance_wallet</span>
+            {walletLoading ? (
+              <div className="mt-4 bg-surface-container-lowest p-4 flex items-center gap-3">
+                <span className="material-symbols-outlined text-on-surface/30 animate-spin">refresh</span>
                 <span className="text-sm font-headline text-on-surface/40 uppercase tracking-tight">
                   Inicializando wallet…
                 </span>
               </div>
-            )}
-
-            {walletAddress && (
+            ) : walletAddress ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <button
                   onClick={() => { setSendOpen(true); setSendError(null); setSendTxHash(null); }}
@@ -288,7 +256,7 @@ export function WalletTab() {
                   <span className="block skew-content">BUY</span>
                 </button>
               </div>
-            )}
+            ) : null}
 
       </div>
 
@@ -489,9 +457,6 @@ export function WalletTab() {
                 </div>
               </div>
             )}
-            <div className="bg-surface-container-lowest p-4 mb-4">
-              <p className="font-mono text-xs text-on-background break-all">{walletAddress}</p>
-            </div>
             <button
               onClick={copyReceiveAddress}
               className={`w-full py-3 font-headline font-black text-sm uppercase transition-all mb-3 flex items-center justify-center gap-2 ${
