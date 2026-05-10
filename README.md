@@ -29,8 +29,7 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 
 ```
 src/
-  middleware.ts       # Next.js middleware entry point — re-exports proxy as middleware
-  proxy.ts            # Subdomain routing logic — app.* → /app, admin.* → /admin
+  proxy.ts            # Subdomain routing (Next.js 16 native proxy) — app.* → /app, admin.* → /admin
   app/
     (main)/           # 1upesports.org — all public routes (TopAppBar + Footer + MobileBottomNav)
     app/              # app.1upesports.org — user shell

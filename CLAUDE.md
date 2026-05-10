@@ -236,12 +236,11 @@ Do NOT append `&limit=N` — Blockscout v2 rejects unknown query params and retu
 
 ## Subdomain Routing
 
-Subdomain routing is split across two files — **both must exist**:
+**`src/proxy.ts`** is the Next.js 16 first-class proxy file — it replaces `middleware.ts` for subdomain routing. Next.js 16 picks it up automatically by name; no `middleware.ts` is needed or allowed (having both causes a build error).
 
-- **`src/proxy.ts`** — contains the `proxy()` function and `config` matcher. Has all the logic.
-- **`src/middleware.ts`** — the actual Next.js middleware entry point. One line: `export { proxy as middleware, config } from "./proxy";`
-
-Next.js only picks up `middleware.ts` (or `middleware.js`) by name. If `middleware.ts` is missing, `app.1upesports.org` and `admin.1upesports.org` requests are never rewritten and every subdomain page 404s silently. Never delete or rename `src/middleware.ts`.
+- Export the function as `proxy` (not `middleware`)
+- Export `config` with the `matcher` array
+- Never create a `src/middleware.ts` alongside it — that conflicts and breaks the build
 
 ---
 
