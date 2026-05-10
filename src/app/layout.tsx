@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "1UP Gaming Tower — El Primer Espacio Equipado en Colombia",
   description:
     "La primera infraestructura de élite para jugadores profesionales de e-sport en Colombia. Gaming Tower, Academia, Team 1UP.",
-  metadataBase: new URL("https://1up.ekinoxis.xyz"),
+  metadataBase: new URL("https://1upesports.org"),
   icons: {
     icon: "/1up.png",
     apple: "/1up.png",
