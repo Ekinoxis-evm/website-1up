@@ -41,6 +41,8 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 | `user_profiles` | `id`, `privy_user_id`, `tipo_documento`, `numero_documento`, `comfenalco_afiliado`, `verified_aliados` (text[]), `created_at` |
 | `recruitment_submissions` | `id`, `name`, `email`, `phone`, `category_id`, `game_id`, `gamertag`, `portfolio_url`, `message`, `source`, `created_at` |
 | `admin_users` | `id`, `email`, `added_by`, `created_at` |
+| `brand_logos` | `id`, `name`, `logo_url`, `website_url` (nullable), `sort_order`, `is_active`, `created_at` |
+| `tournaments` | `id`, `name`, `game_id` → games (SET NULL), `date` (timestamptz), `prize_pool_cop`, `max_participants`, `status` (upcoming\|live\|completed), `location_type` (presencial\|online\|mixto), `image_url`, `description`, `is_active`, `is_registration_open`, `sort_order`, `created_at` |
 
 ## Type system
 
@@ -56,7 +58,7 @@ export type Aliado       = Database["public"]["Tables"]["aliados"]["Row"];
 // ... etc.
 ```
 
-**Always import types from `@/types/database.types`** in components and API routes — not from `@/db/schema`. The schema file is for Drizzle/seeding only.
+**Always import types from `@/types/database.types`** in components and API routes.
 
 ## Schema change workflow
 
@@ -66,11 +68,9 @@ When adding or modifying a DB column:
    ```sql
    ALTER TABLE table_name ADD COLUMN column_name TYPE;
    ```
-2. **Update Drizzle schema** (`src/db/schema.ts`) — add the field to the matching table definition
-3. **Regenerate types** via Supabase MCP: `mcp__plugin_supabase_supabase__generate_typescript_types`
-4. **Update `database.types.ts`** — paste the new generated content, keep the convenience aliases at the bottom intact
-5. **Update API routes** — add the new column to POST/PUT insert/update objects
-6. **Update admin client** — add field to form state + modal UI
+2. **Update `src/types/database.types.ts`** manually — add the field to the matching Row/Insert/Update blocks and keep the convenience aliases at the bottom intact
+3. **Update API routes** — add the new column to POST/PUT insert/update objects
+4. **Update admin client** — add field to form state + modal UI
 
 ## Column naming convention
 
@@ -92,11 +92,11 @@ All images are stored in the **`images`** bucket in Supabase Storage (public, 5M
 
 ```ts
 import { uploadImage } from "@/lib/blob";
-// folder: "players" | "courses" | "games" | "floors" | "masters" | "aliados"
-const url = await uploadImage(file, "players"); // returns public Supabase Storage URL
+// folder: "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site" | "brand-logos" | "tournaments"
+const url = await uploadImage(file, "players", entityId); // returns public Supabase Storage URL
 ```
 
-The bucket uses folder structure: `images/players/`, `images/courses/`, `images/masters/`, etc.
+The bucket uses folder structure: `images/players/{id}/cover`, `images/tournaments/{id}/cover`, etc.
 
 - **Upload**: `supabaseAdmin.storage.from("images").upload(path, file)` (service role — server-side only)
 - **Public URL**: `supabaseAdmin.storage.from("images").getPublicUrl(path).data.publicUrl`
@@ -104,14 +104,6 @@ The bucket uses folder structure: `images/players/`, `images/courses/`, `images/
 
 This runs **server-side only** (inside `/api/admin/upload/route.ts`). Never import `blob.ts` in client components.
 
-## Drizzle (schema + seeding only)
+## No Drizzle
 
-```ts
-import { db } from "@/db";
-import { games, players } from "@/db/schema";
-
-// Use for seeding / migrations only
-await db.insert(games).values({ name: "Street Fighter 6", categoryId: 1 });
-```
-
-Drizzle `db` uses `DATABASE_URL` (Supabase Transaction pooler connection string). Do NOT use Drizzle in API routes or Server Components — use `supabase` / `supabaseAdmin` instead.
+Drizzle was removed from this project. Do not import from `@/db` or `@/db/schema`. All DB access is via `supabase` / `supabaseAdmin` from `@/lib/supabase`.

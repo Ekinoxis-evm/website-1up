@@ -64,7 +64,7 @@ import { ImageUpload } from "./ImageUpload";
 // Inside modal:
 <ImageUpload
   currentUrl={form.imageUrl || null}
-  folder="courses"          // "players" | "courses" | "games" | "floors" | "masters" | "aliados"
+  folder="courses"          // "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site" | "brand-logos" | "tournaments"
   aspectRatio="video"       // "video" (16:9) | "square" (1:1)
   onUploaded={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
   getAccessToken={getAccessToken}
@@ -96,6 +96,8 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | Pass orders | `/admin/pass-orders`, `/app/pass` |
 | Referral codes | `/admin/referral-codes` |
 | User onboarding | `/app`, `/admin/referral-codes` |
+| Brand logos | `/`, `/admin/brand-logos` |
+| Tournaments | `/torneos`, `/admin/torneos` |
 
 ## All admin routes
 
@@ -122,6 +124,8 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/user-profiles` | `AdminUserProfilesClient` | — (read-only) | — |
 | `/admin/submissions` | read-only table | — | — |
 | `/admin/users` | `AdminUsersClient` | `/api/admin/users` | GET/POST/DELETE |
+| `/admin/brand-logos` | `AdminBrandLogosClient` | `/api/admin/brand-logos` | GET/POST/PUT/DELETE |
+| `/admin/torneos` | `AdminTorneosClient` | `/api/admin/tournaments` | GET/POST/PUT/DELETE |
 
 **Special endpoints:**
 - `/api/admin/upload` — POST multipart/form-data → Supabase Storage `images` bucket → returns `{ url }`
@@ -134,7 +138,7 @@ Sidebar is organized into 4 labeled groups:
 
 | Group | Items |
 |-------|-------|
-| **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters, Imágenes del Sitio, Links Sociales |
+| **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters, Imágenes del Sitio, Logos Banner, Torneos |
 | **Academia & App** | Cursos (includes inline content management), 1UP Pass, Descuentos, Inscripciones |
 | **OTC / Tokens** | Órdenes $1UP, Cuentas Bancarias |
 | **Sistema** | Usuarios Privy, Referidos, Aliados, Solicitudes, Admins |

@@ -24,7 +24,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 | URL | Layout group | Purpose |
 |-----|-------------|---------|
-| `/` | `(main)` | Home — Hero, 1UP Pass section, Games Gallery, Recruitment |
+| `/` | `(main)` | Home — Hero, Brands Banner, 1UP Pass section, Games Gallery, Marketplace teaser, Recruitment |
+| `/torneos` | `(main)` | Tournament list — upcoming/live/completed cards with game, prize, registration CTA |
 | `/gaming-tower` | `(main)` | 6-floor breakdown, Map |
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/juegos` | `(main)` | Games showcase by category |
@@ -71,6 +72,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/user/onboarding` | Privy user | Complete onboarding — saves all profile fields, validates referral code, sets onboarding_completed_at |
 | `GET /api/user/referral-codes/validate` | Public | Validate a referral code (returns `{ valid, reason }`) |
 | `GET\|POST\|PUT /api/admin/referral-codes` | isAdmin | Referral code CRUD (create, toggle active, update description/max_uses) |
+| `GET\|POST\|PUT\|DELETE /api/admin/brand-logos` | isAdmin | Brand logo CRUD (GET is public — active only) |
+| `GET\|POST\|PUT\|DELETE /api/admin/tournaments` | isAdmin | Tournament CRUD (GET is public — active only, joined with game name) |
 
 ---
 
@@ -100,6 +103,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
 | `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
 | `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
+| `brand_logos` | name, logo_url, website_url (optional — makes logo clickable), sort_order, is_active — animated marquee banner on home |
+| `tournaments` | name, game_id FK (nullable → games), date, prize_pool_cop, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, is_active, is_registration_open, sort_order |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 
@@ -137,6 +142,8 @@ Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`
 | `floors/{id}/cover` | Floor images (Gaming Tower) |
 | `masters/{id}/cover` | Master photos |
 | `aliados/{id}/cover` | Partner logos |
+| `brand-logos/{id}/cover` | Brand/sponsor logos for home marquee banner |
+| `tournaments/{id}/cover` | Tournament cover images |
 | `site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 | `comprobantes/pending/{privyUserIdHash}-{timestamp}.{ext}` | Payment receipt — temporary path before order ID exists |
 | `comprobantes/{orderId}/receipt.{ext}` | Payment receipt — moved here after order is created (jpg/png/webp/pdf) |
