@@ -22,7 +22,7 @@ export function HeroHome() {
         <h1 className="font-headline font-black text-6xl md:text-8xl leading-none tracking-tighter mb-8 text-on-background">
           EL PRIMER ESPACIO{" "}
           <span className="text-primary italic text-glow-pink">EQUIPADO</span>{" "}
-          PARA PRO-PLAYERS
+          PARA GAMERS
         </h1>
 
         <p className="font-body text-xl md:text-2xl text-secondary max-w-2xl mb-12 border-l-4 border-primary pl-6">

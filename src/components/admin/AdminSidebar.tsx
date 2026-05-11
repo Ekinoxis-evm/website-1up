@@ -14,6 +14,7 @@ const GROUPS = [
       { href: "/admin/competitions", icon: "emoji_events",    label: "Competiciones" },
       { href: "/admin/masters",      icon: "star",            label: "Masters"       },
       { href: "/admin/site-images",  icon: "image",           label: "Imágenes Sitio" },
+      { href: "/admin/brand-logos",  icon: "storefront",      label: "Logos Banner"   },
     ],
   },
   {

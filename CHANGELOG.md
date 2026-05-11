@@ -5,6 +5,33 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.5.0] — 2026-05-10
+
+### Added
+
+- **Brands Banner (home)**: infinite animated marquee of partner/brand logos, rendered between Hero and Pass section. Logos managed via admin panel. Pauses on hover. White background with subtle top/bottom accent borders.
+- **Marketplace section (home)**: teaser section with `id="marketplace"` for anchor linking. "PRÓXIMAMENTE" badge, headline, description, and 3 category tiles (Periféricos, Equipos, Accesorios). Scrollable from navbar.
+- **Navbar — Marketplace link**: new `/#marketplace` anchor link added to `TopAppBar` NAV_LINKS so users can scroll directly from any page.
+- **Admin — Logos Banner**: full CRUD panel at `/admin/brand-logos`. Supports image upload (PNG/SVG with transparent background), website URL (optional, makes logo clickable), sort order, and active toggle. Images stored in Supabase Storage under `brand-logos/` folder.
+- **`brand_logos` table**: new DB table (`id`, `name`, `logo_url`, `website_url`, `sort_order`, `is_active`, `created_at`). API at `/api/admin/brand-logos` (GET public, POST/PUT/DELETE admin-only). `revalidatePath("/")` and `revalidatePath("/admin/brand-logos")` on every mutation.
+- **Admin sidebar**: "Logos Banner" entry added to the "Sitio Web" group.
+- **CSS marquee animation**: `@keyframes marquee-scroll` + `.animate-marquee` utility class added to `globals.css`.
+
+### Changed
+
+- **`src/lib/blob.ts`**: `"brand-logos"` added to `ImageFolder` type union.
+- **`/api/admin/upload`**: `"brand-logos"` added to `ALLOWED_FOLDERS`.
+- **`ImageUpload` component**: `"brand-logos"` added to `folder` prop type.
+
+### Requires
+
+- DB migration: `CREATE TABLE brand_logos (...)` — see migration SQL below or in the admin setup guide.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.4.0] — 2026-05-10
 
 ### Changed

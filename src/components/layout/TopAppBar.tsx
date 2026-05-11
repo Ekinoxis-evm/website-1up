@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: "/team",         label: "Team"      },
   { href: "/masters",      label: "Masters"   },
   { href: "/recreativo",   label: "Recreativo"},
+  { href: "/#marketplace", label: "Marketplace"},
 ];
 
 export function TopAppBar() {

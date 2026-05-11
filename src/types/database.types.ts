@@ -79,6 +79,36 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_logos: {
+        Row: {
+          id:          number
+          name:        string
+          logo_url:    string
+          website_url: string | null
+          sort_order:  number
+          is_active:   boolean
+          created_at:  string
+        }
+        Insert: {
+          id?:         number
+          name:        string
+          logo_url:    string
+          website_url?: string | null
+          sort_order?:  number
+          is_active?:   boolean
+          created_at?:  string
+        }
+        Update: {
+          id?:         number
+          name?:       string
+          logo_url?:   string
+          website_url?: string | null
+          sort_order?:  number
+          is_active?:   boolean
+          created_at?:  string
+        }
+        Relationships: []
+      }
       aliados: {
         Row: {
           api_key: string | null
@@ -1219,3 +1249,4 @@ export type PassConfig       = Database["public"]["Tables"]["pass_config"]["Row"
 export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"];
 export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
 export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];
+export type BrandLogo        = Database["public"]["Tables"]["brand_logos"]["Row"];

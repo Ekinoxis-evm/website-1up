@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @layer base {
   html {
     @apply bg-background text-on-background font-body;
@@ -48,6 +53,16 @@
   }
 
   /* Phone input — matches form dark theme */
+  /* Infinite horizontal scroll for brands banner */
+  .animate-marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 35s linear infinite;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
   .phone-input-1up {
     @apply w-full bg-surface-container-lowest text-on-background font-headline font-bold;
     display: flex;

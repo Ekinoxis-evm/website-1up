@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import crypto from "crypto";
 
-export type ImageFolder = "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site";
+export type ImageFolder = "players" | "courses" | "games" | "categories" | "floors" | "masters" | "aliados" | "site" | "brand-logos";
 
 export async function uploadImage(
   file: File,
