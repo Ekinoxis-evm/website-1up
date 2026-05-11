@@ -21,6 +21,7 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Database | Supabase (`@supabase/supabase-js`) |
 | File Storage | Supabase Storage (`images` bucket — public, 5MB limit) |
 | Payments | MercadoPago (`mercadopago` SDK v2) |
+| QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
 | Runtime | Node.js 24 |
 
 ---
@@ -62,8 +63,8 @@ src/
     team/             # Team + Hall of Fame (PlayerCard with social PNG icons)
     masters/          # MasterCard, MasterGrid — shared with /academia page
     academia/         # Course catalog + PaymentFeedback
-    torneos/          # Tournament cards, detail modal, register button, calendar modal, HallOfFameSection, IntlTournamentCard
-    perfil/           # WalletTab (balance card + HISTORIAL/ÓRDENES tabs — send/receive/buy, Blockscout tx history, purchase orders), SettingsTab, IdentidadTab, BeneficiosTab
+    torneos/          # TournamentCard, RegisterButton (with redirect flow), CalendarPromptModal, TournamentCheckinClient, HallOfFameSection, IntlTournamentCard
+    perfil/           # WalletTab, AjustesClient (IDENTIDAD + SEGURIDAD tabs), IdentidadTab, SettingsTab, BeneficiosTab, MisTorneosTab
     app/              # App shell (AppSidebar — desktop, AppBottomNav — mobile)
     admin/            # Admin panel components
     layout/           # TopAppBar, Footer (reads social_links from DB), MobileBottomNav
@@ -194,10 +195,12 @@ npm run dev
 | Route | Description |
 |-------|-------------|
 | `/` | Home — Hero, Brands Banner (animated marquee), 1UP Pass section, Games Gallery, Marketplace teaser, Recruitment |
-| `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, detail modal, registration CTA, month+game filters. International tournaments section. |
+| `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, registration CTA, month+game filters. International tournaments section. HallOfFame team competition history at bottom. |
+| `/torneos/[id]` | Tournament detail — cover image, status/game/location badges, prize podium, `RegisterButton` CTA. Dynamic OG metadata per tournament. |
+| `/torneos/[id]/checkin` | QR check-in — inline Privy login (modal, no redirect), validates registration status, marks attendance via API. |
 | `/gaming-tower` | 6-floor breakdown, Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
-| `/team` | Pro roster + Hall of Fame + Recruitment |
+| `/team` | Pro roster + Recruitment |
 | `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + MercadoPago checkout |
 | `/juegos` | Games showcase by category |
 | `/recreativo` | Casual gaming section |
@@ -209,12 +212,12 @@ npm run dev
 | Route | Description |
 |-------|-------------|
 | `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code), purchase orders, Blockscout tx history |
-| `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
+| `/app/mis-torneos` | My tournament registrations — card list with status badges (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), links to tournament detail pages |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
 | `/app/pass` | 1UP Pass status + purchase — two payment methods: $1UP tokens (on-chain, instant) or bank transfer (manual admin approval, max 24h) |
 | `/app/academia` | My enrolled courses + content access |
-| `/app/settings` | Linked accounts management |
+| `/app/ajustes` | Settings — two tabs: IDENTIDAD (profile data, nombre/apellidos/@username/phone/games/document) + SEGURIDAD (linked accounts). `/app/identidad` and `/app/settings` redirect here. |
 
 ---
 

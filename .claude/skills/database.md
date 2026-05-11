@@ -44,6 +44,10 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 | `brand_logos` | `id`, `name`, `logo_url`, `website_url` (nullable), `sort_order`, `is_active`, `created_at` |
 | `tournaments` | `id`, `name`, `game_id` → games (SET NULL), `date` (timestamptz), `prize_pool_cop` (deprecated), `max_participants`, `status` (upcoming\|live\|completed), `location_type` (presencial\|online\|mixto), `image_url`, `description`, `is_active`, `is_registration_open`, `sort_order`, `created_at` |
 | `tournament_prizes` | `id`, `tournament_id` → tournaments (CASCADE), `position` (1–3), `prize_type` (tokens\|cop\|both), `amount_tokens` (nullable numeric), `amount_cop` (nullable int), `created_at` |
+| `tournament_registrations` | `tournament_id` → tournaments (CASCADE), `user_profile_id` → user_profiles (CASCADE), `privy_user_id`, `status` (registered\|cancelled\|attended\|no_show), `registered_at`, `cancelled_at`. UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
+| `international_tournaments` | `id`, `name`, `organizer`, `date` (timestamptz nullable), `country`, `city`, `game_id` → games (SET NULL), `registration_link`, `image_url`, `description`, `is_active`, `sort_order`, `created_at` |
+| `tournament_results` | `id`, `tournament_id` → tournaments (CASCADE), `user_profile_id` → user_profiles (CASCADE), `position` (1–3), `points`, `awarded_by`. UNIQUE per tournament+position and per tournament+user |
+| `hall_of_fame` | **PostgreSQL VIEW** — aggregates gold/silver/bronze counts + total_points per player. ORDER BY points DESC, gold_count DESC |
 
 ## Type system
 

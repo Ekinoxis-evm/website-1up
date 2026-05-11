@@ -29,13 +29,17 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/gaming-tower` | `(main)` | 6-floor breakdown, Map |
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/juegos` | `(main)` | Games showcase by category |
-| `/team` | `(main)` | Pro roster + Hall of Fame |
+| `/team` | `(main)` | Pro roster + Recruitment |
+| `/torneos/[id]` | `(main)` | Tournament detail — cover, badges, prizes podium, RegisterButton CTA. `generateMetadata` with per-tournament OG. |
+| `/torneos/[id]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin |
 | `/academia` | `(main)` | Course catalog + Masters profiles + MercadoPago checkout |
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
-| `app/login` | `app/` | Public login page for app subdomain |
+| `app/login` | `app/` | Public login page — `safeRedirectTarget()` allowlist, redirects back to `?redirect=` URL after auth |
 | `app/onboarding` | `app/` | Mandatory first-time wizard (outside `(protected)` to avoid circular redirect) — own auth check |
-| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, identidad, beneficios, pass, academia, settings) — AppSidebar on desktop, AppBottomNav on mobile. Layout redirects unonboarded users to `/app/onboarding`. |
+| `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, mis-torneos, beneficios, pass, academia, ajustes) — AppSidebar on desktop, AppBottomNav on mobile. Layout redirects unonboarded users to `/app/onboarding`. |
+| `app/(protected)/mis-torneos` | `app/` | User tournament registrations — card list with status badges, links to detail pages |
+| `app/(protected)/ajustes` | `app/` | Two-tab settings: IDENTIDAD (profile data) + SEGURIDAD (linked accounts). Replaces `/app/identidad` and `/app/settings` (both redirect here). |
 | `admin/login` | `admin/` | Public login page for admin subdomain |
 | `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
 
@@ -77,6 +81,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET\|PATCH /api/admin/tournament-registrations` | isAdmin | List all registrations (filter by tournamentId) / update status (attended/no_show) |
 | `POST\|DELETE /api/admin/tournament-results` | isAdmin | Upsert podium result (position 1–3 with points) / delete by id |
 | `GET\|POST\|PUT\|DELETE /api/admin/international-tournaments` | isAdmin | International tournament CRUD |
+| `POST /api/user/tournament-checkin` | Privy user | Mark own registration as `attended` — validates tournament is `live`, registration is `registered` |
 
 ---
 

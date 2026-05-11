@@ -5,6 +5,30 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.13.0] — 2026-05-11
+
+### Added
+
+- **Tournament detail pages (`/torneos/[id]`)**: dedicated Server Component page per tournament — cover image, status/game/location badges, title, date, description, prize podium (`PrizePodium`), and `RegisterButton` CTA. `generateMetadata` with per-tournament OG image. `notFound()` on inactive or missing tournament.
+- **Smooth login redirect flow**: `RegisterButton` now encodes the tournament detail URL as `?redirect=` and sends unauthenticated users to `app/login`. Login page uses `safeRedirectTarget()` (origin allowlist against `NEXT_PUBLIC_BASE_URL`) and redirects back to the tournament after auth. Prevents open redirects.
+- **`/app/mis-torneos` tab**: new app section listing the authenticated user's tournament registrations — cover image, game badge, status badge (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), location icon, name, date. Each card links to the tournament detail page. Empty state includes CTA to `/torneos`.
+- **Ajustes consolidation (`/app/ajustes`)**: merged Identidad and Settings into a single page with two tabs — IDENTIDAD (profile data) and SEGURIDAD (linked accounts). `/app/identidad` and `/app/settings` now redirect to `/app/ajustes` to preserve bookmarks.
+- **QR check-in flow**: admin can generate a QR code per tournament (button in `/admin/torneos`) that encodes `/torneos/[id]/checkin`. Participants scan it → public check-in page authenticates inline via `usePrivy().login()` (no redirect), verifies registration, and calls `POST /api/user/tournament-checkin` to mark status as `attended`.
+- **`POST /api/user/tournament-checkin`**: validates tournament is `live`, finds a `registered` registration for the user, updates status to `attended`, and revalidates `/admin/tournament-registrations`.
+- **HallOfFame relocated**: "Torneos ganados por el 1UP Team" section moved from `/team` to the bottom of `/torneos` for contextual relevance.
+- **`react-qr-code`**: added as dependency; used as default export `QRCode` in `AdminTorneosClient` for QR modal.
+
+### Changed
+
+- AppSidebar + AppBottomNav: removed `/app/identidad` entry; updated `/app/settings` → `/app/ajustes`; added "Torneos" nav entry (`emoji_events`) between Academia and Ajustes.
+- `/app/(main)/team/page.tsx`: removed `allCompetitions` query and `HallOfFame` render (moved to `/torneos`).
+- `HallOfFame` component heading changed to "TORNEOS GANADOS POR EL 1UP TEAM" with left-aligned layout matching the torneos page style.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.12.0] — 2026-05-11
 
 ### Added

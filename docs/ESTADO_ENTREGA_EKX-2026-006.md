@@ -2,7 +2,7 @@
 ## 1UP Gaming Tower × Ekinoxis Labs
 
 **Fecha de corte:** 11 de mayo de 2026  
-**Versión en producción:** v2.12.0  
+**Versión en producción:** v2.13.0  
 **Referencia contractual:** EKX-2026-005
 
 ---
@@ -12,10 +12,10 @@
 | | |
 |--|--|
 | **Scope original entregado** | 100% — todas las páginas y módulos del contrato EKX-2026-005 están funcionando en producción |
-| **Funcionalidades adicionales** | 162 horas de desarrollo fuera del scope original, implementadas y en producción |
+| **Funcionalidades adicionales** | 178 horas de desarrollo fuera del scope original, implementadas y en producción |
 | **Estado del proyecto** | Activo — dos integraciones pendientes por credenciales externas (MercadoPago automático, Cloudflare Stream) |
-| **Total facturado adiciones** | $24.300.000 COP (162h × $150.000/h) |
-| **Total proyecto** | **$44.300.000 COP** |
+| **Total facturado adiciones** | $26.700.000 COP (178h × $150.000/h) |
+| **Total proyecto** | **$46.700.000 COP** |
 
 ---
 
@@ -94,14 +94,14 @@
 
 | Módulo | Función | Estado |
 |--------|---------|--------|
-| Login | Acceso con email o Google (Privy) | ✅ Entregado |
+| Login | Acceso con email o Google (Privy) — redirige de vuelta al torneo u otra página tras autenticarse | ✅ Entregado |
 | Onboarding | Wizard obligatorio al crear cuenta: datos personales, documento, juegos, código referido, habeas data Ley 1581 | ✅ Entregado |
 | Wallet | Balance $1UP, enviar (QR), recibir (QR), historial de transacciones, órdenes de compra | ✅ Entregado |
-| Identidad | Edición de perfil, verificación de documento | ✅ Entregado |
+| Mis Torneos | Listado de inscripciones del usuario con estado (inscrito / asistió / cancelado / no asistió) | ✅ Entregado |
 | Beneficios | Verificación de afiliación a aliados (Comfenalco, Comfandi, universidades) para descuentos | ✅ Entregado |
 | 1UP Pass | Estado del pass activo + compra: tokens on-chain o transferencia bancaria | ✅ Entregado |
 | Academia | Mis cursos inscritos + acceso al contenido | ✅ Entregado |
-| Ajustes | Cuentas vinculadas | ✅ Entregado |
+| Ajustes | Dos pestañas: Identidad (edición de perfil, documento) + Seguridad (cuentas vinculadas) | ✅ Entregado |
 
 ---
 
@@ -144,7 +144,7 @@ Sistema que permite al usuario verificar su afiliación a organizaciones aliadas
 
 ---
 
-### 4.6 Sistema completo de torneos (v2.6.0 – v2.10.0)
+### 4.6 Sistema completo de torneos (v2.6.0 – v2.13.0)
 Módulo de torneos construido desde cero, no contemplado en el contrato original.
 
 | Funcionalidad | Detalle |
@@ -154,11 +154,13 @@ Módulo de torneos construido desde cero, no contemplado en el contrato original
 | Torneos internacionales | Sección separada para torneos externos con enlace de inscripción |
 | Inscripción de jugadores | Botón de inscripción con confirmación por email + sugerencia de calendario (Google / .ics) |
 | Filtros | Por mes y por juego |
-| Popup detalle | Vista completa del torneo con podium de premios |
+| Página de detalle por torneo | Ruta dedicada `/torneos/[id]` con imagen, premios, descripción y CTA de inscripción |
 | Hall of Fame — Tabla de Campeones | Ranking automático por puntos (10/5/3) según posición en cada torneo |
 | Torneos ganados por el 1UP Team | Historial de competencias externas del equipo, visible en `/torneos` |
+| Flujo de login sin fricción | Al inscribirse, el usuario no autenticado es redirigido al login y de vuelta al torneo automáticamente |
+| Check-in por código QR | El admin genera un QR por torneo; los participantes lo escanean, confirman asistencia sin salir del sitio |
 
-**62 horas → $9.300.000 COP**
+**78 horas → $11.700.000 COP**
 
 ---
 
@@ -184,7 +186,19 @@ Iteración adicional tras el review de mayo 2026.
 
 ---
 
-### 4.9 Infraestructura y seguridad base
+### 4.9 Mejoras de la app de usuario (v2.13.0)
+Iteración de experiencia en `app.1upesports.org`.
+
+| Entregable | Descripción |
+|-----------|-------------|
+| Mis Torneos | Nueva sección en la app donde el usuario ve todas sus inscripciones, estado de asistencia y accede al detalle del torneo |
+| Ajustes unificados | Identidad y Seguridad fusionados en una sola página con pestañas, simplificando la navegación |
+
+**6 horas → $900.000 COP**
+
+---
+
+### 4.10 Infraestructura y seguridad base
 Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de autenticación de administradores, invalidación automática de caché, política de privacidad Ley 1581, y configuración del dominio canónico.
 
 **8 horas → $1.200.000 COP**
@@ -201,13 +215,14 @@ Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de a
 | Onboarding + Sistema de Referidos | 18h | $2.700.000 COP |
 | Gas Sponsorship (sin costo para el usuario) | 6h | $900.000 COP |
 | Verificación de aliados + descuentos | 8h | $1.200.000 COP |
-| Sistema de Torneos completo | 62h | $9.300.000 COP |
+| Sistema de Torneos completo (incl. QR check-in) | 78h | $11.700.000 COP |
 | Auditoría de seguridad | 4h | $600.000 COP |
 | Mejoras post-entrega (PWA + SEO + nav) | 20h | $3.000.000 COP |
+| Mejoras de la app de usuario (v2.13.0) | 6h | $900.000 COP |
 | Infraestructura y seguridad base | 8h | $1.200.000 COP |
-| **Total adiciones fuera del scope** | **162h** | **$24.300.000 COP** |
+| **Total adiciones fuera del scope** | **178h** | **$26.700.000 COP** |
 | | | |
-| **TOTAL PROYECTO** | | **$44.300.000 COP** |
+| **TOTAL PROYECTO** | | **$46.700.000 COP** |
 
 > Tarifa adiciones: $150.000 COP/hora (según EKX-2026-005, Parte 4).
 
