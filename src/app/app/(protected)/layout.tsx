@@ -12,9 +12,20 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 export default async function AppProtectedLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("privy-token")?.value;
+  // privy-session is present when the access token has expired but the refresh
+  // token is still valid — Privy will refresh the access token client-side on
+  // page load. Redirect to /refresh so the client can renew before re-entering.
+  const session = cookieStore.get("privy-session")?.value;
 
   const claims = await verifyCookieToken(token);
-  if (!claims) redirect(`${APP_URL}/login`);
+  if (!claims) {
+    if (session) {
+      // Access token expired but session still alive — let client refresh it
+      const current = new URL(`${APP_URL}${"/app"}`);
+      redirect(`${APP_URL}/refresh?redirect_uri=${encodeURIComponent(current.pathname)}`);
+    }
+    redirect(`${APP_URL}/login`);
+  }
 
   // Onboarding gate — redirect new users before they access any protected page
   const { data: profile } = await supabaseAdmin
