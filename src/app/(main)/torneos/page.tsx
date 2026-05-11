@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { TorneosClient, type TournamentFull, type IntlTournamentFull } from "@/components/torneos/TorneosClient";
 import { HallOfFameSection } from "@/components/torneos/HallOfFameSection";
+import { HallOfFame } from "@/components/team/HallOfFame";
 
 export const metadata: Metadata = {
   title: "Torneos Esports — 1UP Gaming Tower Colombia",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TorneosPage() {
-  const [{ data: tournaments }, { data: intlTournaments }, { data: games }] = await Promise.all([
+  const [{ data: tournaments }, { data: intlTournaments }, { data: games }, { data: competitions }] = await Promise.all([
     supabase
       .from("tournaments")
       .select("*, games(id, name), tournament_prizes(*)")
@@ -34,6 +35,7 @@ export default async function TorneosPage() {
       .order("sort_order")
       .order("date", { ascending: true }),
     supabase.from("games").select("id, name").order("name"),
+    supabase.from("competitions").select("*").order("year", { ascending: false }),
   ]);
 
   const upcomingTournaments = (tournaments ?? []).filter((t) => t.status === "upcoming" || t.status === "live");
@@ -75,6 +77,7 @@ export default async function TorneosPage() {
       </section>
 
       <HallOfFameSection />
+      {(competitions ?? []).length > 0 && <HallOfFame competitions={competitions ?? []} />}
       <TorneosClient
         tournaments={(tournaments ?? []) as TournamentFull[]}
         intlTournaments={(intlTournaments ?? []) as IntlTournamentFull[]}

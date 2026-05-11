@@ -11,11 +11,16 @@ const RESULT_STYLE: Record<string, string> = {
 export function HallOfFame({ competitions }: Props) {
   return (
     <section className="py-20 px-8 md:px-16 bg-surface-container-low">
-      <div className="mb-12 text-center">
-        <h2 className="font-headline text-5xl font-black text-primary-container italic tracking-tighter">
-          HALL OF FAME
+      <div className="mb-12">
+        <div className="inline-block bg-primary-container px-4 py-1 mb-4 skew-fix">
+          <span className="text-white font-black italic skew-content block text-sm tracking-widest font-headline">
+            1UP TEAM
+          </span>
+        </div>
+        <h2 className="font-headline font-black text-4xl md:text-5xl uppercase tracking-tighter leading-none mb-2">
+          TORNEOS GANADOS POR <span className="text-primary-container">EL 1UP TEAM</span>
         </h2>
-        <div className="h-1 w-32 bg-primary-container mx-auto mt-3" />
+        <div className="h-1 w-24 bg-primary-container" />
       </div>
 
       <div className="w-full overflow-x-auto">
