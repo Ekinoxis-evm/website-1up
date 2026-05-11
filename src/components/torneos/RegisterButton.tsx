@@ -15,8 +15,11 @@ interface Props {
   onRegistered?:  () => void;
 }
 
+const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
+
 export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact, onRegistered }: Props) {
-  const { authenticated, ready, login, getAccessToken } = usePrivy();
+  const { authenticated, ready, getAccessToken } = usePrivy();
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [registered, setRegistered] = useState(isRegistered);
@@ -96,8 +99,9 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
     );
   }
 
-  // Not authenticated — compact cards link to detail page; full button opens login modal
+  // Not authenticated
   if (!authenticated) {
+    // Compact (list cards): link straight to the detail page
     if (compact) {
       return (
         <Link
@@ -108,16 +112,15 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
         </Link>
       );
     }
+    // Detail page: send to app login with a redirect back to this tournament
+    const loginHref = `${APP_URL}/login?redirect=${encodeURIComponent(`${BASE_URL}/torneos/${tournamentId}`)}`;
     return (
-      <button
-        onClick={login}
-        disabled={!ready}
-        className="inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm px-6 py-2.5"
+      <a
+        href={loginHref}
+        className="inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all text-sm px-6 py-2.5"
       >
-        <span className="block skew-content">
-          {!ready ? "CARGANDO..." : "INGRESAR PARA INSCRIBIRSE"}
-        </span>
-      </button>
+        <span className="block skew-content">INGRESAR PARA INSCRIBIRSE</span>
+      </a>
     );
   }
 
