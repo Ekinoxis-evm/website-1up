@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       not_found:          "Torneo no encontrado.",
     };
     const status = res.reason === "full" || res.reason === "already_registered" ? 409 : 400;
-    return NextResponse.json({ error: msgs[res.reason ?? ""] ?? "No se pudo completar la inscripción." }, { status });
+    return NextResponse.json({ error: msgs[res.reason ?? ""] ?? "No se pudo completar la inscripción.", reason: res.reason }, { status });
   }
 
   // Fetch tournament for email + calendar

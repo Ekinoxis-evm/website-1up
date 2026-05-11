@@ -1,35 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { CalendarPromptModal } from "./CalendarPromptModal";
 
 interface Props {
-  tournamentId:    number;
-  tournamentName:  string;
-  tournamentDate:  string | null;
-  locationType:    string;
-  isRegistered:    boolean;
-  compact?:        boolean;
+  tournamentId:   number;
+  tournamentName: string;
+  tournamentDate: string | null;
+  locationType:   string;
+  isRegistered:   boolean;
+  compact?:       boolean;
 }
 
 export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact }: Props) {
   const { authenticated, ready, login, getAccessToken } = usePrivy();
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
   const [registered, setRegistered] = useState(isRegistered);
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
-  const [pendingRegister, setPendingRegister] = useState(false);
 
-  // Sync if parent (TorneosClient) refreshes registeredIds after auth
+  // useRef so pending intent survives Privy-triggered re-renders
+  const pendingRef = useRef(false);
+
+  // Sync prop (parent refreshes after fetching registeredIds)
   useEffect(() => {
     if (isRegistered) setRegistered(true);
   }, [isRegistered]);
 
-  // When the user is authenticated and idle (no pending registration), check registration
-  // status from the API. Needed on the detail page where isRegistered is always false.
+  // Single auth-state effect: runs once when Privy is ready + authenticated
   useEffect(() => {
-    if (!authenticated || registered || pendingRegister || loading) return;
+    if (!ready || !authenticated) return;
+
+    if (pendingRef.current) {
+      // User clicked button then logged in — complete the registration now
+      pendingRef.current = false;
+      doRegister();
+      return;
+    }
+
+    // Detail page always passes isRegistered=false — silently check the real status
+    if (registered) return;
     let cancelled = false;
     (async () => {
       try {
@@ -46,32 +57,49 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated]);
+  }, [authenticated, ready]);
 
-  // After Privy login modal closes, auto-complete registration
-  useEffect(() => {
-    if (!authenticated || !pendingRegister) return;
-    setPendingRegister(false);
-    (async () => {
-      setLoading(true); setError(null);
-      try {
-        const token = await getAccessToken();
-        const res = await fetch("/api/user/tournament-registrations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tournamentId }),
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
-        setRegistered(true);
+  async function doRegister() {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/user/tournament-registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tournamentId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Already registered (e.g. duplicate click or stale state) → treat as success
+        if (res.status === 409 && data.reason === "already_registered") {
+          setRegistered(true);
+          setLoading(false);
+          return;
+        }
+        setError(data.error ?? "Error al inscribirse.");
         setLoading(false);
-        if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
-      } catch {
-        setError("Error de conexión. Intenta de nuevo.");
-        setLoading(false);
+        return;
       }
-    })();
-  }, [authenticated, pendingRegister, getAccessToken, tournamentId]);
+
+      setRegistered(true);
+      setLoading(false);
+      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+      setLoading(false);
+    }
+  }
+
+  function handleClick() {
+    if (!authenticated) {
+      pendingRef.current = true;
+      login();
+      return;
+    }
+    doRegister();
+  }
 
   if (registered) {
     return (
@@ -82,36 +110,11 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
     );
   }
 
-  async function handleRegister() {
-    if (!authenticated) {
-      setPendingRegister(true);
-      login();
-      return;
-    }
-    setLoading(true); setError(null);
-    try {
-      const token = await getAccessToken();
-      const res = await fetch("/api/user/tournament-registrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tournamentId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
-      setRegistered(true);
-      setLoading(false);
-      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
-    } catch {
-      setError("Error de conexión. Intenta de nuevo.");
-      setLoading(false);
-    }
-  }
-
   return (
     <>
       <div className="flex flex-col gap-1">
         <button
-          onClick={handleRegister}
+          onClick={handleClick}
           disabled={!ready || loading}
           className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all disabled:opacity-40 disabled:cursor-not-allowed ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
         >
