@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import QRCode from "react-qr-code";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import { AdminTorneoPrizesEditor, type PrizeFormRow } from "@/components/admin/AdminTorneoPrizesEditor";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
 type TournamentWithGame = Tournament & {
   games:             Pick<Game, "id" | "name"> | null;
@@ -68,6 +71,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
   const [form, setForm]       = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [qrTournament, setQrTournament] = useState<{ id: number; name: string } | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -188,6 +192,15 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                     <button onClick={() => openEdit(t)} className="p-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors" title="Editar">
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
+                    {t.status !== "completed" && (
+                      <button
+                        onClick={() => setQrTournament({ id: t.id, name: t.name })}
+                        className="p-1.5 bg-surface-container-high hover:bg-secondary-container/20 transition-colors"
+                        title="QR Check-in"
+                      >
+                        <span className="material-symbols-outlined text-sm">qr_code</span>
+                      </button>
+                    )}
                     <button onClick={() => handleDelete(t.id)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors" title="Eliminar">
                       <span className="material-symbols-outlined text-sm">delete</span>
                     </button>
@@ -328,6 +341,48 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 {loading ? "GUARDANDO…" : "GUARDAR"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Check-in modal */}
+      {qrTournament && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
+          onClick={() => setQrTournament(null)}
+        >
+          <div
+            className="bg-surface-container w-full max-w-sm p-8 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setQrTournament(null)}
+              className="absolute top-4 right-4 text-outline hover:text-on-surface"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-1">
+              QR CHECK-IN
+            </h2>
+            <p className="font-body text-xs text-outline mb-6 truncate">{qrTournament.name}</p>
+
+            <div className="flex justify-center mb-6 bg-white p-4">
+              <QRCode
+                value={`${BASE_URL}/torneos/${qrTournament.id}/checkin`}
+                size={200}
+                bgColor="#ffffff"
+                fgColor="#0a0a0a"
+              />
+            </div>
+
+            <p className="font-body text-xs text-outline/60 text-center mb-4 break-all">
+              {BASE_URL}/torneos/{qrTournament.id}/checkin
+            </p>
+
+            <p className="font-body text-xs text-outline/50 text-center">
+              Muestra este QR a los participantes al inicio del torneo para que confirmen su asistencia.
+            </p>
           </div>
         </div>
       )}
