@@ -83,7 +83,7 @@ function TorneoCard({ t }: { t: TournamentWithGame }) {
         <div className="mt-auto pt-2">
           {t.is_registration_open ? (
             <a
-              href={`${APP_URL}/torneos`}
+              href={APP_URL}
               className="inline-block bg-primary-container text-white font-headline font-black text-sm px-6 py-2.5 skew-fix hover:neo-shadow-pink transition-all"
             >
               <span className="block skew-content">REGISTRARME</span>

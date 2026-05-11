@@ -27,7 +27,7 @@ export function TopAppBar() {
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
 
   return (
-    <header className="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 glass-panel border-b border-outline-variant/20">
+    <header className="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 glass-panel">
       {/* Logo + Nav */}
       <div className="flex items-center gap-8">
         <Link href="/">
@@ -70,7 +70,7 @@ export function TopAppBar() {
             <div className="flex items-center gap-3">
               {/* Wallet pill */}
               {embeddedWallet && (
-                <Link
+                <a
                   href={APP_URL}
                   className="hidden sm:flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-primary/20 hover:border-primary/50 transition-colors"
                 >
@@ -83,10 +83,10 @@ export function TopAppBar() {
                   <span className="font-headline font-bold text-primary text-xs">
                     {`${embeddedWallet.address.slice(0, 6)}…${embeddedWallet.address.slice(-4)}`}
                   </span>
-                </Link>
+                </a>
               )}
               {/* Profile */}
-              <Link
+              <a
                 href={APP_URL}
                 className="flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors text-on-background/70 hover:text-primary"
               >
@@ -97,7 +97,7 @@ export function TopAppBar() {
                   account_circle
                 </span>
                 <span className="hidden sm:block">Perfil</span>
-              </Link>
+              </a>
               {/* Logout */}
               <button
                 onClick={logout}

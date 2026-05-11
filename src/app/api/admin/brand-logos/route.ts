@@ -22,13 +22,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data } = await supabaseAdmin.from("brand_logos").insert({
+  if (!body.name || !body.logoUrl) return NextResponse.json({ error: "name y logoUrl requeridos" }, { status: 400 });
+  const { data, error } = await supabaseAdmin.from("brand_logos").insert({
     name:        body.name,
     logo_url:    body.logoUrl,
     website_url: body.websiteUrl || null,
     sort_order:  body.sortOrder ?? 0,
     is_active:   body.isActive ?? true,
   }).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/");
   revalidatePath("/admin/brand-logos");
   return NextResponse.json(data);

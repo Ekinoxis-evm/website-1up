@@ -9,7 +9,7 @@ export function BrandsBanner({ logos }: Props) {
   const doubled = [...logos, ...logos];
 
   return (
-    <section className="bg-white py-5 overflow-hidden border-y-4 border-outline-variant/10">
+    <section className="bg-white py-5 overflow-hidden">
       <div className="animate-marquee gap-12 items-center px-6">
         {doubled.map((logo, i) => {
           const img = (

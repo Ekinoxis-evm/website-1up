@@ -23,7 +23,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data } = await supabaseAdmin.from("tournaments").insert({
+  if (!body.name) return NextResponse.json({ error: "name requerido" }, { status: 400 });
+  const { data, error } = await supabaseAdmin.from("tournaments").insert({
     name:                 body.name,
     game_id:              body.gameId || null,
     date:                 body.date || null,
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     is_registration_open: body.isRegistrationOpen ?? false,
     sort_order:           body.sortOrder ?? 0,
   }).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/torneos");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);

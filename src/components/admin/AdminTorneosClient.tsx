@@ -121,7 +121,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
           </thead>
           <tbody>
             {tournaments.map((t) => (
-              <tr key={t.id} className={`border-b border-outline-variant/10 ${!t.is_active ? "opacity-40" : ""}`}>
+              <tr key={t.id} className={`even:bg-surface-container-low ${!t.is_active ? "opacity-40" : ""}`}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {t.image_url && (
