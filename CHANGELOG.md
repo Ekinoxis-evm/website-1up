@@ -5,6 +5,24 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.14.1] — 2026-05-11
+
+### Fixed
+
+- **Tournament card navigation** (`src/components/torneos/TorneosClient.tsx`): cover image, title, and "VER MÁS" on list cards now link to `/torneos/[id]` instead of opening a detail modal. Gives users a shareable, navigable detail page for each tournament.
+- **RegisterButton — removed `pendingRef` auto-register** (`src/components/torneos/RegisterButton.tsx`): the `pendingRef` trick was silently broken for Google/email magic-link auth because those flows navigate the page away, destroying the ref before the effect could fire. Removed entirely.
+- **RegisterButton — compact card (unauthenticated)**: `login()` on the list page is replaced by a `<Link>` to `/torneos/[id]`. Users land on the detail page where the full auth flow applies.
+- **RegisterButton — detail page (unauthenticated)**: "INGRESAR PARA INSCRIBIRSE" now navigates to `app.1upesports.org/login?redirect=https://1upesports.org/torneos/[id]`. Login happens on the app subdomain (already configured in Privy), then `safeRedirectTarget` returns the user to the exact tournament page. Privy session is shared cross-subdomain at the app-ID level via secure iframe.
+- **RegisterButton — `CARGANDO...` state**: button text now shows `CARGANDO...` while Privy is initializing (`!ready`) instead of silently appearing disabled/dead.
+- **RegisterButton — 404 error message**: missing profile now shows `"Completa tu perfil en la app para inscribirte."` instead of a raw API error string.
+- **RegisterButton — `onRegistered` callback**: list page `TorneosClient` now passes `onRegistered` to each card's `RegisterButton`, updating `registeredIds` immediately after a successful registration so the card shows INSCRITO without a page refresh.
+- **Privy dashboard configuration**: added `https://1upesports.org` to Allowed Domains and Allowed OAuth Redirect URLs so the Privy SDK initializes correctly on the main site.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.14.0] — 2026-05-11
 
 ### Added
