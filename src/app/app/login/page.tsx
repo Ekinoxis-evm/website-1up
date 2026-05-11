@@ -22,16 +22,8 @@ export default function AppLoginPage() {
 
       <div className="w-full max-w-md space-y-10">
         {/* Logo */}
-        <div className="flex flex-col items-center gap-4">
-          <Image src="/1up.png" alt="1UP Gaming Tower" width={72} height={72} className="object-contain" />
-          <div className="text-center">
-            <h1 className="font-headline font-black text-5xl text-primary italic tracking-tighter leading-none">
-              1UP
-            </h1>
-            <p className="font-headline font-bold text-on-background/50 uppercase tracking-widest text-xs mt-1">
-              Gaming Tower
-            </p>
-          </div>
+        <div className="flex justify-center">
+          <Image src="/1up.png" alt="1UP Gaming Tower" width={64} height={64} className="object-contain opacity-90" />
         </div>
 
         {/* Card */}
@@ -55,8 +47,8 @@ export default function AppLoginPage() {
             </span>
           </button>
 
-          <p className="font-body text-on-background/30 text-xs text-center">
-            Email · Google · Discord — impulsado por Privy
+          <p className="font-body text-on-background/20 text-xs text-center">
+            Impulsado por Privy
           </p>
         </div>
 
