@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { buildIcsContent } from "@/lib/calendar";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -212,12 +213,25 @@ export async function sendTournamentRegistrationEmail(opts: {
        </div>`
     : "";
 
+  // Build ICS attachment so every email client shows "Add to Calendar"
+  const icsAttachment = tournamentDate ? [{
+    filename: `${tournamentName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}.ics`,
+    content:  Buffer.from(buildIcsContent({
+      name:        tournamentName,
+      date:        tournamentDate,
+      location:    locationType === "online" ? "Online" : "1UP Gaming Tower, Cali, Colombia",
+      description: description ?? `Torneo ${tournamentName} — 1UP Gaming Tower`,
+    })),
+    contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+  }] : [];
+
   await Promise.allSettled([
     // ── User confirmation
     resend.emails.send({
-      from:    FROM,
-      to:      userEmail,
-      subject: `✅ Inscripción confirmada — ${tournamentName}`,
+      from:        FROM,
+      to:          userEmail,
+      subject:     `✅ Inscripción confirmada — ${tournamentName}`,
+      attachments: icsAttachment,
       html: `
         <div style="font-family:sans-serif;max-width:540px;margin:0 auto">
           <div style="background:#e91e8c;height:4px"></div>
