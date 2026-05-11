@@ -133,52 +133,133 @@ export async function sendPassTokenEmails(opts: {
 
 // ── Tournament registration ─────────────────────────────────────
 
+type TournamentPrizeRow = {
+  position:      number;
+  prize_type:    string;
+  amount_tokens: number | null;
+  amount_cop:    number | null;
+};
+
+function formatPrizeText(p: TournamentPrizeRow): string {
+  if (p.prize_type === "tokens" && p.amount_tokens)
+    return `${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`;
+  if (p.prize_type === "cop" && p.amount_cop)
+    return `$${p.amount_cop.toLocaleString("es-CO")} COP`;
+  if (p.prize_type === "both") {
+    const parts: string[] = [];
+    if (p.amount_tokens) parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
+    if (p.amount_cop)    parts.push(`$${p.amount_cop.toLocaleString("es-CO")} COP`);
+    return parts.join(" + ");
+  }
+  return "";
+}
+
+const PRIZE_MEDAL = ["", "🥇", "🥈", "🥉"];
+const PRIZE_LABEL = ["", "1er lugar", "2do lugar", "3er lugar"];
+
 export async function sendTournamentRegistrationEmail(opts: {
-  userEmail:       string;
-  userName:        string;
-  tournamentName:  string;
-  tournamentDate:  string | null;
-  locationType:    string;
+  userEmail:         string;
+  userName:          string;
+  tournamentName:    string;
+  tournamentDate:    string | null;
+  locationType:      string;
   googleCalendarUrl: string;
+  gameName?:         string | null;
+  description?:      string | null;
+  prizes?:           TournamentPrizeRow[];
+  tournamentUrl?:    string;
+  registrantEmail?:  string;
+  registrantName?:   string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
-  const { userEmail, userName, tournamentName, tournamentDate, locationType, googleCalendarUrl } = opts;
+  const {
+    userEmail, userName, tournamentName, tournamentDate, locationType,
+    googleCalendarUrl, gameName, description, prizes = [], tournamentUrl,
+  } = opts;
+
   const dateStr = tournamentDate
     ? new Date(tournamentDate).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
     : "Por confirmar";
+  const timeStr = tournamentDate
+    ? new Date(tournamentDate).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
+    : "";
 
-  const locLabel: Record<string, string> = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
+  const locLabel: Record<string, string> = { presencial: "Presencial — 1UP Gaming Tower, Cali", online: "Online", mixto: "Mixto (presencial + online)" };
+
+  const sortedPrizes = [...prizes].sort((a, b) => a.position - b.position);
+
+  const prizesHtml = sortedPrizes.length > 0
+    ? `
+      <div style="margin-top:24px">
+        <p style="color:#999;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px">Premios</p>
+        <table style="width:100%;border-collapse:collapse">
+          ${sortedPrizes.map((p) => `
+            <tr>
+              <td style="padding:6px 0;font-size:20px;width:32px">${PRIZE_MEDAL[p.position] ?? p.position}</td>
+              <td style="padding:6px 0;color:#999;font-size:12px;text-transform:uppercase">${PRIZE_LABEL[p.position] ?? `Posición ${p.position}`}</td>
+              <td style="padding:6px 0;font-weight:700;text-align:right;font-size:14px">${formatPrizeText(p)}</td>
+            </tr>
+          `).join("")}
+        </table>
+      </div>`
+    : "";
+
+  const descriptionHtml = description
+    ? `<div style="margin-top:20px;padding:16px;background:#f5f5f5">
+        <p style="color:#999;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px">Sobre el torneo</p>
+        <p style="color:#444;font-size:13px;line-height:1.6;margin:0;white-space:pre-line">${description}</p>
+       </div>`
+    : "";
 
   await Promise.allSettled([
+    // ── User confirmation
     resend.emails.send({
-      from: FROM,
-      to:   userEmail,
+      from:    FROM,
+      to:      userEmail,
       subject: `✅ Inscripción confirmada — ${tournamentName}`,
       html: `
-        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+        <div style="font-family:sans-serif;max-width:540px;margin:0 auto">
           <div style="background:#e91e8c;height:4px"></div>
           <div style="padding:32px 24px">
-            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
-              ¡Estás inscrito!
-            </h1>
-            <p style="color:#666;margin:0 0 24px">Hola ${userName}, tu inscripción al torneo ha sido confirmada.</p>
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 4px">¡Estás inscrito!</h1>
+            <p style="color:#666;margin:0 0 24px">Hola ${userName}, tu inscripción ha sido confirmada.</p>
+
             <table style="width:100%;border-collapse:collapse">
-              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Torneo</td>
-                  <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td></tr>
-              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Fecha</td>
-                  <td style="padding:8px 0;text-align:right">${dateStr}</td></tr>
-              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Modalidad</td>
-                  <td style="padding:8px 0;text-align:right">${locLabel[locationType] ?? locationType}</td></tr>
+              <tr>
+                <td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase;width:40%">Torneo</td>
+                <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td>
+              </tr>
+              ${gameName ? `<tr>
+                <td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Juego</td>
+                <td style="padding:8px 0;text-align:right">${gameName}</td>
+              </tr>` : ""}
+              <tr>
+                <td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Fecha</td>
+                <td style="padding:8px 0;text-align:right">${dateStr}${timeStr ? ` · ${timeStr}` : ""}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Modalidad</td>
+                <td style="padding:8px 0;text-align:right">${locLabel[locationType] ?? locationType}</td>
+              </tr>
             </table>
-            <div style="margin-top:24px">
-              <a href="${googleCalendarUrl}"
-                style="display:inline-block;background:#e91e8c;color:#fff;font-weight:900;text-transform:uppercase;padding:12px 24px;text-decoration:none;font-size:13px">
-                AÑADIR A GOOGLE CALENDAR
-              </a>
+
+            ${prizesHtml}
+            ${descriptionHtml}
+
+            <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
+              ${tournamentUrl ? `<a href="${tournamentUrl}"
+                style="display:inline-block;background:#111;color:#fff;font-weight:900;text-transform:uppercase;padding:12px 20px;text-decoration:none;font-size:12px;letter-spacing:1px;margin-right:10px">
+                VER TORNEO →
+              </a>` : ""}
+              ${googleCalendarUrl ? `<a href="${googleCalendarUrl}"
+                style="display:inline-block;background:#e91e8c;color:#fff;font-weight:900;text-transform:uppercase;padding:12px 20px;text-decoration:none;font-size:12px;letter-spacing:1px">
+                + GOOGLE CALENDAR
+              </a>` : ""}
             </div>
-            <p style="color:#999;font-size:12px;margin-top:24px">
-              Estaremos en contacto con los detalles del torneo. ¡Mucha suerte!
+
+            <p style="color:#999;font-size:12px;margin-top:28px">
+              Estaremos en contacto con los detalles finales del torneo. ¡Mucha suerte!
             </p>
           </div>
           <div style="background:#111;padding:16px 24px">
@@ -187,6 +268,18 @@ export async function sendTournamentRegistrationEmail(opts: {
         </div>
       `,
     }),
+
+    // ── Admin notification
+    ...(ADMIN_EMAIL ? [resend.emails.send({
+      from:    FROM,
+      to:      ADMIN_EMAIL,
+      subject: `[Torneo] Nueva inscripción: ${tournamentName} — ${userName}`,
+      html: `
+        <p><strong>${userName}</strong> (${userEmail}) se inscribió en <strong>${tournamentName}</strong>.</p>
+        <p>Fecha: ${dateStr}${timeStr ? ` ${timeStr}` : ""}${gameName ? ` · Juego: ${gameName}` : ""}</p>
+        <p><a href="https://admin.1upesports.org/tournament-registrations">Ver inscripciones →</a></p>
+      `,
+    })] : []),
   ]);
 }
 

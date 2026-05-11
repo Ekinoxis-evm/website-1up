@@ -5,6 +5,18 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.14.2] — 2026-05-11
+
+### Changed
+
+- **Tournament registration email** (`src/lib/email.ts`): enriched with full tournament data — game name, date + time, location label, prize podium (🥇🥈🥉 with amounts), description block, "VER TORNEO →" CTA linking to the detail page, and "AÑADIR A GOOGLE CALENDAR" button. Admin notification email added for every new registration (sends to `ADMIN_NOTIFICATION_EMAIL`).
+- **Tournament registration API** (`src/app/api/user/tournament-registrations/route.ts`): expands the post-registration tournament query to include `games(name)`, `tournament_prizes(*)`, `description`, and `max_participants` so the email function receives the full dataset.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.14.1] — 2026-05-11
 
 ### Fixed

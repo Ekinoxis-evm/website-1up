@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   // Fetch tournament for email + calendar
   const { data: tournament } = await supabaseAdmin
     .from("tournaments")
-    .select("name, date, location_type")
+    .select("name, date, location_type, description, max_participants, games(name), tournament_prizes(*)")
     .eq("id", tournamentId)
     .single();
 
@@ -86,6 +86,8 @@ export async function POST(req: NextRequest) {
       })
     : "";
 
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
+
   if (userEmail && tournament) {
     await sendTournamentRegistrationEmail({
       userEmail,
@@ -94,6 +96,12 @@ export async function POST(req: NextRequest) {
       tournamentDate:    tournament.date,
       locationType:      tournament.location_type,
       googleCalendarUrl: googleUrl,
+      gameName:          (tournament.games as { name: string } | null)?.name ?? null,
+      description:       tournament.description ?? null,
+      prizes:            (tournament.tournament_prizes ?? []) as Array<{ position: number; prize_type: string; amount_tokens: number | null; amount_cop: number | null }>,
+      tournamentUrl:     `${BASE_URL}/torneos/${tournamentId}`,
+      registrantEmail:   userEmail,
+      registrantName:    userName,
     });
   }
 
