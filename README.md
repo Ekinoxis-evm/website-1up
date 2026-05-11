@@ -194,17 +194,17 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — Hero, Brands Banner (animated marquee), 1UP Pass section, Games Gallery, Marketplace teaser, Recruitment |
-| `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, registration CTA, month+game filters. International tournaments section. HallOfFame team competition history at bottom. |
+| `/` | Home — Hero, Brands Banner (animated marquee), 1UP Pass section, Academia teaser, Torneos teaser, Marketplace teaser, Nuestro Ecosistema (3-pillar), Recruitment form |
+| `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, registration CTA, month+game filters. International tournaments section. HallOfFame team competition history at bottom. Recruitment form. |
 | `/torneos/[id]` | Tournament detail — cover image, status/game/location badges, prize podium, `RegisterButton` CTA. Dynamic OG metadata per tournament. |
 | `/torneos/[id]/checkin` | QR check-in — inline Privy login (modal, no redirect), validates registration status, marks attendance via API. |
-| `/gaming-tower` | 6-floor breakdown, Map |
+| `/gaming-tower` | 6-floor breakdown, 1UP Pass benefits, per-category games showcase (category image + game cards), Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
-| `/team` | Pro roster + Recruitment |
+| `/team` | Redirects to `/` — roster removed; Masters live on `/academia` |
 | `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + MercadoPago checkout |
-| `/juegos` | Games showcase by category |
+| `/juegos` | Redirects to `/gaming-tower` — games integrated into Tower page |
 | `/recreativo` | Casual gaming section |
-| `/marketplace` | Coming soon — merchandise + periféricos, paga con $1UP tokens |
+| `/marketplace` | Coming soon — merchandise + periféricos, paga con $1UP tokens. Dynamic social links from DB. |
 | `/perfil` | Legacy profile page (redirects to app subdomain) |
 
 **app.1upesports.org (user app)**

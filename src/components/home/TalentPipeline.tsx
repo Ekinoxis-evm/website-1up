@@ -29,8 +29,9 @@ export function TalentPipeline() {
   return (
     <section className="py-24 px-6 bg-surface-container-lowest">
       <div className="mb-16">
+        <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Sobre Nosotros</p>
         <h2 className="font-headline text-5xl font-black uppercase tracking-tighter">
-          Talent <span className="text-secondary">Pipeline</span>
+          NUESTRO <span className="text-secondary">ECOSISTEMA</span>
         </h2>
         <div className="h-2 w-32 bg-tertiary mt-2" />
       </div>

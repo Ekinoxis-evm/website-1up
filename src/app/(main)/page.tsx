@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 };
 import { BrandsBanner } from "@/components/home/BrandsBanner";
 import { TalentPipeline } from "@/components/home/TalentPipeline";
-import { GamesGallery } from "@/components/home/GamesGallery";
+import { AcademiaSection } from "@/components/home/AcademiaSection";
+import { TorneosSection } from "@/components/home/TorneosSection";
 import { MarketplaceSection } from "@/components/home/MarketplaceSection";
 import { RecruitmentForm } from "@/components/home/RecruitmentForm";
 import { PassSection } from "@/components/tower/PassSection";
@@ -52,9 +53,10 @@ export default async function HomePage() {
       <HeroHome />
       <BrandsBanner logos={brandLogos ?? []} />
       <PassSection benefits={benefits ?? []} />
-      <TalentPipeline />
-      <GamesGallery categories={allCategories ?? []} games={allGames ?? []} />
+      <AcademiaSection />
+      <TorneosSection />
       <MarketplaceSection />
+      <TalentPipeline />
       <RecruitmentForm categories={allCategories ?? []} games={allGames ?? []} />
     </>
   );

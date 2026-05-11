@@ -24,12 +24,12 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 | URL | Layout group | Purpose |
 |-----|-------------|---------|
-| `/` | `(main)` | Home — Hero, Brands Banner, 1UP Pass section, Games Gallery, Marketplace teaser, Recruitment |
-| `/torneos` | `(main)` | Tournament list — upcoming/live/completed cards with game, prize, registration CTA |
-| `/gaming-tower` | `(main)` | 6-floor breakdown, Map |
+| `/` | `(main)` | Home — Hero, Brands Banner, 1UP Pass, AcademiaSection, TorneosSection, MarketplaceSection, TalentPipeline ("Sobre Nosotros"), Recruitment |
+| `/torneos` | `(main)` | Tournament list — upcoming/live/completed cards with game, prize, registration CTA. RecruitmentForm at bottom. |
+| `/gaming-tower` | `(main)` | 6-floor breakdown, 1UP Pass benefits, per-category games (JuegosDisplay hideHero), Map |
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
-| `/juegos` | `(main)` | Games showcase by category |
-| `/team` | `(main)` | Pro roster + Recruitment |
+| `/juegos` | `(main)` | **Redirects to `/gaming-tower`** — games are now part of the Tower page |
+| `/team` | `(main)` | **Redirects to `/`** — Masters on `/academia`, recruitment on `/torneos` |
 | `/torneos/[id]` | `(main)` | Tournament detail — cover, badges, prizes podium, RegisterButton CTA. `generateMetadata` with per-tournament OG. |
 | `/torneos/[id]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin |
 | `/academia` | `(main)` | Course catalog + Masters profiles + MercadoPago checkout |

@@ -5,6 +5,43 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.14.0] — 2026-05-11
+
+### Added
+
+- **AcademiaSection** (`src/components/home/AcademiaSection.tsx`): new home section — pink accent, 3 feature tiles (cursos técnicos, mentalidad pro, coaches certificados), "VER CURSOS →" CTA to `/academia`.
+- **TorneosSection** (`src/components/home/TorneosSection.tsx`): new home section — secondary blue accent, 3 feature tiles (premios $1UP, recompensas token, ranking oficial), "VER TORNEOS →" CTA to `/torneos`.
+- **`JuegosDisplay` `hideHero` prop**: hero section is now conditional; pass `hideHero` to suppress it when embedding inside another page.
+- **PassSection on Tower page** (`/gaming-tower`): 1UP Pass benefits now render below the hero on the Tower page (same component used on home).
+- **MobileBottomNav PERFIL tab**: 5th tab is now always visible (PERFIL icon + label); links authenticated users to the app subdomain, unauthenticated to `APP_URL/login`. External `<a>` tag for cross-subdomain navigation.
+- **AdminSidebar logout button**: "Cerrar Sesión" button at the bottom of the nav — calls Privy `logout()` then redirects to `ADMIN_URL/login`.
+- **RecruitmentForm on Torneos page** (`/torneos`): recruitment form added below the tournament list; `source` union extended to include `"torneos"`.
+
+### Changed
+
+- **Home page sections reordered**: Hero → BrandsBanner → PassSection → **AcademiaSection** → **TorneosSection** → MarketplaceSection → TalentPipeline → RecruitmentForm. GamesGallery removed from home (games now live on Tower page).
+- **TalentPipeline heading**: renamed from "Talent Pipeline" to "Sobre Nosotros / NUESTRO ECOSISTEMA" — frames the three pillars (Recreativo, Academia, Torneos) as an ecosystem explanation rather than a talent funnel.
+- **Tower page games**: `GamesGallery` replaced by `JuegosDisplay hideHero` — displays games with the per-category layout (category image + game cards grid) matching the standalone `/juegos` design.
+- **`/team` page**: removed roster/recruitment content; now `redirect("/")`. Masters on `/academia` and recruitment on `/torneos` cover both concerns.
+- **`/juegos` page**: removed standalone games showcase; now `redirect("/gaming-tower")`. Games live on Tower page.
+- **Sitemap** (`src/app/sitemap.ts`): removed `/team` and `/juegos` entries.
+- **HeroHome**: removed "VER EQUIPO" button — only "CONOCE LA TORRE" CTA remains.
+- **Marketplace page** (`/marketplace`): dynamic social links — reads `social_links` from DB, renders platform icons with `brightness-0 invert` styling on the pink accent card.
+- **Footer** (`src/components/layout/Footer.tsx`): removed "Admin" link — admins access the panel directly via `admin.1upesports.org`.
+- **TopAppBar** (`src/components/layout/TopAppBar.tsx`): removed admin panel icon and `ADMIN_URL` constant.
+- **BrandsBanner** sparse-logo fix: uses `Math.ceil(6 / logos.length)` multiplier before doubling the track so the marquee animation looks correct even with a single logo.
+
+### Fixed
+
+- **RegisterButton cross-subdomain auth bug** (`src/components/torneos/RegisterButton.tsx`): button was broken for users coming from `1upesports.org` because redirecting to `app.1upesports.org/login` created a different Privy session. Fix: uses inline `login()` modal (same domain), `pendingRegister` flag, and a `useEffect` that auto-completes registration after `authenticated` flips to `true`.
+- **RegisterButton stuck loading**: missing `try/catch` left `loading=true` on network errors. Both auth flows now wrap the API call in try/catch with `setLoading(false)` in the catch block.
+- **RegisterButton detail page always showing REGISTRARME**: `useState(isRegistered)` only reads the prop on mount; detail page always passed `false`. Fixed with a sync `useEffect` for prop changes and a check-on-auth `useEffect` that fetches `/api/user/tournament-registrations` when `authenticated` becomes true.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.13.0] — 2026-05-11
 
 ### Added

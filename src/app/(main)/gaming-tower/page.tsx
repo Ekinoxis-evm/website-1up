@@ -4,7 +4,7 @@ import { PassSection } from "@/components/tower/PassSection";
 import { EquipmentHighlight } from "@/components/tower/EquipmentHighlight";
 import { FloorBreakdown } from "@/components/tower/FloorBreakdown";
 import { LocationMap } from "@/components/tower/LocationMap";
-import { GamesGallery } from "@/components/home/GamesGallery";
+import { JuegosDisplay } from "@/components/juegos/JuegosDisplay";
 
 export const metadata = {
   title: "Gaming Tower — Instalaciones Profesionales de Esports en Cali, Colombia",
@@ -44,7 +44,7 @@ export default async function GamingTowerPage() {
       <EquipmentHighlight imageUrl={siteImages?.image_url} updatedAt={siteImages?.updated_at} />
       <FloorBreakdown floors={floors ?? []} />
       <LocationMap />
-      <GamesGallery categories={allCategories ?? []} games={allGames ?? []} />
+      <JuegosDisplay categories={allCategories ?? []} games={allGames ?? []} hideHero />
     </>
   );
 }
