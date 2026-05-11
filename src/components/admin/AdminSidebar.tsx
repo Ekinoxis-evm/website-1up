@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { usePrivy } from "@privy-io/react-auth";
+
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
 
 const GROUPS = [
   {
@@ -57,6 +60,12 @@ const GROUPS = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { logout } = usePrivy();
+
+  async function handleLogout() {
+    await logout();
+    window.location.href = `${ADMIN_URL}/login`;
+  }
 
   // Close drawer on route change
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -97,7 +106,7 @@ export function AdminSidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto pt-6 px-2">
+      <div className="mt-auto pt-6 px-2 flex flex-col gap-3">
         <Link
           href={process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org"}
           className="flex items-center gap-2 text-outline hover:text-secondary text-xs font-headline uppercase tracking-widest transition-colors"
@@ -105,6 +114,13 @@ export function AdminSidebar() {
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Ver Sitio
         </Link>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-error/50 hover:text-error text-xs font-headline uppercase tracking-widest transition-colors"
+        >
+          <span className="material-symbols-outlined text-sm">logout</span>
+          Cerrar Sesión
+        </button>
       </div>
     </>
   );

@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { CalendarPromptModal } from "./CalendarPromptModal";
-
-const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
 interface Props {
   tournamentId:    number;
@@ -17,23 +14,32 @@ interface Props {
 }
 
 export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact }: Props) {
-  const { authenticated, getAccessToken } = usePrivy();
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const { authenticated, ready, login, getAccessToken } = usePrivy();
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
   const [registered, setRegistered] = useState(isRegistered);
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
+  const [pendingRegister, setPendingRegister] = useState(false);
 
-  if (!authenticated) {
-    const returnUrl = encodeURIComponent(`${BASE_URL}/torneos/${tournamentId}`);
-    return (
-      <a
-        href={`${APP_URL}/login?redirect=${returnUrl}`}
-        className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
-      >
-        <span className="block skew-content">REGISTRARME</span>
-      </a>
-    );
-  }
+  // After Privy login modal closes and user is authenticated, auto-complete registration
+  useEffect(() => {
+    if (!authenticated || !pendingRegister) return;
+    setPendingRegister(false);
+    (async () => {
+      setLoading(true); setError(null);
+      const token = await getAccessToken();
+      const res = await fetch("/api/user/tournament-registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tournamentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
+      setRegistered(true);
+      setLoading(false);
+      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+    })();
+  }, [authenticated, pendingRegister, getAccessToken, tournamentId]);
 
   if (registered) {
     return (
@@ -45,6 +51,11 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
   }
 
   async function handleRegister() {
+    if (!authenticated) {
+      setPendingRegister(true);
+      login();
+      return;
+    }
     setLoading(true); setError(null);
     const token = await getAccessToken();
     const res = await fetch("/api/user/tournament-registrations", {
@@ -64,7 +75,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       <div className="flex flex-col gap-1">
         <button
           onClick={handleRegister}
-          disabled={loading}
+          disabled={!ready || loading}
           className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all disabled:opacity-40 disabled:cursor-not-allowed ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
         >
           <span className="block skew-content">
