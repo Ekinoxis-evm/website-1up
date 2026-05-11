@@ -21,23 +21,55 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
   const [pendingRegister, setPendingRegister] = useState(false);
 
-  // After Privy login modal closes and user is authenticated, auto-complete registration
+  // Sync if parent (TorneosClient) refreshes registeredIds after auth
+  useEffect(() => {
+    if (isRegistered) setRegistered(true);
+  }, [isRegistered]);
+
+  // When the user is authenticated and idle (no pending registration), check registration
+  // status from the API. Needed on the detail page where isRegistered is always false.
+  useEffect(() => {
+    if (!authenticated || registered || pendingRegister || loading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch("/api/user/tournament-registrations", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const rows: { tournament_id: number }[] = await res.json();
+        if (!cancelled && rows.some((r) => r.tournament_id === tournamentId)) {
+          setRegistered(true);
+        }
+      } catch { /* ignore — button stays enabled */ }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated]);
+
+  // After Privy login modal closes, auto-complete registration
   useEffect(() => {
     if (!authenticated || !pendingRegister) return;
     setPendingRegister(false);
     (async () => {
       setLoading(true); setError(null);
-      const token = await getAccessToken();
-      const res = await fetch("/api/user/tournament-registrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tournamentId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
-      setRegistered(true);
-      setLoading(false);
-      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+      try {
+        const token = await getAccessToken();
+        const res = await fetch("/api/user/tournament-registrations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tournamentId }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
+        setRegistered(true);
+        setLoading(false);
+        if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+      } catch {
+        setError("Error de conexión. Intenta de nuevo.");
+        setLoading(false);
+      }
     })();
   }, [authenticated, pendingRegister, getAccessToken, tournamentId]);
 
@@ -57,17 +89,22 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       return;
     }
     setLoading(true); setError(null);
-    const token = await getAccessToken();
-    const res = await fetch("/api/user/tournament-registrations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ tournamentId }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
-    setRegistered(true);
-    setLoading(false);
-    if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/user/tournament-registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tournamentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Error al inscribirse."); setLoading(false); return; }
+      setRegistered(true);
+      setLoading(false);
+      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+      setLoading(false);
+    }
   }
 
   return (
