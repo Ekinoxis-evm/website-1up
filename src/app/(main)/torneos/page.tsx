@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { TorneosClient, type TournamentFull, type IntlTournamentFull } from "@/components/torneos/TorneosClient";
 import { HallOfFameSection } from "@/components/torneos/HallOfFameSection";
 import { HallOfFame } from "@/components/team/HallOfFame";
+import { RecruitmentForm } from "@/components/home/RecruitmentForm";
 
 export const metadata: Metadata = {
   title: "Torneos Esports — 1UP Gaming Tower Colombia",
@@ -21,7 +22,13 @@ export const metadata: Metadata = {
 };
 
 export default async function TorneosPage() {
-  const [{ data: tournaments }, { data: intlTournaments }, { data: games }, { data: competitions }] = await Promise.all([
+  const [
+    { data: tournaments },
+    { data: intlTournaments },
+    { data: allGames },
+    { data: competitions },
+    { data: categories },
+  ] = await Promise.all([
     supabase
       .from("tournaments")
       .select("*, games(id, name), tournament_prizes(*)")
@@ -34,8 +41,9 @@ export default async function TorneosPage() {
       .eq("is_active", true)
       .order("sort_order")
       .order("date", { ascending: true }),
-    supabase.from("games").select("id, name").order("name"),
+    supabase.from("games").select("*").order("name"),
     supabase.from("competitions").select("*").order("year", { ascending: false }),
+    supabase.from("game_categories").select("*").order("sort_order"),
   ]);
 
   const upcomingTournaments = (tournaments ?? []).filter((t) => t.status === "upcoming" || t.status === "live");
@@ -80,9 +88,10 @@ export default async function TorneosPage() {
       <TorneosClient
         tournaments={(tournaments ?? []) as TournamentFull[]}
         intlTournaments={(intlTournaments ?? []) as IntlTournamentFull[]}
-        games={games ?? []}
+        games={allGames ?? []}
       />
       {(competitions ?? []).length > 0 && <HallOfFame competitions={competitions ?? []} />}
+      <RecruitmentForm categories={categories ?? []} games={allGames ?? []} source="torneos" />
     </>
   );
 }

@@ -9,8 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/gaming-tower`,        lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/academia`,            lastModified: now, changeFrequency: "weekly",  priority: 0.9 },
     { url: `${base}/torneos`,             lastModified: now, changeFrequency: "daily",   priority: 0.9 },
-    { url: `${base}/team`,                lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/juegos`,              lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/recreativo`,          lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/marketplace`,         lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/privacidad`,          lastModified: now, changeFrequency: "yearly",  priority: 0.3 },

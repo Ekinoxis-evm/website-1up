@@ -9,7 +9,7 @@ import type { GameCategory, Game } from "@/types/database.types";
 interface Props {
   categories: GameCategory[];
   games: Game[];
-  source?: "home" | "team";
+  source?: "home" | "team" | "torneos";
 }
 
 export function RecruitmentForm({ categories, games, source = "home" }: Props) {
