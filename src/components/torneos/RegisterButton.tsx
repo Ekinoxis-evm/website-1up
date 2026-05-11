@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { CalendarPromptModal } from "./CalendarPromptModal";
 
@@ -16,32 +17,19 @@ interface Props {
 
 export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact, onRegistered }: Props) {
   const { authenticated, ready, login, getAccessToken } = usePrivy();
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
   const [registered, setRegistered] = useState(isRegistered);
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
-
-  // useRef so pending intent survives Privy-triggered re-renders
-  const pendingRef = useRef(false);
 
   // Sync prop (parent refreshes after fetching registeredIds)
   useEffect(() => {
     if (isRegistered) setRegistered(true);
   }, [isRegistered]);
 
-  // Single auth-state effect: runs once when Privy is ready + authenticated
+  // When authenticated, silently check if already registered
   useEffect(() => {
-    if (!ready || !authenticated) return;
-
-    if (pendingRef.current) {
-      // User clicked button then logged in — complete the registration now
-      pendingRef.current = false;
-      doRegister();
-      return;
-    }
-
-    // Detail page always passes isRegistered=false — silently check the real status
-    if (registered) return;
+    if (!ready || !authenticated || registered) return;
     let cancelled = false;
     (async () => {
       try {
@@ -73,14 +61,17 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       const data = await res.json();
 
       if (!res.ok) {
-        // Already registered (e.g. duplicate click or stale state) → treat as success
         if (res.status === 409 && data.reason === "already_registered") {
           setRegistered(true);
           onRegistered?.();
           setLoading(false);
           return;
         }
-        setError(data.error ?? "Error al inscribirse.");
+        if (res.status === 404) {
+          setError("Completa tu perfil en la app para inscribirte.");
+        } else {
+          setError(data.error ?? "Error al inscribirse.");
+        }
         setLoading(false);
         return;
       }
@@ -95,15 +86,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
     }
   }
 
-  function handleClick() {
-    if (!authenticated) {
-      pendingRef.current = true;
-      login();
-      return;
-    }
-    doRegister();
-  }
-
+  // Already registered
   if (registered) {
     return (
       <span className={`font-headline font-bold uppercase tracking-widest text-secondary flex items-center gap-1 ${compact ? "text-[10px]" : "text-xs"}`}>
@@ -113,16 +96,42 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
     );
   }
 
+  // Not authenticated — compact cards link to detail page; full button opens login modal
+  if (!authenticated) {
+    if (compact) {
+      return (
+        <Link
+          href={`/torneos/${tournamentId}`}
+          className="inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all text-xs px-4 py-2"
+        >
+          <span className="block skew-content">REGISTRARME</span>
+        </Link>
+      );
+    }
+    return (
+      <button
+        onClick={login}
+        disabled={!ready}
+        className="inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm px-6 py-2.5"
+      >
+        <span className="block skew-content">
+          {!ready ? "CARGANDO..." : "INGRESAR PARA INSCRIBIRSE"}
+        </span>
+      </button>
+    );
+  }
+
+  // Authenticated
   return (
     <>
       <div className="flex flex-col gap-1">
         <button
-          onClick={handleClick}
+          onClick={doRegister}
           disabled={!ready || loading}
           className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all disabled:opacity-40 disabled:cursor-not-allowed ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
         >
           <span className="block skew-content">
-            {loading ? "REGISTRANDO…" : "REGISTRARME"}
+            {!ready ? "CARGANDO..." : loading ? "REGISTRANDO…" : "REGISTRARME"}
           </span>
         </button>
         {error && <p className="font-body text-xs text-error">{error}</p>}
