@@ -31,6 +31,8 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 src/
   proxy.ts            # Subdomain routing (Next.js 16 native proxy) — app.* → /app, admin.* → /admin
   app/
+    sitemap.ts        # Native sitemap generator → /sitemap.xml (all public routes with priority)
+    robots.ts         # Native robots.txt → /robots.txt (blocks /admin, /app, /api)
     (main)/           # 1upesports.org — all public routes (TopAppBar + Footer + MobileBottomNav)
     app/              # app.1upesports.org — user shell
       login/          #   Public login page (Privy, redirects to dashboard)
@@ -65,7 +67,7 @@ src/
     app/              # App shell (AppSidebar — desktop, AppBottomNav — mobile)
     admin/            # Admin panel components
     layout/           # TopAppBar, Footer (reads social_links from DB), MobileBottomNav
-    providers/        # PrivyClientProvider
+    providers/        # PrivyClientProvider, ServiceWorkerRegister (PWA SW registration)
   lib/
     supabase.ts       # Public + admin Supabase clients
     blob.ts           # uploadImage() → Supabase Storage images bucket
@@ -82,6 +84,8 @@ src/
   types/
     database.types.ts # Full Supabase type definitions (manually maintained)
 public/
+  manifest.json       # PWA manifest — display: standalone, theme #e91e8c, shortcuts (Wallet/Torneos/Academia)
+  sw.js               # Service worker — offline fallback cache strategy
   socialmedia/        # Brand PNG icons: instagram, tiktok, kick, youtube, x, twitch, github, linkedin
 ```
 
@@ -197,6 +201,7 @@ npm run dev
 | `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + MercadoPago checkout |
 | `/juegos` | Games showcase by category |
 | `/recreativo` | Casual gaming section |
+| `/marketplace` | Coming soon — merchandise + periféricos, paga con $1UP tokens |
 | `/perfil` | Legacy profile page (redirects to app subdomain) |
 
 **app.1upesports.org (user app)**

@@ -2,7 +2,7 @@
 ## Referencia: EKX-2026-005 → EKX-2026-006
 
 **Cliente:** 1UP Gaming Tower  
-**Fecha de corte:** 10 de mayo de 2026 — versión final v2.10.0  
+**Fecha de corte:** 11 de mayo de 2026 — versión final v2.12.0  
 **Preparado por:** Ekinoxis Labs
 
 ---
@@ -20,7 +20,7 @@
 | `/academia` | Course catalog + Masters + MercadoPago checkout | Done | ✅ Entregado + mejorado (v2.7.0, v2.10.0) | **⊕ Masters integrados** |
 | `/juegos` | Games showcase by category | Done | ✅ Entregado | — |
 | `/recreativo` | Casual gaming section | Done | ✅ Entregado | — |
-| `/store` | Buy merchandise | Future | ⏳ Pendiente (fuera de scope actual) | — |
+| `/marketplace` | Marketplace coming soon (merchandise + $1UP) | ❌ No contemplado | ✅ Entregado (v2.10.1) | **⊕ Adición** |
 | `/torneos` | Torneos públicos con filtros + premios | ❌ No contemplado | ✅ Entregado (v2.6.0–v2.7.1) | **⊕ Adición** |
 | `/privacidad` | Política de Privacidad (Ley 1581) | ❌ No contemplado | ✅ Entregado (v2.3.0) | **⊕ Adición** |
 
@@ -51,6 +51,10 @@
 | `/admin/referral-codes` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
 | `/admin/brand-logos` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
 | `/admin/torneos` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
+| `/admin/hall-of-fame` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
+| `/admin/tournament-registrations` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
+| `/admin/tournament-results` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
+| `/admin/torneos-internacionales` | ❌ No contemplado | ✅ Entregado | **⊕ Adición** |
 
 ### 1.3 Aplicación: app.1upesports.org
 
@@ -112,7 +116,7 @@ Estado de cada punto solicitado en el documento de revisión.
 ### Masters & Academia
 | Tarea | Estado |
 |-------|--------|
-| Unificar Masters + Academia en sección clara | ✅ Entregado v2.10.0 (Masters integrados en /academia con perfiles completos; /masters redirige) |
+| Unificar Masters + Academia en sección clara | ✅ Entregado v2.10.0 (Masters integrados en /academia con perfiles completos; ruta /masters eliminada) |
 
 ### Generales
 | Tarea | Estado |
@@ -121,8 +125,14 @@ Estado de cada punto solicitado en el documento de revisión.
 | Habilitar pago por transferencia bancaria (pass) | ✅ Entregado v2.3.0 |
 | Política de Privacidad (/privacidad) | ✅ Entregado v2.3.0 |
 | Habeas data al crear cuenta | ✅ Entregado (onboarding wizard) |
-| Emails por compra de tokens / pass | ✅ Entregado v2.3.0 (Resend) |
+| Emails por compra de tokens / pass | ✅ Entregado v2.3.0 — fix nombre real en email de pass v2.10.0 |
 | Emails por inscripción torneos | ✅ Entregado v2.8.0 (Resend, email con detalles + CTA Google Calendar) |
+| Torneos en navbar (TopAppBar + MobileBottomNav) | ✅ Entregado v2.10.1 |
+| Marketplace — página coming soon | ✅ Entregado v2.10.1 |
+| Cédula de ciudadanía obligatoria en onboarding | ✅ Entregado v2.10.0 |
+| App instalable en celular (PWA) | ✅ Entregado v2.11.0 (manifest, service worker, offline page) |
+| Admin panel usable en móvil (drawer) | ✅ Entregado v2.11.0 |
+| SEO completo — todas las páginas públicas | ✅ Entregado v2.12.0 (metadata, OG, JSON-LD, sitemap, robots) |
 | MercadoPago automático | ⏳ Pendiente (bloqueado — 1UP debe habilitar procesador) |
 
 ---
@@ -236,7 +246,36 @@ Iteración completa de mejoras visuales, nuevas secciones y optimizaciones técn
 
 ---
 
-### 3.7 Infraestructura & Seguridad Base
+### 3.7 Auditoría de Seguridad + Correcciones
+
+Revisión completa de APIs y flujos críticos antes del primer push a producción.
+
+| Corrección | Descripción |
+|-----------|-------------|
+| Path traversal — comprobantes | Guard `startsWith("comprobantes/pending/")` en token-orders y pass-orders: evita que un usuario apunte a archivos de otro usuario |
+| Auth faltante — international-tournaments GET | Endpoint GET de torneos internacionales no tenía `checkAdmin` — agregado |
+| Validación de extensión — upload-comprobante | Allowlist explícita `{jpg, jpeg, png, webp, pdf}` además de validación MIME |
+
+**Estimación:** 4 horas → **$600.000 COP**
+
+---
+
+### 3.8 Review Post-entrega — v2.10.1 a v2.12.0
+
+Iteración adicional de mejoras de producto, experiencia móvil y visibilidad web.
+
+| Versión | Entregables principales | Horas est. |
+|---------|------------------------|-----------|
+| v2.10.0 | Masters fusionados en Academia, cédula obligatoria, fix emails nombre real en pass | 3h |
+| v2.10.1 | Torneos en navbar (TopAppBar + MobileBottomNav), Marketplace coming soon | 3h |
+| v2.11.0 | PWA installable (manifest.json, service worker, offline page) + Admin mobile drawer + mobile-responsive skill | 8h |
+| v2.12.0 | SEO full pass — metadata tipada en 8 páginas públicas, JSON-LD (LocalBusiness + SportsEvent), sitemap.xml, robots.txt, seo skill | 6h |
+
+**Subtotal: 20 horas → $3.000.000 COP**
+
+---
+
+### 3.9 Infraestructura & Seguridad Base
 
 | Componente | Descripción |
 |-----------|-------------|
@@ -262,17 +301,17 @@ Iteración completa de mejoras visuales, nuevas secciones y optimizaciones técn
 | Gas Sponsorship (EIP-7702) | 6h | $900.000 |
 | Verificación Comfenalco + Aliados | 8h | $1.200.000 |
 | Review 8 Mayo 2026 (v2.4.0–v2.10.0) | 62h | $9.300.000 |
+| Auditoría de Seguridad + Correcciones | 4h | $600.000 |
+| Review Post-entrega (v2.10.1–v2.12.0) | 20h | $3.000.000 |
 | Infraestructura & Seguridad base | 8h | $1.200.000 |
-| **TOTAL ADICIONES** | **138h** | **$20.700.000** |
-| **TOTAL PROYECTO** | | **$40.700.000** |
+| **TOTAL ADICIONES** | **162h** | **$24.300.000** |
+| **TOTAL PROYECTO** | | **$44.300.000** |
 
 > Tarifa de referencia adiciones: **$150.000 COP/hora** (según EKX-2026-005, Parte 4).
 
 ---
 
 ## PARTE 4 — PENDIENTES DE ALTO IMPACTO
-
-Items identificados del Review 8 Mayo. Los entregados en v2.7.1 se marcan ✅.
 
 | Prioridad | Tarea | Complejidad | Valor estimado | Estado |
 |-----------|-------|-------------|----------------|--------|
@@ -283,10 +322,12 @@ Items identificados del Review 8 Mayo. Los entregados en v2.7.1 se marcan ✅.
 | ✅ | Torneos Internacionales (sección separada, BD propia) | Media | ~10h / $1.500.000 | Entregado v2.9.0 |
 | ✅ | Hall of Fame: sistema de puntos por posición en torneo | Alta | ~16h / $2.400.000 | Entregado v2.9.0 |
 | ✅ | Academia + Masters unificados en una sola página | Baja | ~3h / $450.000 | Entregado v2.10.0 |
+| ✅ | App instalable en celular (PWA) + admin móvil | Media | ~8h / $1.200.000 | Entregado v2.11.0 |
+| ✅ | SEO completo — metadata, JSON-LD, sitemap, robots | Media | ~6h / $900.000 | Entregado v2.12.0 |
 | 🟢 Baja | MercadoPago automático | Alta | Bloqueado — 1UP debe habilitar procesador | ⏳ Bloqueado |
 | 🟢 Baja | Cloudflare Stream (video academia) | Alta | ~20h / $3.000.000 — pendiente credenciales | ⏳ Bloqueado |
 
 ---
 
-*Documento preparado por Ekinoxis Labs — 10 de mayo de 2026*  
+*Documento preparado por Ekinoxis Labs — 11 de mayo de 2026*  
 *Referencia contrato base: EKX-2026-005*
