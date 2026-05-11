@@ -10,13 +10,14 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
 
 const NAV_LINKS = [
-  { href: "/",             label: "Home"      },
-  { href: "/academia",     label: "Academia"  },
-  { href: "/gaming-tower", label: "Tower"     },
-  { href: "/juegos",       label: "Juegos"    },
-  { href: "/team",         label: "Team"      },
-  { href: "/recreativo",   label: "Recreativo"},
-  { href: "/#marketplace", label: "Marketplace"},
+  { href: "/",             label: "Home"        },
+  { href: "/academia",     label: "Academia"    },
+  { href: "/torneos",      label: "Torneos"     },
+  { href: "/gaming-tower", label: "Tower"       },
+  { href: "/juegos",       label: "Juegos"      },
+  { href: "/team",         label: "Team"        },
+  { href: "/recreativo",   label: "Recreativo"  },
+  { href: "/marketplace",  label: "Marketplace" },
 ];
 
 export function TopAppBar() {
