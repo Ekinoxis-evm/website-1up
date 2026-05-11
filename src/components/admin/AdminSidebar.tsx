@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 const GROUPS = [
   {
@@ -55,14 +56,13 @@ const GROUPS = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
-  return (
-    <aside className="hidden md:flex flex-col w-56 min-h-screen bg-surface-container border-r border-outline-variant/20 fixed left-0 top-0 z-40 py-8 px-4 overflow-y-auto">
-      <div className="mb-8 px-2">
-        <div className="font-headline font-black text-primary italic text-xl">1UP</div>
-        <div className="font-body text-xs text-outline uppercase tracking-widest mt-1">Admin Panel</div>
-      </div>
+  // Close drawer on route change
+  useEffect(() => { setOpen(false); }, [pathname]);
 
+  const navContent = (
+    <>
       <nav className="flex flex-col gap-6">
         {GROUPS.map((group) => (
           <div key={group.label}>
@@ -76,7 +76,7 @@ export function AdminSidebar() {
                   <Link
                     key={href}
                     href={href}
-                    className={`flex items-center gap-3 px-3 py-2.5 font-headline font-bold uppercase text-xs tracking-tight transition-all ${
+                    className={`flex items-center gap-3 px-3 py-3 font-headline font-bold uppercase text-xs tracking-tight transition-all ${
                       active
                         ? "bg-primary-container/20 text-primary border-l-2 border-primary-container"
                         : "text-on-surface/60 hover:text-on-surface hover:bg-surface-container-high"
@@ -106,6 +106,55 @@ export function AdminSidebar() {
           Ver Sitio
         </Link>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-surface-container flex items-center gap-3 px-4">
+        <button
+          onClick={() => setOpen(true)}
+          className="p-2 text-on-surface/70 hover:text-on-surface transition-colors"
+          aria-label="Abrir menú"
+        >
+          <span className="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <div className="font-headline font-black text-primary italic text-lg">1UP</div>
+        <div className="font-body text-xs text-outline uppercase tracking-widest">Admin</div>
+      </div>
+
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — slide-in on mobile, fixed on desktop */}
+      <aside
+        className={`flex flex-col w-64 md:w-56 min-h-screen bg-surface-container border-r border-outline-variant/20
+          fixed left-0 top-0 z-50 py-8 px-4 overflow-y-auto transition-transform duration-200
+          ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+      >
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-8 px-2">
+          <div>
+            <div className="font-headline font-black text-primary italic text-xl">1UP</div>
+            <div className="font-body text-xs text-outline uppercase tracking-widest mt-1">Admin Panel</div>
+          </div>
+          <button
+            onClick={() => setOpen(false)}
+            className="md:hidden p-1 text-outline hover:text-on-surface transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        {navContent}
+      </aside>
+    </>
   );
 }

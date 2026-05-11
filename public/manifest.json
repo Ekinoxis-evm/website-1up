@@ -1,0 +1,22 @@
+{
+  "name": "1UP Gaming Tower",
+  "short_name": "1UP",
+  "description": "Colombia's first professional esports hub — wallet, pass, academia y torneos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0a",
+  "theme_color": "#e91e8c",
+  "lang": "es",
+  "categories": ["games", "sports", "entertainment"],
+  "icons": [
+    { "src": "/1up.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/1up.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Wallet",   "short_name": "Wallet",   "url": "/app",          "icons": [{ "src": "/1up.png", "sizes": "96x96" }] },
+    { "name": "Torneos",  "short_name": "Torneos",  "url": "/torneos",      "icons": [{ "src": "/1up.png", "sizes": "96x96" }] },
+    { "name": "Academia", "short_name": "Academia", "url": "/academia",     "icons": [{ "src": "/1up.png", "sizes": "96x96" }] }
+  ]
+}

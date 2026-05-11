@@ -33,7 +33,7 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   return (
     <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
       <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10">{children}</main>
+      <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10 pt-20 md:pt-10">{children}</main>
     </div>
   );
 }
