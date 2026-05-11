@@ -22,12 +22,13 @@ const STATUS_LABEL: Record<Tournament["status"], string> = {
 };
 
 interface Props {
-  tournament:   TournamentFull;
-  onClose:      () => void;
+  tournament:    TournamentFull;
+  onClose:       () => void;
   isRegistered?: boolean;
+  onRegistered?: () => void;
 }
 
-export function TournamentDetailModal({ tournament: t, onClose, isRegistered = false }: Props) {
+export function TournamentDetailModal({ tournament: t, onClose, isRegistered = false, onRegistered }: Props) {
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
 
   return (
@@ -123,6 +124,7 @@ export function TournamentDetailModal({ tournament: t, onClose, isRegistered = f
               tournamentDate={t.date}
               locationType={t.location_type}
               isRegistered={isRegistered}
+              onRegistered={onRegistered}
             />
           )}
 

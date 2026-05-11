@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
-import { TournamentDetailModal } from "./TournamentDetailModal";
 import { PrizeBadge } from "./PrizeBadge";
 import { RegisterButton } from "./RegisterButton";
 import { IntlTournamentCard } from "./IntlTournamentCard";
@@ -41,13 +41,13 @@ const LOC_LABEL: Record<Tournament["location_type"], string> = {
   mixto:      "Mixto",
 };
 
-function TorneoCard({ t, onOpen, isRegistered }: { t: TournamentFull; onOpen: () => void; isRegistered: boolean }) {
+function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRegistered: boolean; onRegistered?: () => void }) {
   const badge  = STATUS_BADGE[t.status];
   const prizes = t.tournament_prizes ?? [];
   return (
     <div className="bg-surface-container flex flex-col">
-      {/* Cover */}
-      <div className="relative aspect-video bg-surface-container-high overflow-hidden">
+      {/* Cover — links to detail page */}
+      <Link href={`/torneos/${t.id}`} className="relative aspect-video bg-surface-container-high overflow-hidden block">
         {t.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
@@ -69,16 +69,18 @@ function TorneoCard({ t, onOpen, isRegistered }: { t: TournamentFull; onOpen: ()
             {LOC_LABEL[t.location_type]}
           </span>
         </span>
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-5 flex flex-col flex-1 gap-3">
         {t.games && (
           <p className="font-headline font-bold text-xs uppercase tracking-widest text-secondary">{t.games.name}</p>
         )}
-        <h3 className="font-headline font-black text-xl uppercase tracking-tighter leading-tight text-on-surface">
-          {t.name}
-        </h3>
+        <Link href={`/torneos/${t.id}`}>
+          <h3 className="font-headline font-black text-xl uppercase tracking-tighter leading-tight text-on-surface hover:text-primary-container transition-colors">
+            {t.name}
+          </h3>
+        </Link>
 
         <div className="flex flex-wrap gap-4 text-xs font-headline font-bold text-on-surface/60 uppercase tracking-wider">
           {t.date && (
@@ -101,13 +103,13 @@ function TorneoCard({ t, onOpen, isRegistered }: { t: TournamentFull; onOpen: ()
         )}
 
         <div className="mt-auto pt-2 flex gap-3 items-center flex-wrap">
-          <button
-            onClick={onOpen}
+          <Link
+            href={`/torneos/${t.id}`}
             className="font-headline font-bold text-xs uppercase tracking-widest text-outline hover:text-on-surface transition-colors flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-sm">open_in_full</span>
             VER MÁS
-          </button>
+          </Link>
           {t.is_registration_open && (
             <RegisterButton
               tournamentId={t.id}
@@ -115,6 +117,7 @@ function TorneoCard({ t, onOpen, isRegistered }: { t: TournamentFull; onOpen: ()
               tournamentDate={t.date}
               locationType={t.location_type}
               isRegistered={isRegistered}
+              onRegistered={onRegistered}
               compact
             />
           )}
@@ -138,7 +141,6 @@ export function TorneosClient({ tournaments, intlTournaments, games }: Props) {
   const { authenticated, getAccessToken } = usePrivy();
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGame, setSelectedGame]   = useState<string>("");
-  const [modalT, setModalT]               = useState<TournamentFull | null>(null);
   const [registeredIds, setRegisteredIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -229,7 +231,14 @@ export function TorneosClient({ tournaments, intlTournaments, games }: Props) {
             PRÓXIMOS <span className="text-primary-container">TORNEOS</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcoming.map((t) => <TorneoCard key={t.id} t={t} onOpen={() => setModalT(t)} isRegistered={registeredIds.includes(t.id)} />)}
+            {upcoming.map((t) => (
+              <TorneoCard
+                key={t.id}
+                t={t}
+                isRegistered={registeredIds.includes(t.id)}
+                onRegistered={() => setRegisteredIds((prev) => [...prev, t.id])}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -241,7 +250,13 @@ export function TorneosClient({ tournaments, intlTournaments, games }: Props) {
             HISTORIAL
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-70">
-            {completed.map((t) => <TorneoCard key={t.id} t={t} onOpen={() => setModalT(t)} isRegistered={registeredIds.includes(t.id)} />)}
+            {completed.map((t) => (
+              <TorneoCard
+                key={t.id}
+                t={t}
+                isRegistered={registeredIds.includes(t.id)}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -278,14 +293,6 @@ export function TorneosClient({ tournaments, intlTournaments, games }: Props) {
         </section>
       )}
 
-      {/* Detail modal */}
-      {modalT && (
-        <TournamentDetailModal
-          tournament={modalT}
-          onClose={() => setModalT(null)}
-          isRegistered={registeredIds.includes(modalT.id)}
-        />
-      )}
     </>
   );
 }

@@ -2,7 +2,7 @@
 ## 1UP Gaming Tower × Ekinoxis Labs
 
 **Fecha de corte:** 11 de mayo de 2026  
-**Versión en producción:** v2.13.0  
+**Versión en producción:** v2.14.0  
 **Referencia contractual:** EKX-2026-005
 
 ---
@@ -12,30 +12,33 @@
 | | |
 |--|--|
 | **Scope original entregado** | 100% — todas las páginas y módulos del contrato EKX-2026-005 están funcionando en producción |
-| **Funcionalidades adicionales** | 178 horas de desarrollo fuera del scope original, implementadas y en producción |
+| **Funcionalidades adicionales** | ~196 horas de desarrollo fuera del scope original, implementadas y en producción |
 | **Estado del proyecto** | Activo — dos integraciones pendientes por credenciales externas (MercadoPago automático, Cloudflare Stream) |
-| **Total facturado adiciones** | $26.700.000 COP (178h × $150.000/h) |
-| **Total proyecto** | **$46.700.000 COP** |
+| **Total facturado adiciones** | $29.400.000 COP (~196h × $150.000/h) |
+| **Total proyecto** | **$49.400.000 COP** |
 
 ---
 
 ## 1. PLATAFORMA WEB — 1upesports.org
 
-### 1.1 Páginas públicas
+### 1.1 Páginas públicas — Estado actual
 
-| Página | Descripción | Estado |
-|--------|-------------|--------|
-| `/` — Inicio | Hero, banner de marcas animado, 1UP Pass, catálogo de juegos, sección Marketplace, formulario de reclutamiento | ✅ Entregado |
-| `/gaming-tower` | 6 plantas, equipamiento, mapa de ubicación | ✅ Entregado |
-| `/academia` | Catálogo de cursos, perfiles de masters, checkout MercadoPago | ✅ Entregado |
-| `/torneos` | Torneos nacionales (próximos / en vivo / finalizados), torneos internacionales, tabla de campeones, historial del equipo 1UP | ✅ Entregado |
-| `/team` | Roster profesional activo, formulario de reclutamiento | ✅ Entregado |
-| `/juegos` | Catálogo de juegos por categoría | ✅ Entregado |
-| `/recreativo` | Jornadas corporativas y recreativas | ✅ Entregado |
-| `/marketplace` | Página de próxima apertura (merchandise + pago con $1UP) | ✅ Entregado |
-| `/privacidad` | Política de Privacidad y Tratamiento de Datos — Ley 1581 | ✅ Entregado |
+| Página | Contenido actual | Notas de versión |
+|--------|-----------------|-----------------|
+| `/` — Inicio | Hero · Banner de marcas animado · 1UP Pass (beneficios) · **Sección Academia** · **Sección Torneos** · Marketplace (coming soon) · "Sobre Nosotros" (3 pilares del ecosistema) · Formulario de reclutamiento | v2.14.0: GamesGallery retirada; reemplazada por AcademiaSection y TorneosSection. TalentPipeline renombrado a "Nuestro Ecosistema" |
+| `/gaming-tower` | Hero · **1UP Pass (beneficios)** · Equipamiento · 6 plantas · **Juegos por categoría** (imagen de categoría + grid de juegos) · Mapa | v2.14.0: PassSection añadida debajo del hero; JuegosDisplay integrado al final (mismo layout que /juegos tenía). Juegos movidos aquí desde home |
+| `/torneos` | Hall of Fame leaderboard · Torneos nacionales (filtros por mes y juego) · Torneos internacionales · Formulario de reclutamiento | v2.14.0: RecruitmentForm añadido al final |
+| `/torneos/[id]` | Página de detalle por torneo — imagen, badges de estado/juego/ubicación, podio de premios, botón REGISTRARME | v2.14.0: bug de login cross-subdominio resuelto; botón ya no queda en estado cargando |
+| `/torneos/[id]/checkin` | Check-in por QR — login inline (sin redirect), valida inscripción, marca asistencia | — |
+| `/academia` | Catálogo de cursos · Perfiles de masters · Checkout MercadoPago | — |
+| `/recreativo` | Jornadas corporativas y recreativas | — |
+| `/marketplace` | Página coming soon — features, paga con $1UP · **Links de redes sociales dinámicos desde admin** | v2.14.0: redes sociales reales desde BD (antes era texto estático) |
+| `/privacidad` | Política de Privacidad y Tratamiento de Datos — Ley 1581 | — |
+| `/team` | ~~Roster profesional~~ → **Redirige a `/`** | v2.14.0: página retirada. Masters en `/academia`; reclutamiento en `/torneos`. URL antigua sigue funcionando sin error 404 |
+| `/juegos` | ~~Catálogo standalone~~ → **Redirige a `/gaming-tower`** | v2.14.0: página retirada. Juegos integrados en la Tower con el mismo layout por categorías. URL antigua sigue funcionando sin error 404 |
+| `/perfil` | → Redirige a `app.1upesports.org` | Ruta legacy preservada |
 
-> La ruta `/masters` fue integrada en `/academia` y eliminada (v2.10.0) para simplificar la navegación.
+> **Rutas eliminadas como páginas independientes pero no rotas:** `/team` y `/juegos` ahora redirigen a contenido equivalente. Ningún enlace externo queda en 404.
 
 ### 1.2 Características transversales
 
@@ -43,9 +46,11 @@
 |---------------|--------|
 | SEO completo — título, descripción, Open Graph, Twitter Card, canonical en todas las páginas | ✅ Entregado |
 | Datos estructurados JSON-LD (Google rich results) para el sitio y los torneos | ✅ Entregado |
-| Sitemap automático (`/sitemap.xml`) y robots.txt (`/robots.txt`) | ✅ Entregado |
+| Sitemap automático (`/sitemap.xml`) y robots.txt (`/robots.txt`) | ✅ Entregado — `/team` y `/juegos` removidos del sitemap |
 | App instalable en celular (PWA) — icono en pantalla de inicio, modo offline | ✅ Entregado |
-| Navegación: Torneos y Marketplace incluidos en navbar y menú móvil | ✅ Entregado |
+| Navegación móvil (MobileBottomNav) — 5 tabs fijos: Home · Torneos · Academia · Store · **Perfil** | v2.14.0: tab PERFIL siempre visible; autenticado → app subdomain, no autenticado → login |
+| TopAppBar — nav principal en desktop | v2.14.0: ícono de admin removido; solo acceso desde `admin.1upesports.org` |
+| Footer — links de redes sociales dinámicos + Privacidad | v2.14.0: link de Admin removido del footer público |
 
 ---
 
@@ -86,7 +91,7 @@
 | Inscripciones a torneos | Lista de inscritos por torneo, marcar asistencia / no asistió | ✅ Entregado |
 | Resultados (Hall of Fame) | Asignar 1°/2°/3° por torneo → genera la tabla de campeones pública | ✅ Entregado |
 | Imágenes del sitio | Sección de equipamiento (Gaming Tower) y ruta de aprendizaje (Academia) | ✅ Entregado |
-| Códigos de referido | Crear, activar/desactivar, ver uso | ✅ Entregado |
+| **Logout en panel admin** | Botón "Cerrar Sesión" en el sidebar — cierra sesión Privy y redirige a `/admin/login` | ✅ v2.14.0 |
 
 ---
 
@@ -157,7 +162,6 @@ Módulo de torneos construido desde cero, no contemplado en el contrato original
 | Página de detalle por torneo | Ruta dedicada `/torneos/[id]` con imagen, premios, descripción y CTA de inscripción |
 | Hall of Fame — Tabla de Campeones | Ranking automático por puntos (10/5/3) según posición en cada torneo |
 | Torneos ganados por el 1UP Team | Historial de competencias externas del equipo, visible en `/torneos` |
-| Flujo de login sin fricción | Al inscribirse, el usuario no autenticado es redirigido al login y de vuelta al torneo automáticamente |
 | Check-in por código QR | El admin genera un QR por torneo; los participantes lo escanean, confirman asistencia sin salir del sitio |
 
 **78 horas → $11.700.000 COP**
@@ -198,7 +202,27 @@ Iteración de experiencia en `app.1upesports.org`.
 
 ---
 
-### 4.10 Infraestructura y seguridad base
+### 4.10 Restructura de navegación y UX (v2.14.0)
+Simplificación de la arquitectura de información del sitio público y corrección de bugs de flujo de inscripción.
+
+| Entregable | Descripción |
+|-----------|-------------|
+| Home enriquecido | Nuevas secciones AcademiaSection y TorneosSection — cada una con propuesta de valor, íconos y CTA directo a su sección. GamesGallery retirada del home (games viven en Tower) |
+| "Sobre Nosotros" en home | Sección TalentPipeline reenmarcada como "Nuestro Ecosistema" — explica los tres pilares (Recreativo · Academia · Torneos) en lugar de hablar de un funnel de talento |
+| Juegos integrados en Tower | Página `/juegos` retirada como standalone; los juegos ahora se muestran en `/gaming-tower` con el mismo layout por categorías (imagen de categoría + grid de títulos). `/juegos` redirige sin romper URLs externas |
+| Reclutamiento en Torneos | Formulario de reclutamiento añadido al final de `/torneos` — punto de conversión natural donde los competidores ya están |
+| Página `/team` consolidada | Roster retirado como sección dedicada — los Masters viven en `/academia`, reclutamiento en `/torneos`. `/team` redirige sin romper URLs externas |
+| 1UP Pass en Tower | PassSection (beneficios) añadida a `/gaming-tower` para comunicar el valor del pass en contexto |
+| Fix inscripción a torneos | Botón REGISTRARME funcionaba solo si el usuario ya tenía sesión en `app.1upesports.org`. Resuelto con login modal inline (mismo dominio), auto-registro tras autenticación, y corrección de estado colgado por falta de manejo de errores |
+| Redes sociales en Marketplace | Íconos de redes sociales dinámicos en `/marketplace`, leídos desde la BD (antes era texto estático con sugerencia de Instagram) |
+| Tab PERFIL siempre visible | Menú móvil inferior muestra siempre el tab PERFIL como 5to elemento, independiente del estado de autenticación |
+| Logout en admin sidebar | Botón de cierre de sesión añadido al panel de administración |
+
+**18 horas → $2.700.000 COP**
+
+---
+
+### 4.11 Infraestructura y seguridad base
 Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de autenticación de administradores, invalidación automática de caché, política de privacidad Ley 1581, y configuración del dominio canónico.
 
 **8 horas → $1.200.000 COP**
@@ -219,10 +243,11 @@ Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de a
 | Auditoría de seguridad | 4h | $600.000 COP |
 | Mejoras post-entrega (PWA + SEO + nav) | 20h | $3.000.000 COP |
 | Mejoras de la app de usuario (v2.13.0) | 6h | $900.000 COP |
+| Restructura de navegación y UX (v2.14.0) | 18h | $2.700.000 COP |
 | Infraestructura y seguridad base | 8h | $1.200.000 COP |
-| **Total adiciones fuera del scope** | **178h** | **$26.700.000 COP** |
+| **Total adiciones fuera del scope** | **~196h** | **$29.400.000 COP** |
 | | | |
-| **TOTAL PROYECTO** | | **$46.700.000 COP** |
+| **TOTAL PROYECTO** | | **$49.400.000 COP** |
 
 > Tarifa adiciones: $150.000 COP/hora (según EKX-2026-005, Parte 4).
 

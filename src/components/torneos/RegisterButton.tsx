@@ -11,9 +11,10 @@ interface Props {
   locationType:   string;
   isRegistered:   boolean;
   compact?:       boolean;
+  onRegistered?:  () => void;
 }
 
-export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact }: Props) {
+export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, compact, onRegistered }: Props) {
   const { authenticated, ready, login, getAccessToken } = usePrivy();
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
         // Already registered (e.g. duplicate click or stale state) → treat as success
         if (res.status === 409 && data.reason === "already_registered") {
           setRegistered(true);
+          onRegistered?.();
           setLoading(false);
           return;
         }
@@ -84,6 +86,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       }
 
       setRegistered(true);
+      onRegistered?.();
       setLoading(false);
       if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
     } catch {
