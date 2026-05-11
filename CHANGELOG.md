@@ -5,6 +5,23 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.6.0] — 2026-05-10
+
+### Added
+
+- **Public `/torneos` page**: tournament list grouped into "Próximos Torneos" (upcoming + live) and "Historial" (completed). Each card shows cover image, game name, status badge (animated pulse when live), location badge (Presencial/Online/Mixto), date, prize pool in COP, max participants, description excerpt, and a "REGISTRARME" CTA when registration is open. Empty state with "Próximamente" copy shown when no active tournaments exist.
+- **Admin `/admin/torneos`**: full CRUD table with image upload, game dropdown (FK to `games`), date/time picker, status selector, location type, prize pool COP, max participants, description, sort order, registration-open toggle, and active toggle.
+- **`/api/admin/tournaments`** — GET (public, active only, joined with game name), POST/PUT/DELETE (admin-only). `revalidatePath("/torneos")` and `revalidatePath("/admin/torneos")` on every mutation.
+- **`tournaments` DB table**: `id`, `name`, `game_id` (nullable FK → `games`), `date`, `prize_pool_cop`, `max_participants`, `status` (`upcoming`/`live`/`completed`), `location_type` (`presencial`/`online`/`mixto`), `image_url`, `description`, `is_active`, `is_registration_open`, `sort_order`, `created_at`. Migration applied via Supabase MCP.
+- **Admin sidebar**: "Torneos" entry added to "Sitio Web" group.
+- **`blob.ts` + upload route + `ImageUpload`**: `"tournaments"` folder added.
+- **`database.types.ts`**: `tournaments` table definition + `Tournament` convenience type export.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.5.0] — 2026-05-10
 
 ### Added

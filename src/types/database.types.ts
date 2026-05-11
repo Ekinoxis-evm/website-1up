@@ -79,6 +79,65 @@ export type Database = {
         }
         Relationships: []
       }
+      tournaments: {
+        Row: {
+          id:                   number
+          name:                 string
+          game_id:              number | null
+          date:                 string | null
+          prize_pool_cop:       number | null
+          max_participants:     number | null
+          status:               "upcoming" | "live" | "completed"
+          location_type:        "presencial" | "online" | "mixto"
+          image_url:            string | null
+          description:          string | null
+          is_active:            boolean
+          is_registration_open: boolean
+          sort_order:           number
+          created_at:           string
+        }
+        Insert: {
+          id?:                   number
+          name:                  string
+          game_id?:              number | null
+          date?:                 string | null
+          prize_pool_cop?:       number | null
+          max_participants?:     number | null
+          status?:               "upcoming" | "live" | "completed"
+          location_type?:        "presencial" | "online" | "mixto"
+          image_url?:            string | null
+          description?:          string | null
+          is_active?:            boolean
+          is_registration_open?: boolean
+          sort_order?:           number
+          created_at?:           string
+        }
+        Update: {
+          id?:                   number
+          name?:                 string
+          game_id?:              number | null
+          date?:                 string | null
+          prize_pool_cop?:       number | null
+          max_participants?:     number | null
+          status?:               "upcoming" | "live" | "completed"
+          location_type?:        "presencial" | "online" | "mixto"
+          image_url?:            string | null
+          description?:          string | null
+          is_active?:            boolean
+          is_registration_open?: boolean
+          sort_order?:           number
+          created_at?:           string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournaments_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_logos: {
         Row: {
           id:          number
@@ -1250,3 +1309,4 @@ export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"
 export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
 export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];
 export type BrandLogo        = Database["public"]["Tables"]["brand_logos"]["Row"];
+export type Tournament       = Database["public"]["Tables"]["tournaments"]["Row"];

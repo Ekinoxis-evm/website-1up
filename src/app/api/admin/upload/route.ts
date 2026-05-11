@@ -3,7 +3,7 @@ import { uploadImage, type ImageFolder } from "@/lib/blob";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 
-const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados", "site", "brand-logos"] as const;
+const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados", "site", "brand-logos", "tournaments"] as const;
 type Folder = typeof ALLOWED_FOLDERS[number];
 
 async function checkAdmin(req: NextRequest) {
