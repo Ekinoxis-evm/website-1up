@@ -37,12 +37,6 @@ export function HeroHome() {
           >
             <span className="block skew-content">CONOCE LA TORRE</span>
           </Link>
-          <Link
-            href="/team"
-            className="inline-block border-2 border-primary text-primary text-xl font-black px-10 py-5 skew-fix hover:bg-primary hover:text-background transition-all font-headline"
-          >
-            <span className="block skew-content">VER EQUIPO</span>
-          </Link>
         </div>
       </div>
 

@@ -54,12 +54,6 @@ export async function Footer() {
         >
           Privacidad
         </Link>
-        <Link
-          href="/admin"
-          className="font-body text-xs tracking-widest uppercase text-outline/40 hover:text-outline transition-colors"
-        >
-          Admin
-        </Link>
         <span className="text-tertiary font-black tracking-widest text-xs font-headline">
           LEVEL UP COLOMBIA
         </span>

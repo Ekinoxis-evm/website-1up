@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { HeroTower } from "@/components/tower/HeroTower";
+import { PassSection } from "@/components/tower/PassSection";
 import { EquipmentHighlight } from "@/components/tower/EquipmentHighlight";
 import { FloorBreakdown } from "@/components/tower/FloorBreakdown";
 import { LocationMap } from "@/components/tower/LocationMap";
@@ -21,14 +22,16 @@ export const metadata = {
 };
 
 export default async function GamingTowerPage() {
-  const [{ data: floors }, { data: siteImages }] = await Promise.all([
+  const [{ data: floors }, { data: siteImages }, { data: benefits }] = await Promise.all([
     supabase.from("floor_info").select("*").order("sort_order"),
     supabase.from("site_content").select("key, image_url, updated_at").eq("key", "equipment_highlight").single(),
+    supabase.from("pass_benefits").select("*").order("sort_order"),
   ]);
 
   return (
     <>
       <HeroTower />
+      <PassSection benefits={benefits ?? []} />
       <EquipmentHighlight imageUrl={siteImages?.image_url} updatedAt={siteImages?.updated_at} />
       <FloorBreakdown floors={floors ?? []} />
       <LocationMap />

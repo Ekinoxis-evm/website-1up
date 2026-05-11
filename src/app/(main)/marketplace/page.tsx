@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { supabase } from "@/lib/supabase";
+import { SOCIAL_ICON, SOCIAL_LABEL } from "@/lib/socialIcons";
 
 export const metadata: Metadata = {
   title: "Marketplace — Compra con $1UP Tokens | 1UP Gaming Tower",
@@ -16,7 +18,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://1upesports.org/marketplace" },
 };
 
-export default function MarketplacePage() {
+export default async function MarketplacePage() {
+  const { data: socialLinks } = await supabase
+    .from("social_links")
+    .select("*")
+    .eq("is_active", true)
+    .not("url", "is", null)
+    .order("sort_order");
+
   return (
     <>
       {/* Hero */}
@@ -63,7 +72,7 @@ export default function MarketplacePage() {
 
       {/* Notify strip */}
       <section className="bg-primary-container px-8 md:px-16 py-12">
-        <div className="max-w-4xl flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div className="max-w-4xl flex flex-col md:flex-row items-start md:items-center gap-8">
           <div className="flex-1">
             <p className="font-headline font-black text-white text-2xl uppercase tracking-tighter">
               Sé el primero en saber cuándo abre
@@ -72,14 +81,27 @@ export default function MarketplacePage() {
               Síguenos en redes sociales para el anuncio oficial de apertura.
             </p>
           </div>
-          <a
-            href="https://www.instagram.com/1upgamingtower/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 bg-white text-primary-container font-headline font-black text-sm py-3 px-8 uppercase tracking-tight hover:bg-white/90 transition-colors"
-          >
-            SEGUIR @1UPGAMINGTOWER
-          </a>
+          {(socialLinks ?? []).length > 0 && (
+            <div className="flex items-center gap-4">
+              {(socialLinks ?? []).map((s) => (
+                <a
+                  key={s.id}
+                  href={s.url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={SOCIAL_LABEL[s.platform] ?? s.platform}
+                  className="opacity-70 hover:opacity-100 transition-opacity hover:scale-110 transform"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={SOCIAL_ICON[s.platform] ?? `/socialmedia/${s.platform}.png`}
+                    alt={s.platform}
+                    className="w-7 h-7 object-contain brightness-0 invert"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>
