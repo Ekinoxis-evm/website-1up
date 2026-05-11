@@ -5,9 +5,24 @@ import { CourseCatalog } from "@/components/academia/CourseCatalog";
 import { LearningPath } from "@/components/academia/LearningPath";
 import { PaymentFeedback } from "@/components/academia/PaymentFeedback";
 import { MasterGrid } from "@/components/masters/MasterGrid";
+import type { Metadata } from "next";
 import type { Master } from "@/types/database.types";
 
-export const metadata = { title: "Academia — 1UP Gaming Tower" };
+export const metadata: Metadata = {
+  title: "Academia 1UP — Cursos de Esports y Gaming en Colombia",
+  description:
+    "Aprende con los mejores coaches y masters de esports en Colombia. Cursos de estrategia, mecánicas, coaching y desarrollo profesional. Paga con $1UP tokens o MercadoPago.",
+  keywords: ["academia esports Colombia", "cursos gaming Colombia", "coaching esports", "aprender esports", "1UP academia"],
+  openGraph: {
+    title: "Academia 1UP — Cursos de Esports en Colombia",
+    description: "Cursos con masters profesionales. Estrategia, mecánicas y coaching. Paga con $1UP o MercadoPago.",
+    url: "https://1upesports.org/academia",
+    type: "website",
+    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Academia 1UP Gaming Tower" }],
+  },
+  twitter: { card: "summary_large_image", title: "Academia 1UP Esports", description: "Cursos de esports con los mejores coaches de Colombia." },
+  alternates: { canonical: "https://1upesports.org/academia" },
+};
 
 export default async function AcademiaPage() {
   const [{ data: allCourses }, { data: siteImage }, { data: masters }, { data: masterCourses }] = await Promise.all([

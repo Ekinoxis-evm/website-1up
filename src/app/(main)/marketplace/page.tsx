@@ -1,4 +1,20 @@
-export const metadata = { title: "Marketplace — 1UP Gaming Tower" };
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Marketplace — Compra con $1UP Tokens | 1UP Gaming Tower",
+  description:
+    "Marketplace del ecosistema 1UP — próximamente. Compra merchandise oficial, periféricos gaming y coleccionables usando tus $1UP tokens. Primer marketplace esports de Colombia.",
+  keywords: ["marketplace esports Colombia", "merchandise gaming Colombia", "comprar con tokens esports", "1UP marketplace", "periféricos gaming Cali"],
+  openGraph: {
+    title: "Marketplace 1UP — Próximamente",
+    description: "Merchandise, periféricos y coleccionables. Paga con $1UP tokens en el marketplace del ecosistema 1UP.",
+    url: "https://1upesports.org/marketplace",
+    type: "website",
+    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Marketplace 1UP Gaming Tower" }],
+  },
+  twitter: { card: "summary_large_image", title: "Marketplace 1UP — Próximamente", description: "Compra con $1UP tokens en el marketplace del ecosistema esports 1UP." },
+  alternates: { canonical: "https://1upesports.org/marketplace" },
+};
 
 export default function MarketplacePage() {
   return (

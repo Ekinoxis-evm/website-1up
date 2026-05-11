@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.12.0] — 2026-05-11
+
+### Added
+
+- **Full SEO pass — all public pages**: every `(main)` route now exports a typed `Metadata` object with `title`, `description`, `keywords`, `openGraph` (url, title, description, images), `twitter` (card, title, description), and `alternates.canonical`. Pages covered: home, torneos, gaming-tower, academia, team, juegos, recreativo, marketplace.
+- **JSON-LD structured data**: `SportsActivityLocation` (LocalBusiness) on home page; `SportsEvent` per upcoming/live tournament on `/torneos` — enables Google rich results.
+- **`src/app/sitemap.ts`**: Next.js native sitemap generator — auto-served at `/sitemap.xml`. All public routes listed with priority and change frequency calibrated per content type (torneos = daily, academia/home = weekly, static = monthly, legal = yearly).
+- **`src/app/robots.ts`**: Next.js native robots.txt — allows crawlers on all public routes, disallows `/admin/`, `/app/`, `/api/`.
+- **`.claude/skills/seo.md`**: new skill documenting the metadata pattern, JSON-LD approach, sitemap/robots conventions, keyword strategy and checklist for future pages.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.11.0] — 2026-05-10
+
+### Added
+
+- **PWA support**: `public/manifest.json` (name, short_name, icons, theme `#e91e8c`, `display: standalone`, shortcuts to Wallet/Torneos/Academia); `public/sw.js` (install → cache /offline + /1up.png; fetch → offline fallback on navigation); `ServiceWorkerRegister` client component registered in root layout; `src/app/offline/page.tsx` branded offline fallback.
+- **Admin mobile drawer**: `AdminSidebar` is now a slide-in drawer on mobile (≤ md). Fixed top bar `h-14` with hamburger, close on route change (`useEffect([pathname])`), backdrop tap-to-close, `translate-x` transition.
+- **Admin main padding**: `pt-20 md:pt-10` on all admin `<main>` elements to clear the mobile top bar.
+- **`.claude/skills/mobile-responsive.md`**: skill documenting touch targets (44px), table→card stacks, modal sheet pattern, iOS input zoom (`text-base`), safe-area insets, PWA notes, breakpoints.
+
+### Changed
+
+- Root layout `metadata`: added `manifest: "/manifest.json"`, `theme-color`, `apple-mobile-web-app-*`, and `viewport-fit=cover` meta tags.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.10.0] — 2026-05-10
 
 ### Added

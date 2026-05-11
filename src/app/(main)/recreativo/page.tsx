@@ -1,4 +1,20 @@
-export const metadata = { title: "Recreativo — 1UP Gaming Tower" };
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Jornadas Recreativas — 1UP Gaming Tower Colombia",
+  description:
+    "Experiencias gaming corporativas y recreativas en 1UP Gaming Tower Cali. Equipo completo, cafetería incluida y ambiente diseñado para el máximo disfrute en equipo.",
+  keywords: ["jornadas recreativas gaming Colombia", "team building gaming Cali", "eventos corporativos esports", "gaming corporativo Colombia", "1UP recreativo"],
+  openGraph: {
+    title: "Jornadas Recreativas — 1UP Gaming Tower",
+    description: "Lleva a tu equipo al gaming tower más completo de Colombia. Equipos top, cafetería y experiencia premium.",
+    url: "https://1upesports.org/recreativo",
+    type: "website",
+    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Jornadas Recreativas 1UP Gaming Tower" }],
+  },
+  twitter: { card: "summary_large_image", title: "Jornadas Recreativas 1UP", description: "Eventos corporativos y recreativos en el gaming tower más completo de Colombia." },
+  alternates: { canonical: "https://1upesports.org/recreativo" },
+};
 
 const BENEFITS = [
   { icon: "sports_esports", label: "Gaming Tower Pass",  value: "1 mes de acceso por usuario",           color: "border-primary-container"   },

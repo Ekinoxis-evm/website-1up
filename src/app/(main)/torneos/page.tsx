@@ -1,6 +1,23 @@
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { TorneosClient, type TournamentFull, type IntlTournamentFull } from "@/components/torneos/TorneosClient";
 import { HallOfFameSection } from "@/components/torneos/HallOfFameSection";
+
+export const metadata: Metadata = {
+  title: "Torneos Esports — 1UP Gaming Tower Colombia",
+  description:
+    "Compite en los torneos oficiales del ecosistema 1UP. Premios en $1UP tokens, múltiples juegos, todos los niveles. Torneos presenciales y online en Colombia.",
+  keywords: ["torneos esports Colombia", "competencias gaming Colombia", "torneos videojuegos Cali", "premios esports", "1UP torneos"],
+  openGraph: {
+    title: "Torneos Esports — 1UP Gaming Tower",
+    description: "Compite, gana premios en $1UP y sube al Hall of Fame. Torneos oficiales del ecosistema 1UP en Colombia.",
+    url: "https://1upesports.org/torneos",
+    type: "website",
+    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Torneos 1UP Gaming Tower" }],
+  },
+  twitter: { card: "summary_large_image", title: "Torneos Esports 1UP", description: "Compite y gana en los torneos oficiales del ecosistema 1UP." },
+  alternates: { canonical: "https://1upesports.org/torneos" },
+};
 
 export default async function TorneosPage() {
   const [{ data: tournaments }, { data: intlTournaments }, { data: games }] = await Promise.all([
@@ -19,8 +36,25 @@ export default async function TorneosPage() {
     supabase.from("games").select("id, name").order("name"),
   ]);
 
+  const upcomingTournaments = (tournaments ?? []).filter((t) => t.status === "upcoming" || t.status === "live");
+  const sportsEvents = upcomingTournaments.map((t) => ({
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: t.name,
+    startDate: t.date ?? undefined,
+    location: t.location_type === "online"
+      ? { "@type": "VirtualLocation", url: "https://1upesports.org/torneos" }
+      : { "@type": "Place", name: "1UP Gaming Tower", address: { "@type": "PostalAddress", addressLocality: "Cali", addressCountry: "CO" } },
+    organizer: { "@type": "Organization", name: "1UP Gaming Tower", url: "https://1upesports.org" },
+    url: "https://1upesports.org/torneos",
+    sport: "Esports",
+  }));
+
   return (
     <>
+      {sportsEvents.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(sportsEvents) }} />
+      )}
       {/* Hero */}
       <section className="py-24 px-8 md:px-16 bg-background">
         <div className="max-w-5xl">

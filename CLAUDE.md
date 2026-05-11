@@ -176,6 +176,7 @@ Social media brand icons live in `/public/socialmedia/` as static PNGs — not u
 | `.claude/skills/onboarding-flow.md` | `src/app/app/onboarding/**`, `src/components/perfil/OnboardingWizard.tsx`, `src/app/api/user/onboarding/**`, `src/app/api/user/referral-codes/**`, `src/app/api/admin/referral-codes/**`, `src/app/admin/(protected)/referral-codes/**`, `src/components/admin/AdminReferralCodesClient.tsx` |
 | `.claude/skills/mobile-responsive.md` | `src/components/layout/**`, `src/components/admin/**`, any new page or client component |
 | `.claude/skills/pass-purchase-flow.md` | `src/components/perfil/BuyPassWizard.tsx`, `src/components/perfil/MisPassOrders.tsx`, `src/components/perfil/PassPurchasePanel.tsx`, `src/lib/passVerifier.ts`, `src/app/api/user/pass-orders/**`, `src/app/api/user/pass-config/**`, `src/app/api/admin/pass-orders/**`, `src/app/api/admin/pass-config/**`, `src/app/admin/(protected)/pass-orders/**`, `src/app/app/(protected)/pass/**` |
+| `.claude/skills/seo.md` | `src/app/(main)/**/page.tsx`, `src/app/sitemap.ts`, `src/app/robots.ts`, any new public page |
 
 ---
 
