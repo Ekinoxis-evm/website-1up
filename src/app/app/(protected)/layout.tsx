@@ -20,9 +20,8 @@ export default async function AppProtectedLayout({ children }: { children: React
   const claims = await verifyCookieToken(token);
   if (!claims) {
     if (session) {
-      // Access token expired but session still alive — let client refresh it
-      const current = new URL(`${APP_URL}${"/app"}`);
-      redirect(`${APP_URL}/refresh?redirect_uri=${encodeURIComponent(current.pathname)}`);
+      // Access token expired but refresh token still valid — renew client-side
+      redirect(`${APP_URL}/refresh?redirect_uri=%2F`);
     }
     redirect(`${APP_URL}/login`);
   }
