@@ -5,7 +5,12 @@ import { usePrivy } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
 
-interface Props { courses: Course[] }
+type MasterSummary = { id: number; name: string; photo_url: string | null };
+
+interface Props {
+  courses: Course[];
+  masters: MasterSummary[];
+}
 
 const CATEGORIES = ["All", "Performance", "Technology", "Gaming"] as const;
 type Cat = (typeof CATEGORIES)[number];
@@ -18,13 +23,20 @@ const CAT_STYLE: Record<string, { badge: string; border: string }> = {
 
 type CheckoutStatus = "idle" | "loading" | "redirecting" | "error";
 
-export function CourseCatalog({ courses }: Props) {
+export function CourseCatalog({ courses, masters }: Props) {
   const [active, setActive] = useState<Cat>("All");
+  const [activeMaster, setActiveMaster] = useState<number | "all">("all");
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const [isAffiliate, setIsAffiliate] = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<Record<number, CheckoutStatus>>({});
 
-  const visible = active === "All" ? courses : courses.filter((c) => c.category === active);
+  const masterMap = Object.fromEntries(masters.map((m) => [m.id, m]));
+
+  const visible = courses.filter((c) => {
+    const catMatch    = active === "All" || c.category === active;
+    const masterMatch = activeMaster === "all" || c.master_id === activeMaster;
+    return catMatch && masterMatch;
+  });
 
   // Fetch affiliate status once user is authenticated
   const fetchAffiliateStatus = useCallback(async () => {
@@ -119,6 +131,39 @@ export function CourseCatalog({ courses }: Props) {
         </div>
       </div>
 
+      {/* Master filter pills */}
+      {masters.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-8">
+          <button
+            onClick={() => setActiveMaster("all")}
+            className={`font-headline font-black text-xs px-4 py-1.5 uppercase tracking-widest transition-all ${
+              activeMaster === "all"
+                ? "bg-primary-container text-white"
+                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+            }`}
+          >
+            Todos los masters
+          </button>
+          {masters.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setActiveMaster(activeMaster === m.id ? "all" : m.id)}
+              className={`flex items-center gap-2 font-headline font-black text-xs px-4 py-1.5 uppercase tracking-widest transition-all ${
+                activeMaster === m.id
+                  ? "bg-primary-container text-white"
+                  : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+              }`}
+            >
+              {m.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.photo_url} alt={m.name} className="w-5 h-5 object-cover rounded-full shrink-0" />
+              )}
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Comfenalco banner (only shown to authenticated affiliates) */}
       {authenticated && isAffiliate && (
         <div className="bg-secondary-container/10 border-l-4 border-secondary-container px-6 py-4 mb-8 flex items-center gap-3">
@@ -177,6 +222,21 @@ export function CourseCatalog({ courses }: Props) {
                   <p className="font-body text-sm text-on-surface-variant mb-4 leading-relaxed">
                     {course.description}
                   </p>
+                )}
+                {course.master_id && masterMap[course.master_id] && (
+                  <div className="flex items-center gap-2 mb-3">
+                    {masterMap[course.master_id].photo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={masterMap[course.master_id].photo_url!}
+                        alt={masterMap[course.master_id].name}
+                        className="w-6 h-6 object-cover rounded-full shrink-0"
+                      />
+                    )}
+                    <span className="font-headline font-bold text-xs text-outline uppercase tracking-widest">
+                      {masterMap[course.master_id].name}
+                    </span>
+                  </div>
                 )}
 
                 <div className="flex items-center justify-between mt-4">

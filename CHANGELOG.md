@@ -5,6 +5,24 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.7.0] — 2026-05-10
+
+### Added
+
+- **Masters + Academia unification**: Academia page now fetches active masters alongside courses. Each course card shows the master's avatar and name as a byline ("by [Name]"). New master filter pill row added below category tabs — click any master to filter only their courses; click again or "Todos los masters" to reset. Filters stack (category + master applied simultaneously).
+- **1UP Pass sticky banner**: fixed bottom banner that appears 3 seconds after page load on every public page. Shows "Obtén tu 1UP PASS" with a brief benefit description and a "VER PASS" CTA linking to `/app/pass`. Dismissable via X button; state stored in `sessionStorage` so it stays hidden for the rest of the session. On mobile it floats above the bottom nav.
+
+### Changed
+
+- **`CourseCatalog`**: accepts new `masters` prop (`{ id, name, photo_url }[]`). Builds an internal master lookup map for efficient byline rendering. Visible courses now filtered by both category and master simultaneously.
+- **`/academia` page**: added `masters` to the parallel data fetch; passes it to `CourseCatalog`.
+- **`(main)` layout**: `PassSuggestionBanner` added as a fixed overlay — no layout shift, always on top of `MobileBottomNav`.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.6.0] — 2026-05-10
 
 ### Added
