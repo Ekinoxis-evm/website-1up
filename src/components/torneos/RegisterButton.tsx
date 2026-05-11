@@ -82,7 +82,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       setRegistered(true);
       onRegistered?.();
       setLoading(false);
-      if (data.googleCalendarUrl) setCalendarModal({ googleUrl: data.googleCalendarUrl });
+      setCalendarModal({ googleUrl: data.googleCalendarUrl ?? "" });
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
       setLoading(false);
