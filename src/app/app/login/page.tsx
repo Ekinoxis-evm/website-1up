@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
-export default function AppLoginPage() {
+function safeRedirectTarget(raw: string | null): string {
+  if (!raw) return APP_URL;
+  try {
+    const parsed = new URL(raw);
+    const allowed = new URL(BASE_URL);
+    if (parsed.origin === allowed.origin) return parsed.toString();
+  } catch {
+    // ignore — fall through to default
+  }
+  return APP_URL;
+}
+
+function AppLoginInner() {
   const { login, authenticated, ready } = usePrivy();
+  const search = useSearchParams();
 
   useEffect(() => {
     if (ready && authenticated) {
-      window.location.href = APP_URL;
+      const target = safeRedirectTarget(search.get("redirect"));
+      window.location.href = target;
     }
-  }, [ready, authenticated]);
+  }, [ready, authenticated, search]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -55,7 +71,7 @@ export default function AppLoginPage() {
         {/* Back link */}
         <div className="text-center">
           <a
-            href={process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org"}
+            href={BASE_URL}
             className="font-headline font-bold text-xs uppercase tracking-widest text-on-background/30 hover:text-primary transition-colors"
           >
             ← Volver al sitio
@@ -66,5 +82,13 @@ export default function AppLoginPage() {
       {/* Bottom accent */}
       <div className="fixed bottom-0 left-0 w-full h-1 bg-secondary-container" />
     </div>
+  );
+}
+
+export default function AppLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <AppLoginInner />
+    </Suspense>
   );
 }

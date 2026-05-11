@@ -8,11 +8,11 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 
 const MODULES = [
   { href: "/app",            icon: "account_balance_wallet", label: "Wallet"     },
-  { href: "/app/identidad",  icon: "badge",                  label: "Identidad"  },
   { href: "/app/beneficios", icon: "handshake",              label: "Beneficios" },
   { href: "/app/pass",       icon: "card_membership",        label: "Pass"       },
   { href: "/app/academia",   icon: "school",                 label: "Academia"   },
-  { href: "/app/settings",   icon: "manage_accounts",        label: "Ajustes"    },
+  { href: "/app/mis-torneos",icon: "emoji_events",           label: "Torneos"    },
+  { href: "/app/ajustes",    icon: "manage_accounts",        label: "Ajustes"    },
 ];
 
 export function AppBottomNav() {

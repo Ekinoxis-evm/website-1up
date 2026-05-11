@@ -1,7 +1,7 @@
-import { SettingsTab } from "@/components/perfil/SettingsTab";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Ajustes — 1UP App" };
 
 export default function AppSettingsPage() {
-  return <SettingsTab />;
+  redirect("/app/ajustes");
 }

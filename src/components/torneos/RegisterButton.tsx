@@ -4,7 +4,8 @@ import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { CalendarPromptModal } from "./CalendarPromptModal";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
 interface Props {
   tournamentId:    number;
@@ -23,9 +24,10 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
 
   if (!authenticated) {
+    const returnUrl = encodeURIComponent(`${BASE_URL}/torneos/${tournamentId}`);
     return (
       <a
-        href={`${APP_URL}/login`}
+        href={`${APP_URL}/login?redirect=${returnUrl}`}
         className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
       >
         <span className="block skew-content">REGISTRARME</span>

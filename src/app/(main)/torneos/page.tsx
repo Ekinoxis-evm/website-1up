@@ -77,12 +77,12 @@ export default async function TorneosPage() {
       </section>
 
       <HallOfFameSection />
-      {(competitions ?? []).length > 0 && <HallOfFame competitions={competitions ?? []} />}
       <TorneosClient
         tournaments={(tournaments ?? []) as TournamentFull[]}
         intlTournaments={(intlTournaments ?? []) as IntlTournamentFull[]}
         games={games ?? []}
       />
+      {(competitions ?? []).length > 0 && <HallOfFame competitions={competitions ?? []} />}
     </>
   );
 }

@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabaseAdmin
     .from("tournament_registrations")
-    .select("tournament_id, status")
+    .select("tournament_id, status, registered_at, tournaments(id, name, date, location_type, image_url, status, games(id, name))")
     .eq("privy_user_id", privyUserId)
-    .neq("status", "cancelled");
+    .neq("status", "cancelled")
+    .order("registered_at", { ascending: false });
 
   return NextResponse.json(data ?? []);
 }
