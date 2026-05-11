@@ -144,7 +144,7 @@ export function OnboardingWizard({ games }: Props) {
 
   const step1Valid = nombre.trim().length > 0 && apellidos.trim().length > 0;
   const step2Valid = !usernameError;
-  const step3Valid = barrio.trim().length > 0 && birthDateComplete && !birthDateError;
+  const step3Valid = barrio.trim().length > 0 && birthDateComplete && !birthDateError && numDoc.trim().length > 0;
   // Referral is optional — block only if code typed but invalid or still checking
   const step5Valid = codeStatus !== "invalid" && codeStatus !== "checking";
   const step6Valid = privacyConsent;
@@ -164,8 +164,8 @@ export function OnboardingWizard({ games }: Props) {
           username:        username.trim().toLowerCase() || undefined,
           phoneCountry:    phoneNumber.trim() ? phoneCountry : undefined,
           phoneNumber:     phoneNumber.trim() || undefined,
-          tipoDocumento:   numDoc.trim() ? tipoDoc : undefined,
-          numeroDocumento: numDoc.trim() || undefined,
+          tipoDocumento:   tipoDoc,
+          numeroDocumento: numDoc.trim(),
           barrio:          barrio.trim(),
           birthDate:       birthDateStr,
           gameIds:         gameIds.length > 0 ? gameIds : undefined,
@@ -378,7 +378,7 @@ export function OnboardingWizard({ games }: Props) {
 
             <div className="bg-surface-container p-4">
               <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">
-                Documento <span className="text-outline/50 normal-case font-normal">(opcional)</span>
+                Documento de identidad *
               </p>
               <div className="flex gap-2">
                 <select

@@ -42,7 +42,8 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 | `recruitment_submissions` | `id`, `name`, `email`, `phone`, `category_id`, `game_id`, `gamertag`, `portfolio_url`, `message`, `source`, `created_at` |
 | `admin_users` | `id`, `email`, `added_by`, `created_at` |
 | `brand_logos` | `id`, `name`, `logo_url`, `website_url` (nullable), `sort_order`, `is_active`, `created_at` |
-| `tournaments` | `id`, `name`, `game_id` → games (SET NULL), `date` (timestamptz), `prize_pool_cop`, `max_participants`, `status` (upcoming\|live\|completed), `location_type` (presencial\|online\|mixto), `image_url`, `description`, `is_active`, `is_registration_open`, `sort_order`, `created_at` |
+| `tournaments` | `id`, `name`, `game_id` → games (SET NULL), `date` (timestamptz), `prize_pool_cop` (deprecated), `max_participants`, `status` (upcoming\|live\|completed), `location_type` (presencial\|online\|mixto), `image_url`, `description`, `is_active`, `is_registration_open`, `sort_order`, `created_at` |
+| `tournament_prizes` | `id`, `tournament_id` → tournaments (CASCADE), `position` (1–3), `prize_type` (tokens\|cop\|both), `amount_tokens` (nullable numeric), `amount_cop` (nullable int), `created_at` |
 
 ## Type system
 

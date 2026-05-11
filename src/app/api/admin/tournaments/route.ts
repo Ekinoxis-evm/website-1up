@@ -13,11 +13,28 @@ async function checkAdmin(req: NextRequest) {
 export async function GET() {
   const { data } = await supabaseAdmin
     .from("tournaments")
-    .select("*, games(id, name)")
-    .eq("is_active", true)
+    .select("*, games(id, name), tournament_prizes(*)")
     .order("sort_order")
     .order("date", { ascending: true });
   return NextResponse.json(data ?? []);
+}
+
+type PrizeRow = { position: number; prizeType: string; amountTokens: string; amountCop: string };
+
+async function savePrizes(tournamentId: number, prizes: PrizeRow[]) {
+  await supabaseAdmin.from("tournament_prizes").delete().eq("tournament_id", tournamentId);
+  if (!prizes?.length) return;
+  await supabaseAdmin.from("tournament_prizes").insert(
+    prizes.map((p) => ({
+      tournament_id: tournamentId,
+      position:      p.position,
+      prize_type:    p.prizeType as "tokens" | "cop" | "both",
+      amount_tokens: (p.prizeType === "tokens" || p.prizeType === "both") && p.amountTokens
+        ? parseFloat(p.amountTokens) : null,
+      amount_cop:    (p.prizeType === "cop" || p.prizeType === "both") && p.amountCop
+        ? parseInt(p.amountCop) : null,
+    }))
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -28,7 +45,7 @@ export async function POST(req: NextRequest) {
     name:                 body.name,
     game_id:              body.gameId || null,
     date:                 body.date || null,
-    prize_pool_cop:       body.prizePoolCop ? parseInt(body.prizePoolCop) : null,
+    prize_pool_cop:       null,
     max_participants:     body.maxParticipants ? parseInt(body.maxParticipants) : null,
     status:               body.status ?? "upcoming",
     location_type:        body.locationType ?? "presencial",
@@ -39,6 +56,7 @@ export async function POST(req: NextRequest) {
     sort_order:           body.sortOrder ?? 0,
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (body.prizes?.length) await savePrizes(data.id, body.prizes);
   revalidatePath("/torneos");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);
@@ -47,11 +65,11 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data } = await supabaseAdmin.from("tournaments").update({
+  const { data, error } = await supabaseAdmin.from("tournaments").update({
     name:                 body.name,
     game_id:              body.gameId || null,
     date:                 body.date || null,
-    prize_pool_cop:       body.prizePoolCop ? parseInt(body.prizePoolCop) : null,
+    prize_pool_cop:       null,
     max_participants:     body.maxParticipants ? parseInt(body.maxParticipants) : null,
     status:               body.status,
     location_type:        body.locationType,
@@ -61,6 +79,8 @@ export async function PUT(req: NextRequest) {
     is_registration_open: body.isRegistrationOpen,
     sort_order:           body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await savePrizes(body.id, body.prizes ?? []);
   revalidatePath("/torneos");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);

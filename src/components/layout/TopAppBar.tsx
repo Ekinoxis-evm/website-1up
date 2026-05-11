@@ -15,7 +15,6 @@ const NAV_LINKS = [
   { href: "/gaming-tower", label: "Tower"     },
   { href: "/juegos",       label: "Juegos"    },
   { href: "/team",         label: "Team"      },
-  { href: "/masters",      label: "Masters"   },
   { href: "/recreativo",   label: "Recreativo"},
   { href: "/#marketplace", label: "Marketplace"},
 ];

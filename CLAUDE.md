@@ -30,8 +30,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/juegos` | `(main)` | Games showcase by category |
 | `/team` | `(main)` | Pro roster + Hall of Fame |
-| `/masters` | `(main)` | Masters showcase — coaches and specialists |
-| `/academia` | `(main)` | Course catalog + MercadoPago checkout |
+| `/academia` | `(main)` | Course catalog + Masters profiles + MercadoPago checkout |
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page for app subdomain |
@@ -74,6 +73,10 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET\|POST\|PUT /api/admin/referral-codes` | isAdmin | Referral code CRUD (create, toggle active, update description/max_uses) |
 | `GET\|POST\|PUT\|DELETE /api/admin/brand-logos` | isAdmin | Brand logo CRUD (GET is public — active only) |
 | `GET\|POST\|PUT\|DELETE /api/admin/tournaments` | isAdmin | Tournament CRUD (GET is public — active only, joined with game name) |
+| `GET\|POST\|DELETE /api/user/tournament-registrations` | Privy user | List own registrations / register for tournament (RPC) / cancel |
+| `GET\|PATCH /api/admin/tournament-registrations` | isAdmin | List all registrations (filter by tournamentId) / update status (attended/no_show) |
+| `POST\|DELETE /api/admin/tournament-results` | isAdmin | Upsert podium result (position 1–3 with points) / delete by id |
+| `GET\|POST\|PUT\|DELETE /api/admin/international-tournaments` | isAdmin | International tournament CRUD |
 
 ---
 
@@ -104,7 +107,12 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
 | `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
 | `brand_logos` | name, logo_url, website_url (optional — makes logo clickable), sort_order, is_active — animated marquee banner on home |
-| `tournaments` | name, game_id FK (nullable → games), date, prize_pool_cop, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, is_active, is_registration_open, sort_order |
+| `tournaments` | name, game_id FK (nullable → games), date, prize_pool_cop (deprecated — use tournament_prizes), max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, is_active, is_registration_open, sort_order |
+| `tournament_prizes` | tournament_id FK → tournaments (CASCADE), position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens (nullable NUMERIC), amount_cop (nullable INTEGER) — DB CHECK enforces type/amount consistency |
+| `tournament_registrations` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at — UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
+| `international_tournaments` | name, organizer, date, country, city, game_id FK (nullable → games), registration_link, image_url, description, is_active, sort_order — no prizes/registrations/capacity lifecycle |
+| `tournament_results` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), position (1–3), points, awarded_by — UNIQUE per tournament+position and per tournament+user |
+| `hall_of_fame` | PostgreSQL VIEW: user_profile_id, username, nombre, apellidos, gold_count, silver_count, bronze_count, total_points — ordered by points DESC then gold_count DESC |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 

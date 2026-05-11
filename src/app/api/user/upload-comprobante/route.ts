@@ -3,6 +3,7 @@ import { verifyToken } from "@/lib/privy";
 import { uploadComprobante } from "@/lib/blob";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "webp", "pdf"]);
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
 
   if (!ALLOWED_MIME.has(file.type))
     return NextResponse.json({ error: "Tipo de archivo no permitido (jpg, png, webp, pdf)" }, { status: 400 });
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_EXT.has(ext))
+    return NextResponse.json({ error: "Extensión no permitida (jpg, png, webp, pdf)" }, { status: 400 });
 
   if (file.size > MAX_BYTES)
     return NextResponse.json({ error: "Archivo demasiado grande (máx 5MB)" }, { status: 400 });

@@ -174,9 +174,10 @@ export async function POST(req: NextRequest) {
   revalidatePath("/admin/pass-orders");
 
   if (email && order) {
+    const displayName = [profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || email;
     sendPassTokenEmails({
       userEmail:    email,
-      userName:     email,
+      userName:     displayName,
       orderId:      order.id,
       tokenAmount:  config.price_token,
       durationDays: config.duration_days,
@@ -198,6 +199,8 @@ async function handleBankOrder(
   if (!walletAddress) return NextResponse.json({ error: "walletAddress es requerido." }, { status: 400 });
   if (!bankAccountId) return NextResponse.json({ error: "Cuenta bancaria requerida." }, { status: 400 });
   if (!comprobantePath || !comprobanteUrl) return NextResponse.json({ error: "Comprobante requerido." }, { status: 400 });
+  if (!comprobantePath.startsWith("comprobantes/pending/"))
+    return NextResponse.json({ error: "Ruta de comprobante inválida." }, { status: 400 });
 
   const { data: bankAccount } = await supabaseAdmin
     .from("bank_accounts")
@@ -256,9 +259,13 @@ async function handleBankOrder(
       .eq("id", bankAccountId)
       .single();
 
+    const displayName = profile
+      ? ([profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || email)
+      : email;
+
     sendPassBankEmails({
       userEmail:    email,
-      userName:     email,
+      userName:     displayName,
       orderId:      inserted.id,
       tokenAmount:  config.price_token,
       durationDays: config.duration_days,

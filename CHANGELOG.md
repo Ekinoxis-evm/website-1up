@@ -5,6 +5,94 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.10.0] — 2026-05-10
+
+### Added
+
+- **Masters merged into Academia**: `/academia` now renders the full master profiles section (photo, bio, social links, topics, courses per master) below the course catalog using the existing `MasterGrid` component. `/masters` route deleted. Nav entry for Masters removed from TopAppBar and MobileBottomNav.
+- **Cédula de ciudadanía mandatory**: `numero_documento` is now required in the onboarding wizard. `step3Valid` enforces non-empty doc number; label updated from "(opcional)" to "*"; submit always sends `tipoDocumento` + `numeroDocumento`.
+
+### Fixed
+
+- **Pass purchase email `userName`**: both token-path and bank-path pass order emails now send the user's actual full name (`nombre + apellidos`) instead of the raw email address.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.9.0] — 2026-05-10
+
+### Added
+
+- **Torneos Internacionales**: new `international_tournaments` table (separate from local tournaments — no prizes, no registrations, no capacity). Public section "TORNEOS INTERNACIONALES" on `/torneos`. External registration link opens in new tab.
+- **`AdminTorneosIntlClient`**: full CRUD admin panel at `/admin/torneos-internacionales` — fields: name, organizer, game, country, city, date, registration link, description, image, sort order, active flag.
+- **`IntlTournamentCard`**: public card component — country/city badge, organizer, game, date, "VER INSCRIPCIÓN" external link. No registration flow (different lifecycle than local tournaments).
+- **Hall of Fame (v2.8.0)**: `tournament_results` table stores 1°/2°/3° podium per tournament with points (10/5/3 default). PostgreSQL `hall_of_fame` VIEW aggregates gold/silver/bronze counts and total points, ordered by points then golds.
+- **`HallOfFameSection`**: Server Component rendering the live leaderboard from the `hall_of_fame` view. Rendered at the top of `/torneos`. Shows rank, player name, medal counts, points. Returns null when no data (clean empty state).
+- **`AdminTournamentResultsClient`** at `/admin/tournament-results`: select a completed/live tournament → see its registered attendees → assign 1°/2°/3° positions from a dropdown. Saves via `/api/admin/tournament-results` (POST upserts by tournament+position). Points are pre-filled (10/5/3) with optional override. Shows existing results panel alongside with delete action.
+- **`src/lib/tournamentPoints.ts`**: `POINTS_BY_POSITION` constant and `pointsFor(position)` helper.
+- Admin sidebar: "Intl. Torneos" (`public` icon) and "Hall of Fame" (`leaderboard` icon) added.
+
+### Changed
+
+- `/torneos` page: now fetches international tournaments in parallel and renders `HallOfFameSection` above `TorneosClient`.
+- `TorneosClient`: accepts `intlTournaments` prop; renders dedicated "TORNEOS INTERNACIONALES" section after historial.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.8.0] — 2026-05-10
+
+### Added
+
+- **Tournament registrations**: new `tournament_registrations` table with status lifecycle (`registered → attended / no_show / cancelled`). Capacity check and uniqueness enforced atomically via PostgreSQL RPC `register_for_tournament` — no TOCTOU race on concurrent registrations.
+- **`RegisterButton`**: client component on each tournament card and detail modal. Unauthenticated users are sent to `/app/login`; logged-in users register in one click; already-registered state shows "INSCRITO" badge.
+- **`CalendarPromptModal`**: appears after successful registration — "AÑADIR A GOOGLE CALENDAR" (opens pre-filled URL) or "DESCARGAR .ICS" (Apple/Outlook). Closes on "Ahora no" or backdrop click.
+- **`src/lib/calendar.ts`**: `buildGoogleCalendarUrl` and `buildIcsContent` — pure functions, UTC timestamps, 2h default duration.
+- **Registration email**: `sendTournamentRegistrationEmail` in `src/lib/email.ts` — sent to user on successful registration with tournament details and Google Calendar CTA.
+- **`/api/user/tournament-registrations`**: POST (register via RPC), GET (user's active registrations), DELETE (cancel — sets `cancelled_at`).
+- **`/api/admin/tournament-registrations`**: GET (list all with filters by tournament), PATCH (mark attended / no_show).
+- **`/admin/tournament-registrations`**: admin panel listing all registrations with tournament + user details, filters by tournament and status, "ASISTIÓ / NO" action buttons, CSV export.
+- Admin sidebar: "Inscripciones" entry (`how_to_reg` icon) added to Sitio Web group.
+- **Registration status shown on cards**: `TorneosClient` fetches user's registered tournament IDs on mount when authenticated; passes `isRegistered` to cards and detail modal.
+
+### Changed
+
+- `TorneosClient`: adds Privy auth hook; fetches `/api/user/tournament-registrations` on mount when authenticated; passes `isRegistered` to `TorneoCard` and `TournamentDetailModal`.
+- `TournamentDetailModal`: REGISTRARME CTA replaced with `<RegisterButton>`.
+- `TorneoCard`: REGISTRARME link replaced with `<RegisterButton compact>` when registration is open.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.7.1] — 2026-05-10
+
+### Added
+
+- **Tournament prize structure**: new `tournament_prizes` table (Supabase migration applied). Each tournament can define 1–3 prizes by position (1°/2°/3°) with type `tokens`, `cop`, or `both`. Amounts enforced by DB CHECK constraints.
+- **`AdminTorneoPrizesEditor`**: inline prize editor inside the tournament modal — replaces the single "Premio (COP)" input.
+- **`PrizeBadge`** / **`PrizePodium`**: compact card badge and full 🥇🥈🥉 podium view (used in the detail modal).
+- **`TournamentDetailModal`**: full-screen detail modal showing cover, date/time, description, prize podium, CTA. Opened via "VER MÁS" button on each card.
+- **`TorneosClient`**: client component owning filter state (month + game select) and modal open state.
+- **Month + game filters** on `/torneos`: auto-derived from actual tournament data; "Limpiar" resets. Empty state adapts to filtered vs unfiltered.
+
+### Changed
+
+- `/torneos` slimmed to a thin Server Component feeding `TorneosClient`.
+- Admin query and admin client updated to include `tournament_prizes(*)` join.
+- Tournaments API POST/PUT persist prizes atomically (delete-then-insert). `prize_pool_cop` no longer written.
+- Existing `prize_pool_cop` values backfilled into `tournament_prizes` as position-1 COP prizes.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.7.0] — 2026-05-10
 
 ### Added

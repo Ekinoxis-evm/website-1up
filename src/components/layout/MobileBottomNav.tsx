@@ -9,7 +9,6 @@ const PUBLIC_TABS = [
   { href: "/gaming-tower", icon: "domain",          label: "TOWER"  },
   { href: "/team",         icon: "groups",          label: "TEAM"   },
   { href: "/academia",     icon: "school",          label: "ACADEMY"},
-  { href: "/masters",      icon: "military_tech",   label: "MASTERS"},
 ];
 
 export function MobileBottomNav() {

@@ -131,6 +131,65 @@ export async function sendPassTokenEmails(opts: {
   ]);
 }
 
+// ── Tournament registration ─────────────────────────────────────
+
+export async function sendTournamentRegistrationEmail(opts: {
+  userEmail:       string;
+  userName:        string;
+  tournamentName:  string;
+  tournamentDate:  string | null;
+  locationType:    string;
+  googleCalendarUrl: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { userEmail, userName, tournamentName, tournamentDate, locationType, googleCalendarUrl } = opts;
+  const dateStr = tournamentDate
+    ? new Date(tournamentDate).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+    : "Por confirmar";
+
+  const locLabel: Record<string, string> = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to:   userEmail,
+      subject: `✅ Inscripción confirmada — ${tournamentName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <div style="background:#e91e8c;height:4px"></div>
+          <div style="padding:32px 24px">
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
+              ¡Estás inscrito!
+            </h1>
+            <p style="color:#666;margin:0 0 24px">Hola ${userName}, tu inscripción al torneo ha sido confirmada.</p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Torneo</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Fecha</td>
+                  <td style="padding:8px 0;text-align:right">${dateStr}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Modalidad</td>
+                  <td style="padding:8px 0;text-align:right">${locLabel[locationType] ?? locationType}</td></tr>
+            </table>
+            <div style="margin-top:24px">
+              <a href="${googleCalendarUrl}"
+                style="display:inline-block;background:#e91e8c;color:#fff;font-weight:900;text-transform:uppercase;padding:12px 24px;text-decoration:none;font-size:13px">
+                AÑADIR A GOOGLE CALENDAR
+              </a>
+            </div>
+            <p style="color:#999;font-size:12px;margin-top:24px">
+              Estaremos en contacto con los detalles del torneo. ¡Mucha suerte!
+            </p>
+          </div>
+          <div style="background:#111;padding:16px 24px">
+            <p style="color:#666;font-size:11px;margin:0">1UP Gaming Tower · Colombia · 1upesports.org</p>
+          </div>
+        </div>
+      `,
+    }),
+  ]);
+}
+
 // ── Pass purchase (bank transfer) ───────────────────────────────
 
 export async function sendPassBankEmails(opts: {

@@ -4,13 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { ImageUpload } from "@/components/admin/ImageUpload";
-import { AdminTorneoPrizesEditor, type PrizeFormRow } from "@/components/admin/AdminTorneoPrizesEditor";
-import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
+import type { InternationalTournament, Game } from "@/types/database.types";
 
-type TournamentWithGame = Tournament & {
-  games:             Pick<Game, "id" | "name"> | null;
-  tournament_prizes: TournamentPrize[];
-};
+type TournamentWithGame = InternationalTournament & { games: Pick<Game, "id" | "name"> | null };
 
 interface Props {
   tournaments: TournamentWithGame[];
@@ -18,49 +14,18 @@ interface Props {
 }
 
 type FormState = {
-  name: string; gameId: string; date: string;
-  maxParticipants: string; status: "upcoming" | "live" | "completed";
-  locationType: "presencial" | "online" | "mixto"; imageUrl: string;
-  description: string; isActive: boolean; isRegistrationOpen: boolean;
-  sortOrder: number; prizes: PrizeFormRow[];
+  name: string; organizer: string; date: string; country: string; city: string;
+  gameId: string; registrationLink: string; imageUrl: string; description: string;
+  isActive: boolean; sortOrder: number;
 };
 
 const EMPTY: FormState = {
-  name: "", gameId: "", date: "", maxParticipants: "",
-  status: "upcoming", locationType: "presencial", imageUrl: "",
-  description: "", isActive: true, isRegistrationOpen: false, sortOrder: 0, prizes: [],
+  name: "", organizer: "", date: "", country: "", city: "",
+  gameId: "", registrationLink: "", imageUrl: "", description: "",
+  isActive: true, sortOrder: 0,
 };
 
-const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" };
-const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary", completed: "text-outline" };
-const LOC_LABELS    = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
-
-function prizeToFormRow(p: TournamentPrize): PrizeFormRow {
-  return {
-    position:     p.position as 1 | 2 | 3,
-    prizeType:    p.prize_type,
-    amountTokens: p.amount_tokens ? String(p.amount_tokens) : "",
-    amountCop:    p.amount_cop    ? String(p.amount_cop)    : "",
-  };
-}
-
-function firstPrizeSummary(prizes: TournamentPrize[]): string {
-  const first = prizes.find((p) => p.position === 1);
-  if (!first) return "—";
-  if (first.prize_type === "tokens" && first.amount_tokens)
-    return `${Number(first.amount_tokens).toLocaleString("es-CO")} $1UP`;
-  if (first.prize_type === "cop" && first.amount_cop)
-    return `$${first.amount_cop.toLocaleString("es-CO")}`;
-  if (first.prize_type === "both") {
-    const parts: string[] = [];
-    if (first.amount_tokens) parts.push(`${Number(first.amount_tokens).toLocaleString("es-CO")} $1UP`);
-    if (first.amount_cop)    parts.push(`$${first.amount_cop.toLocaleString("es-CO")}`);
-    return parts.join(" + ");
-  }
-  return "—";
-}
-
-export function AdminTorneosClient({ tournaments, games }: Props) {
+export function AdminTorneosIntlClient({ tournaments, games }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
   const [open, setOpen]       = useState(false);
@@ -77,18 +42,17 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
   function openEdit(t: TournamentWithGame) {
     setEditing(t);
     setForm({
-      name:               t.name,
-      gameId:             t.game_id ? String(t.game_id) : "",
-      date:               t.date ? t.date.slice(0, 16) : "",
-      maxParticipants:    t.max_participants ? String(t.max_participants) : "",
-      status:             t.status,
-      locationType:       t.location_type,
-      imageUrl:           t.image_url ?? "",
-      description:        t.description ?? "",
-      isActive:           t.is_active,
-      isRegistrationOpen: t.is_registration_open,
-      sortOrder:          t.sort_order,
-      prizes:             [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position).map(prizeToFormRow),
+      name:             t.name,
+      organizer:        t.organizer ?? "",
+      date:             t.date ? t.date.slice(0, 16) : "",
+      country:          t.country ?? "",
+      city:             t.city ?? "",
+      gameId:           t.game_id ? String(t.game_id) : "",
+      registrationLink: t.registration_link ?? "",
+      imageUrl:         t.image_url ?? "",
+      description:      t.description ?? "",
+      isActive:         t.is_active,
+      sortOrder:        t.sort_order,
     });
     setOpen(true);
   }
@@ -98,7 +62,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
     setLoading(true); setSaveError(null);
     const method = editing ? "PUT" : "POST";
     const body   = { ...form, ...(editing ? { id: editing.id } : {}) };
-    const res = await fetch("/api/admin/tournaments", {
+    const res = await fetch("/api/admin/international-tournaments", {
       method, headers: await authHeaders(), body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -110,8 +74,8 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("¿Eliminar este torneo?")) return;
-    await fetch("/api/admin/tournaments", {
+    if (!confirm("¿Eliminar este torneo internacional?")) return;
+    await fetch("/api/admin/international-tournaments", {
       method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id }),
     });
     router.refresh();
@@ -126,30 +90,27 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-headline font-black text-3xl uppercase tracking-tighter">
-            TOR<span className="text-primary-container">NEOS</span>
+            TORNEOS <span className="text-primary-container">INTERNACIONALES</span>
           </h1>
           <div className="h-1 w-16 bg-primary-container mt-2" />
           <p className="font-body text-sm text-outline mt-2">
-            Gestiona los torneos del ecosistema 1UP.
+            Torneos de alcance internacional y circuitos globales.
           </p>
         </div>
         <button
           onClick={() => { setEditing(null); setForm(EMPTY); setOpen(true); }}
           className="bg-primary-container text-white font-headline font-black text-sm px-6 py-3 skew-fix hover:neo-shadow-pink transition-all"
         >
-          <span className="block skew-content">+ NUEVO TORNEO</span>
+          <span className="block skew-content">+ NUEVO</span>
         </button>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-container-high">
-              {["Torneo", "Juego", "Fecha", "1° Premio", "Estado", "Ubicación", "Reg.", ""].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-headline font-black text-xs uppercase tracking-widest text-outline">
-                  {h}
-                </th>
+              {["Torneo", "Organizador", "Juego", "País / Ciudad", "Fecha", "Registro", ""].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-headline font-black text-xs uppercase tracking-widest text-outline">{h}</th>
               ))}
             </tr>
           </thead>
@@ -165,30 +126,28 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                     <span className="font-headline font-bold text-on-surface">{t.name}</span>
                   </div>
                 </td>
+                <td className="px-4 py-3 font-body text-on-surface/70">{t.organizer ?? "—"}</td>
                 <td className="px-4 py-3 font-body text-on-surface/70">{t.games?.name ?? "—"}</td>
+                <td className="px-4 py-3 font-body text-on-surface/70">
+                  {[t.city, t.country].filter(Boolean).join(", ") || "—"}
+                </td>
                 <td className="px-4 py-3 font-body text-on-surface/70 whitespace-nowrap">
                   {t.date ? new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-4 py-3 font-body text-on-surface/70">
-                  {firstPrizeSummary(t.tournament_prizes ?? [])}
-                </td>
                 <td className="px-4 py-3">
-                  <span className={`font-headline font-bold text-xs uppercase ${STATUS_COLORS[t.status]}`}>
-                    {STATUS_LABELS[t.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 font-body text-on-surface/70">{LOC_LABELS[t.location_type]}</td>
-                <td className="px-4 py-3">
-                  <span className={`font-headline font-bold text-xs uppercase ${t.is_registration_open ? "text-secondary" : "text-outline/40"}`}>
-                    {t.is_registration_open ? "Abierto" : "Cerrado"}
-                  </span>
+                  {t.registration_link ? (
+                    <a href={t.registration_link} target="_blank" rel="noopener noreferrer"
+                      className="font-headline font-bold text-xs text-secondary hover:text-primary uppercase tracking-widest transition-colors">
+                      VER →
+                    </a>
+                  ) : <span className="text-outline/30 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2 justify-end">
-                    <button onClick={() => openEdit(t)} className="p-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors" title="Editar">
+                    <button onClick={() => openEdit(t)} className="p-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors">
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
-                    <button onClick={() => handleDelete(t.id)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors" title="Eliminar">
+                    <button onClick={() => handleDelete(t.id)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors">
                       <span className="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>
@@ -197,9 +156,9 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
             ))}
             {tournaments.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
-                  <span className="material-symbols-outlined text-4xl text-outline/30">emoji_events</span>
-                  <p className="font-headline text-sm text-outline/50 uppercase mt-2">Sin torneos aún</p>
+                <td colSpan={7} className="py-16 text-center">
+                  <span className="material-symbols-outlined text-4xl text-outline/30">public</span>
+                  <p className="font-headline text-sm text-outline/50 uppercase mt-2">Sin torneos internacionales aún</p>
                 </td>
               </tr>
             )}
@@ -207,24 +166,19 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
         </table>
       </div>
 
-      {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
           <div className="bg-surface-container w-full max-w-2xl p-8 relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setOpen(false)} className="absolute top-4 right-4 text-outline hover:text-on-surface">
               <span className="material-symbols-outlined">close</span>
             </button>
-
             <h2 className="font-headline font-black text-2xl uppercase tracking-tighter mb-6">
-              {editing ? "EDITAR" : "NUEVO"} <span className="text-primary-container">TORNEO</span>
+              {editing ? "EDITAR" : "NUEVO"} <span className="text-primary-container">TORNEO INTL.</span>
             </h2>
 
             <div className="space-y-4">
-              {/* Image */}
               <div>
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">
-                  Imagen
-                </label>
+                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Imagen</label>
                 <ImageUpload
                   currentUrl={form.imageUrl || null}
                   folder="tournaments"
@@ -235,16 +189,20 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 />
               </div>
 
-              {/* Name */}
               <div>
                 <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Nombre *</label>
                 <input value={form.name} onChange={(e) => f("name", e.target.value)}
-                  placeholder="Ej: Copa 1UP — Valorant S1"
+                  placeholder="Ej: IEM Katowice 2026"
                   className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
               </div>
 
-              {/* Game + Status row */}
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Organizador</label>
+                  <input value={form.organizer} onChange={(e) => f("organizer", e.target.value)}
+                    placeholder="Ej: ESL Gaming"
+                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
+                </div>
                 <div>
                   <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Juego</label>
                   <select value={form.gameId} onChange={(e) => f("gameId", e.target.value)}
@@ -253,50 +211,36 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                     {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Estado</label>
-                  <select value={form.status} onChange={(e) => f("status", e.target.value as FormState["status"])}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none">
-                    <option value="upcoming">Próximo</option>
-                    <option value="live">En vivo</option>
-                    <option value="completed">Finalizado</option>
-                  </select>
-                </div>
               </div>
 
-              {/* Date + Location row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha y hora</label>
-                  <input type="datetime-local" value={form.date} onChange={(e) => f("date", e.target.value)}
+                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">País</label>
+                  <input value={form.country} onChange={(e) => f("country", e.target.value)}
+                    placeholder="Ej: Polonia"
                     className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Modalidad</label>
-                  <select value={form.locationType} onChange={(e) => f("locationType", e.target.value as FormState["locationType"])}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none">
-                    <option value="presencial">Presencial</option>
-                    <option value="online">Online</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
+                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Ciudad</label>
+                  <input value={form.city} onChange={(e) => f("city", e.target.value)}
+                    placeholder="Ej: Katowice"
+                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
                 </div>
               </div>
 
-              {/* Max participants */}
-              <div className="w-1/2 pr-2">
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Máx. participantes</label>
-                <input type="number" value={form.maxParticipants} onChange={(e) => f("maxParticipants", e.target.value)}
-                  placeholder="Ej: 32"
+              <div>
+                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha y hora</label>
+                <input type="datetime-local" value={form.date} onChange={(e) => f("date", e.target.value)}
                   className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
               </div>
 
-              {/* Prizes editor */}
-              <AdminTorneoPrizesEditor
-                value={form.prizes}
-                onChange={(prizes) => f("prizes", prizes)}
-              />
+              <div>
+                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Link de inscripción</label>
+                <input value={form.registrationLink} onChange={(e) => f("registrationLink", e.target.value)}
+                  placeholder="https://..."
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
+              </div>
 
-              {/* Description */}
               <div>
                 <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Descripción</label>
                 <textarea value={form.description} onChange={(e) => f("description", e.target.value)}
@@ -304,17 +248,12 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                   className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none" />
               </div>
 
-              {/* Sort + toggles row */}
               <div className="flex gap-6 items-center">
                 <div className="w-24">
                   <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Orden</label>
                   <input type="number" value={form.sortOrder} onChange={(e) => f("sortOrder", parseInt(e.target.value) || 0)}
                     className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer self-end pb-3">
-                  <input type="checkbox" checked={form.isRegistrationOpen} onChange={(e) => f("isRegistrationOpen", e.target.checked)} className="w-4 h-4 accent-primary-container" />
-                  <span className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Registro abierto</span>
-                </label>
                 <label className="flex items-center gap-2 cursor-pointer self-end pb-3">
                   <input type="checkbox" checked={form.isActive} onChange={(e) => f("isActive", e.target.checked)} className="w-4 h-4 accent-primary-container" />
                   <span className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Activo</span>

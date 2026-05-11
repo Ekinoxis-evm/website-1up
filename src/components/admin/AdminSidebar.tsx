@@ -15,7 +15,10 @@ const GROUPS = [
       { href: "/admin/masters",      icon: "star",            label: "Masters"       },
       { href: "/admin/site-images",  icon: "image",           label: "Imágenes Sitio" },
       { href: "/admin/brand-logos",  icon: "storefront",      label: "Logos Banner"   },
-      { href: "/admin/torneos",      icon: "emoji_events",    label: "Torneos"        },
+      { href: "/admin/torneos",                   icon: "emoji_events",  label: "Torneos"          },
+      { href: "/admin/tournament-registrations",  icon: "how_to_reg",    label: "Inscripciones"    },
+      { href: "/admin/torneos-internacionales",   icon: "public",        label: "Intl. Torneos"    },
+      { href: "/admin/tournament-results",        icon: "leaderboard",   label: "Hall of Fame"     },
     ],
   },
   {

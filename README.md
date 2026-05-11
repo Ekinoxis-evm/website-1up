@@ -58,8 +58,9 @@ src/
     home/             # Home page
     tower/            # Gaming Tower
     team/             # Team + Hall of Fame (PlayerCard with social PNG icons)
-    masters/          # Masters page (HeroMasters, MasterCard, MasterGrid)
+    masters/          # MasterCard, MasterGrid — shared with /academia page
     academia/         # Course catalog + PaymentFeedback
+    torneos/          # Tournament cards, detail modal, register button, calendar modal, HallOfFameSection, IntlTournamentCard
     perfil/           # WalletTab (balance card + HISTORIAL/ÓRDENES tabs — send/receive/buy, Blockscout tx history, purchase orders), SettingsTab, IdentidadTab, BeneficiosTab
     app/              # App shell (AppSidebar — desktop, AppBottomNav — mobile)
     admin/            # Admin panel components
@@ -71,10 +72,13 @@ src/
     privy.ts          # Token verification + email resolution
     admin.ts          # isAdmin check (env + DB)
     viem.ts           # Public client + ERC-20 ABIs ($1UP token)
-    passVerifier.ts   # On-chain pass tx verification — getTransactionReceipt + decodeEventLog
-    socialIcons.ts    # Platform → /public/socialmedia/ icon path mapping
-    comfenalco.ts     # Comfenalco API client (stub — awaiting credentials)
-    mercadopago.ts    # MP preference creation + webhook signature
+    passVerifier.ts       # On-chain pass tx verification — getTransactionReceipt + decodeEventLog
+    socialIcons.ts        # Platform → /public/socialmedia/ icon path mapping
+    comfenalco.ts         # Comfenalco API client (stub — awaiting credentials)
+    mercadopago.ts        # MP preference creation + webhook signature
+    email.ts              # Resend emails — token orders, pass purchases (token+bank), tournament registrations
+    calendar.ts           # buildGoogleCalendarUrl + buildIcsContent (UTC, 2h duration)
+    tournamentPoints.ts   # POINTS_BY_POSITION {1:10, 2:5, 3:3} + pointsFor()
   types/
     database.types.ts # Full Supabase type definitions (manually maintained)
 public/
@@ -185,12 +189,12 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — Hero, 1UP Pass section (benefits + how to buy), Games Gallery, Recruitment |
+| `/` | Home — Hero, Brands Banner (animated marquee), 1UP Pass section, Games Gallery, Marketplace teaser, Recruitment |
+| `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, detail modal, registration CTA, month+game filters. International tournaments section. |
 | `/gaming-tower` | 6-floor breakdown, Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Pro roster + Hall of Fame + Recruitment |
-| `/masters` | Masters showcase — coaches, courses, social links |
-| `/academia` | Course catalog + MercadoPago checkout |
+| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + MercadoPago checkout |
 | `/juegos` | Games showcase by category |
 | `/recreativo` | Casual gaming section |
 | `/perfil` | Legacy profile page (redirects to app subdomain) |
@@ -199,10 +203,10 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code) |
+| `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code), purchase orders, Blockscout tx history |
 | `/app/identidad` | Personal data — nombre, apellidos, @username, phone, games, document |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
-| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), juegos, referral code (optional), privacy consent (required) |
+| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
 | `/app/pass` | 1UP Pass status + purchase — two payment methods: $1UP tokens (on-chain, instant) or bank transfer (manual admin approval, max 24h) |
 | `/app/academia` | My enrolled courses + content access |
 | `/app/settings` | Linked accounts management |
@@ -229,6 +233,11 @@ npm run dev
 | `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
 | `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
 | `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
+| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sort order |
+| `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
+| `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
+| `/admin/tournament-results` | Podium results — select tournament → assign 1°/2°/3° from registered players → save points (10/5/3 default, custom override) |
+| `/admin/brand-logos` | Brands Banner CRUD — logos for the animated marquee on home (name, logo, optional link, sort order) |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
 | `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
@@ -275,6 +284,13 @@ npm run dev
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
+| `brand_logos` | Home marquee banner — name, `logo_url`, `website_url` (optional, makes logo clickable), `sort_order`, `is_active` |
+| `tournaments` | Esports tournaments — game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), is_registration_open, sort_order |
+| `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens, amount_cop. DB CHECK enforces type/amount consistency |
+| `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
+| `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
+| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by. UNIQUE per tournament+position and per tournament+user |
+| `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
 
 ---
 
@@ -293,6 +309,8 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/floors/{id}/cover` | Floor images (Gaming Tower) |
 | `images/masters/{id}/cover` | Master photos |
 | `images/aliados/{id}/cover` | Partner logos |
+| `images/brand-logos/{id}/cover` | Home marquee brand/sponsor logos |
+| `images/tournaments/{id}/cover` | Tournament cover images |
 | `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 
 Static brand icons (instagram, tiktok, etc.) live in `/public/socialmedia/` — not uploaded, shipped with the app.

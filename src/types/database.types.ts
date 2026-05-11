@@ -79,6 +79,193 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_results: {
+        Row: {
+          id:              number
+          tournament_id:   number
+          user_profile_id: number
+          position:        number
+          points:          number
+          awarded_at:      string
+          awarded_by:      string | null
+        }
+        Insert: {
+          id?:              number
+          tournament_id:    number
+          user_profile_id:  number
+          position:         number
+          points:           number
+          awarded_at?:      string
+          awarded_by?:      string | null
+        }
+        Update: {
+          id?:              number
+          tournament_id?:   number
+          user_profile_id?: number
+          position?:        number
+          points?:          number
+          awarded_at?:      string
+          awarded_by?:      string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_results_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_results_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      international_tournaments: {
+        Row: {
+          id:                number
+          name:              string
+          organizer:         string | null
+          date:              string | null
+          country:           string | null
+          city:              string | null
+          game_id:           number | null
+          registration_link: string | null
+          image_url:         string | null
+          description:       string | null
+          is_active:         boolean
+          sort_order:        number
+          created_at:        string
+        }
+        Insert: {
+          id?:                number
+          name:               string
+          organizer?:         string | null
+          date?:              string | null
+          country?:           string | null
+          city?:              string | null
+          game_id?:           number | null
+          registration_link?: string | null
+          image_url?:         string | null
+          description?:       string | null
+          is_active?:         boolean
+          sort_order?:        number
+          created_at?:        string
+        }
+        Update: {
+          id?:                number
+          name?:              string
+          organizer?:         string | null
+          date?:              string | null
+          country?:           string | null
+          city?:              string | null
+          game_id?:           number | null
+          registration_link?: string | null
+          image_url?:         string | null
+          description?:       string | null
+          is_active?:         boolean
+          sort_order?:        number
+          created_at?:        string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "international_tournaments_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_registrations: {
+        Row: {
+          id:              number
+          tournament_id:   number
+          user_profile_id: number
+          privy_user_id:   string
+          status:          "registered" | "cancelled" | "attended" | "no_show"
+          registered_at:   string
+          cancelled_at:    string | null
+          notes:           string | null
+        }
+        Insert: {
+          id?:              number
+          tournament_id:    number
+          user_profile_id:  number
+          privy_user_id:    string
+          status?:          "registered" | "cancelled" | "attended" | "no_show"
+          registered_at?:   string
+          cancelled_at?:    string | null
+          notes?:           string | null
+        }
+        Update: {
+          id?:              number
+          tournament_id?:   number
+          user_profile_id?: number
+          privy_user_id?:   string
+          status?:          "registered" | "cancelled" | "attended" | "no_show"
+          registered_at?:   string
+          cancelled_at?:    string | null
+          notes?:           string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_registrations_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_registrations_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_prizes: {
+        Row: {
+          id:            number
+          tournament_id: number
+          position:      number
+          prize_type:    "tokens" | "cop" | "both"
+          amount_tokens: number | null
+          amount_cop:    number | null
+          created_at:    string
+        }
+        Insert: {
+          id?:            number
+          tournament_id:  number
+          position:       number
+          prize_type:     "tokens" | "cop" | "both"
+          amount_tokens?: number | null
+          amount_cop?:    number | null
+          created_at?:    string
+        }
+        Update: {
+          id?:            number
+          tournament_id?: number
+          position?:      number
+          prize_type?:    "tokens" | "cop" | "both"
+          amount_tokens?: number | null
+          amount_cop?:    number | null
+          created_at?:    string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_prizes_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           id:                   number
@@ -1125,7 +1312,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      register_for_tournament: {
+        Args: {
+          tour_id:   number
+          user_pid:  number
+          privy_uid: string
+        }
+        Returns: { ok: boolean; reason?: string }
+      }
     }
     Enums: {
       discount_applies_to: "courses" | "pass" | "all"
@@ -1310,3 +1504,7 @@ export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
 export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];
 export type BrandLogo        = Database["public"]["Tables"]["brand_logos"]["Row"];
 export type Tournament       = Database["public"]["Tables"]["tournaments"]["Row"];
+export type TournamentPrize        = Database["public"]["Tables"]["tournament_prizes"]["Row"];
+export type TournamentRegistration   = Database["public"]["Tables"]["tournament_registrations"]["Row"];
+export type InternationalTournament  = Database["public"]["Tables"]["international_tournaments"]["Row"];
+export type TournamentResult         = Database["public"]["Tables"]["tournament_results"]["Row"];

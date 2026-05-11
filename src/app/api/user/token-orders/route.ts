@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
   if (!comprobantePath || !comprobanteUrl)
     return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
 
+  if (!comprobantePath.startsWith("comprobantes/pending/"))
+    return NextResponse.json({ error: "Ruta de comprobante inválida" }, { status: 400 });
+
   const { data: bankAccount } = await supabaseAdmin
     .from("bank_accounts")
     .select("id")
