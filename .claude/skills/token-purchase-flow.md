@@ -1,13 +1,42 @@
 ---
-name: otc-purchase-flow
-description: Full spec for the OTC $1UP token purchase flow — 4-step BUY modal, bank accounts, comprobante upload, purchase orders, and admin management.
+name: token-purchase-flow
+description: Full spec for the $1UP token purchase flow — 4-step BUY modal, bank accounts, comprobante upload, purchase orders, and admin management. Also covers course and 1UP Pass purchases via token or bank transfer.
 type: project
-filePattern: src/components/perfil/BuyTokensWizard.tsx, src/components/perfil/MisOrdenes.tsx, src/app/api/user/token-orders/**, src/app/api/user/upload-comprobante/**, src/app/api/bank-accounts/**, src/app/api/admin/token-orders/**, src/app/api/admin/bank-accounts/**, src/app/admin/(protected)/token-orders/**, src/app/admin/(protected)/bank-accounts/**
+filePattern: src/components/perfil/BuyTokensWizard.tsx, src/components/perfil/MisOrdenes.tsx, src/app/api/user/token-orders/**, src/app/api/user/upload-comprobante/**, src/app/api/bank-accounts/**, src/app/api/admin/token-orders/**, src/app/api/admin/bank-accounts/**, src/app/admin/(protected)/token-orders/**, src/app/admin/(protected)/bank-accounts/**, src/components/academia/CourseCheckoutWizard.tsx, src/app/api/user/course-orders/**, src/app/api/admin/enrollments/**, src/components/perfil/BuyPassWizard.tsx, src/app/api/user/pass-orders/**, src/app/api/admin/pass-orders/**
 ---
 
-# OTC $1UP Purchase Flow
+# $1UP Purchase Flow
 
-## Business rules
+## Three products, two payment methods
+
+All three purchasable products share the same payment method architecture:
+
+| Product | Token path | Bank transfer path | MercadoPago |
+|---------|-----------|-------------------|-------------|
+| $1UP tokens (`token_purchase_orders`) | N/A — tokens ARE the payment | ✅ user pays COP, admin sends $1UP | ❌ |
+| 1UP Pass (`pass_orders`) | ✅ on-chain verify, auto-confirm | ✅ admin approve/reject | ❌ |
+| Course enrollment (`enrollments`) | ✅ on-chain verify, auto-confirm | ✅ admin approve/reject | ✅ |
+
+**Email triggers — every product × every event:**
+
+| Event | Email sent |
+|-------|-----------|
+| $1UP token order placed | `sendTokenOrderPlacedEmail` (user) + admin notification |
+| $1UP token order approved | `sendTokenOrderApprovedEmail` (user) + admin notification |
+| $1UP token order rejected | `sendTokenOrderRejectedEmail` (user) + admin notification |
+| Pass bank order placed | `sendPassBankPlacedEmail` (user) + admin notification |
+| Pass bank order approved | `sendPassBankApprovedEmail` (user) + admin notification |
+| Pass bank order rejected | `sendPassBankRejectedEmail` (user) + admin notification |
+| Course order placed (bank) | `sendCourseOrderPlacedEmail` (user) + admin notification |
+| Course order confirmed (token) | `sendCourseOrderConfirmedEmail` (user) + admin notification |
+| Course order approved (bank) | `sendCourseOrderApprovedEmail` (user) + admin notification |
+| Course order rejected (bank) | `sendCourseOrderRejectedEmail` (user) + admin notification |
+
+All email functions live in `src/lib/email.ts` and use `Promise.allSettled` with `.catch(() => null)` so email failures never block order creation.
+
+---
+
+## $1UP Token purchase business rules
 
 - Exchange rate: **1 $1UP = 1,000 COP** (fixed; frozen at order time in `exchange_rate_cop`).
 - User pays by bank transfer (offline). They upload a receipt (comprobante) and submit an order.
@@ -203,3 +232,62 @@ Standard CRUD list + modal. Form fields: `bankName`, `accountType` (select), `ac
 | Bank account deactivated mid-flow | Server re-validates `is_active = true` on order POST → `400 "Cuenta no disponible"` |
 | User has no `user_profiles` row | Use `getOrCreateProfile` helper (extract to `src/lib/userProfile.ts` if not already) |
 | User cancels then resubmits | Cancel frees the unique index slot; comprobante left in storage for audit trail |
+
+---
+
+## Course purchase flow
+
+### `src/components/academia/CourseCheckoutWizard.tsx`
+Client component rendered as a modal overlay from `CourseCatalog`. Props: `course`, `walletAddress`, `recipientAddress`, `getAccessToken`, `onClose`.
+
+**Phase state machine:**
+`"method"` → `"mp_loading"` | `"token_pay"` → `"token_sending"` → `"token_confirming"` → `"token_registering"` → `"bank_select"` → `"bank_pay"` → `"bank_uploading"` → `"bank_submitting"` → `"success"` | `"error"`
+
+**MercadoPago path:** POST `/api/checkout` → `window.location.href = data.checkoutUrl`. Auto-approved on webhook.
+
+**Token path:**
+1. `sendTransaction` with `sponsor: true` (gas-sponsored EIP-7702)
+2. `publicClient.waitForTransactionReceipt` (120s timeout)
+3. POST `/api/user/course-orders` with `{ courseId, paymentMethod:"token", txHash, walletAddress }`
+4. Server calls `verifyPassTransfer(txHash, wallet, recipient, course.price_token)` for on-chain verification
+5. Enrollment created with `payment_status: "approved"` — no admin review needed
+6. `sendCourseOrderConfirmedEmail` fired
+
+**Bank path:**
+1. Fetch `/api/bank-accounts` → user selects bank
+2. User uploads comprobante → POST `/api/user/upload-comprobante`
+3. POST `/api/user/course-orders` with `{ courseId, paymentMethod:"bank", bankAccountId, comprobantePath, comprobanteUrl }`
+4. Enrollment created with `payment_status: "pending"` → admin reviews in `/admin/enrollments`
+5. `sendCourseOrderPlacedEmail` fired
+
+**Token option disabled** when `course.price_token` is null — admin must set this field on each course in `/admin/courses`.
+
+### `POST /api/user/course-orders`
+- Reads `pass_config` (id=1) for `recipient_address` — both course token payments AND pass token payments go to the same wallet
+- Applies best active `discount_rules` server-side (same logic as `/api/checkout`)
+- Deduplicates by `tx_hash` (UNIQUE constraint) → 409 on double-submit
+- On bank path: calls `moveComprobanteToOrder(comprobantePath, enrollment.id, ext)` after insert
+
+### `PATCH /api/admin/enrollments`
+Guards: `payment_method IN ("token","bank")` AND `payment_status = "pending"`.
+- `action: "approve"`: sets `payment_status = "approved"`, `paid_at = now()`, optional `approved_tx_hash`. Fires `sendCourseOrderApprovedEmail`.
+- `action: "reject"`: requires `rejectionReason`, sets `payment_status = "rejected"`. Fires `sendCourseOrderRejectedEmail`.
+- `revalidatePath` on `/academia`, `/admin/enrollments`, `/app/academia`.
+
+### `src/components/admin/AdminEnrollmentsClient.tsx`
+- Payment method badge: MercadoPago / $1UP Token / Banco
+- Inline Aprobar/Rechazar panel for pending token/bank enrollments
+- Comprobante link (bank) and BaseScan TX link (token) rendered in proof column
+- Rejection requires non-empty `rejectionReason`; approve optionally accepts `approved_tx_hash`
+
+---
+
+## Pass purchase flow (token + bank)
+
+See `.claude/skills/pass-purchase-flow.md` for the full spec.
+
+Key points for cross-reference:
+- Token path: `verifyPassTransfer` validates on-chain; `pass_orders.status = "confirmed"` auto-set
+- Bank path: `pass_orders.status = "pending_bank"` → admin approves/rejects in `/admin/pass-orders`
+- Admin combined tab page (`AdminPassOrdersClient`): "Token $1UP" tab + "Banco" tab (with pending count badge)
+- Emails: `sendPassBankApprovedEmail` / `sendPassBankRejectedEmail` fired on PATCH

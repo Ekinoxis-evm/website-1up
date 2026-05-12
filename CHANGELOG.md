@@ -5,6 +5,37 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.20.0] — 2026-05-12
+
+### Added
+
+- **Standardized purchase flows for all three products** — $1UP tokens, 1UP Pass, and course enrollments now all support token ($1UP on-chain) and bank transfer payment paths with identical lifecycle, admin review, and email notifications.
+- **`CourseCheckoutWizard`** (`src/components/academia/CourseCheckoutWizard.tsx`): new 3-method checkout modal for courses. Phases: method select → MercadoPago redirect | token send → on-chain confirm → register | bank select → comprobante upload → submit → success/error. Token option auto-disabled when `course.price_token` is null.
+- **`POST /api/user/course-orders`**: new endpoint for token and bank course purchases. Token path: validates txHash, calls `verifyPassTransfer` with `course.price_token`, creates enrollment `approved` immediately. Bank path: validates comprobante, creates enrollment `pending`, moves comprobante to final storage path. Discount logic applied on both paths.
+- **`PATCH /api/admin/enrollments`**: new action to approve or reject pending token/bank enrollments. Guards `payment_method IN ("token","bank")` and `payment_status = "pending"`. Fires `sendCourseOrderApprovedEmail` / `sendCourseOrderRejectedEmail`.
+- **8 new transactional email functions** in `src/lib/email.ts`:
+  - `sendTokenOrderApprovedEmail`, `sendTokenOrderRejectedEmail` — $1UP token orders
+  - `sendPassBankApprovedEmail`, `sendPassBankRejectedEmail` — 1UP Pass bank orders
+  - `sendCourseOrderPlacedEmail`, `sendCourseOrderConfirmedEmail` — course placement
+  - `sendCourseOrderApprovedEmail`, `sendCourseOrderRejectedEmail` — course bank review
+- **Admin `PATCH /api/admin/token-orders`**: now fires `sendTokenOrderApprovedEmail` / `sendTokenOrderRejectedEmail` on every action.
+- **Admin `PATCH /api/admin/pass-orders`**: now fires `sendPassBankApprovedEmail` / `sendPassBankRejectedEmail` on every action; also fixed missing `revalidatePath("/app/pass")` on rejection.
+- **Combined Pass orders admin page** (`src/components/admin/AdminPassOrdersClient.tsx`): rebuilt with two tabs — "Token $1UP" and "Banco" (with pending count badge). Combined KPIs at top. Old `/admin/pass-bank-orders` redirects here.
+
+### Changed
+
+- **`AdminEnrollmentsClient`** (`src/components/admin/AdminEnrollmentsClient.tsx`): rebuilt — payment method badge (MercadoPago / $1UP Token / Banco), inline Aprobar/Rechazar panel for pending token/bank enrollments, comprobante link and BaseScan TX link in proof column.
+- **`/admin/enrollments/page.tsx`**: switched to `supabaseAdmin` (was anon); now selects all new enrollment fields + `bank_accounts` join.
+- **`CourseCatalog`**: MP checkout replaced with `CourseCheckoutWizard`; fetches `recipient_address` from `/api/user/pass-config`.
+- **Skill file renamed**: `.claude/skills/otc-purchase-flow.md` → `.claude/skills/token-purchase-flow.md`. Updated content: removed OTC terminology, added course flow spec, added cross-product email trigger table.
+- **Privacy policy** (`/privacidad`): "OTC (tokens o 1UP Pass)" → "tokens $1UP y 1UP Pass".
+- **`CLAUDE.md`**: removed all OTC terminology; updated skill file reference.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.19.0] — 2026-05-12
 
 ### Added
