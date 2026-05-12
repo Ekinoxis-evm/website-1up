@@ -5,6 +5,28 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.16.0] — 2026-05-12
+
+### Added
+
+- **Prize delivery panel for tournament results** (`src/components/admin/AdminTournamentResultsClient.tsx`): a new "Entregar Premios" section appears below the podium editor whenever a selected tournament has results. For each podium row the admin sees the configured prize (tokens / COP / both), the winner's lookup wallet, the current delivery status badge (`SIN PREMIO` / `PENDIENTE` / `ENTREGADO`), and either an inline **ENVIAR $1UP** flow (uses `useSendTransaction` + `sponsor: true`, waits for receipt, auto-PATCHes the result with `tx_hash`) or a **comprobante upload** for COP payouts. Once delivered, basescan and comprobante links appear next to the status badge.
+- **`prize_delivery_status` enum + 5 columns on `tournament_results`** (migration `add_prize_delivery_to_tournament_results`): enum values `no_prize | pending | sent`; adds `prize_status`, `prize_tx_hash`, `prize_sent_at`, `prize_sent_by`, `prize_comprobante_url`. Existing results are backfilled — `pending` if a matching `tournament_prizes` row exists for that position, else `no_prize`. New POST/upsert auto-derives the initial status from the live prize configuration.
+- **`PATCH /api/admin/tournament-results`**: marks a result as delivered. Requires `tx_hash` OR `comprobante_url` when `prizeStatus === 'sent'`; sets `prize_sent_at = now()` and `prize_sent_by = admin email`. Clears the timestamp/hash/url fields when reverting to `pending` or `no_prize`.
+- **`GET /api/admin/tournament-results?walletFor={userProfileId}`**: lightweight lookup endpoint — returns the user's most recent wallet from `pass_orders`, falling back to `token_purchase_orders`. Used by the delivery panel to populate the recipient address.
+- **`tournament-prizes` upload folder** (`src/app/api/admin/upload/route.ts`, `src/lib/blob.ts`): new allowed folder for COP comprobante uploads. The upload route now accepts `application/pdf` when the folder is `tournament-prizes` (still rejects PDFs for image folders), 5MB cap unchanged. Storage path: `tournament-prizes/{resultId}/cover`.
+- **Tournament cancellation flow** (`src/components/admin/AdminTorneosClient.tsx`, `src/app/api/admin/tournaments/route.ts`): new `block` icon button next to delete (only visible while the tournament is not yet `completed`). Opens a confirmation panel showing the active registration count; on confirm calls `PUT /api/admin/tournaments` with `cancelTournament: true`, which marks `status='completed'` + `is_registration_open=false` and bulk-updates all `registered` rows in `tournament_registrations` to `cancelled` with `cancelled_at=now()`. Tournament + its history are preserved.
+- **Tournament deletion safety modal** (`src/components/admin/AdminTorneosClient.tsx`): the trash icon no longer fires a bare `confirm()`. It now opens a confirmation panel that fetches the active registration count for the tournament and shows a warning. Two clearly labeled buttons (`CANCELAR` and `ELIMINAR`) plus an explicit nudge pointing admins to the softer `CANCELAR TORNEO` action when applicable.
+
+### Changed
+
+- **`PUT /api/admin/tournaments`**: now accepts an optional `cancelTournament: boolean` body field. When `true`, the tournament is updated as part of the cancellation flow (forces `is_registration_open=false`, skips the prize-rewrite branch) and every active registration is moved to `cancelled`.
+- **`src/types/database.types.ts`**: `tournament_results` Row/Insert/Update extended with the 5 new prize-delivery fields, `Enums.prize_delivery_status` added, `PrizeDeliveryStatus` alias exported, and `Constants` updated.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.15.0] — 2026-05-12
 
 ### Added

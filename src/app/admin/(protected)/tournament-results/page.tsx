@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { AdminTournamentResultsClient } from "@/components/admin/AdminTournamentResultsClient";
 
 export default async function AdminTournamentResultsPage() {
-  const [{ data: tournaments }, { data: results }] = await Promise.all([
+  const [{ data: tournaments }, { data: results }, { data: prizes }] = await Promise.all([
     supabaseAdmin
       .from("tournaments")
       .select("id, name, status, date")
@@ -13,7 +13,16 @@ export default async function AdminTournamentResultsPage() {
       .select("*, user_profiles(nombre, apellidos, username), tournaments(name)")
       .order("tournament_id")
       .order("position"),
+    supabaseAdmin
+      .from("tournament_prizes")
+      .select("*"),
   ]);
 
-  return <AdminTournamentResultsClient tournaments={tournaments ?? []} results={results ?? []} />;
+  return (
+    <AdminTournamentResultsClient
+      tournaments={tournaments ?? []}
+      results={results ?? []}
+      prizes={prizes ?? []}
+    />
+  );
 }

@@ -65,6 +65,10 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
+
+  // Soft-cancel path — extends regular updates with bulk-cancellation of active registrations.
+  const isCancelling = body.cancelTournament === true;
+
   const { data, error } = await supabaseAdmin.from("tournaments").update({
     name:                 body.name,
     game_id:              body.gameId || null,
@@ -76,11 +80,20 @@ export async function PUT(req: NextRequest) {
     image_url:            body.imageUrl || null,
     description:          body.description || null,
     is_active:            body.isActive,
-    is_registration_open: body.isRegistrationOpen,
+    is_registration_open: isCancelling ? false : body.isRegistrationOpen,
     sort_order:           body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await savePrizes(body.id, body.prizes ?? []);
+  if (!isCancelling) await savePrizes(body.id, body.prizes ?? []);
+
+  if (isCancelling) {
+    await supabaseAdmin
+      .from("tournament_registrations")
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("tournament_id", body.id)
+      .eq("status", "registered");
+  }
+
   revalidatePath("/torneos");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);

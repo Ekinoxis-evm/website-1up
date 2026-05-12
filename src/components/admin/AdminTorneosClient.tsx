@@ -81,6 +81,9 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [qrTournament, setQrTournament] = useState<{ id: number; name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -127,11 +130,64 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
     setOpen(false); setLoading(false); router.refresh();
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("¿Eliminar este torneo?")) return;
-    await fetch("/api/admin/tournaments", {
-      method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id }),
+  async function fetchRegistrationCount(tournamentId: number): Promise<number | null> {
+    const token = await getAccessToken();
+    const res = await fetch(`/api/admin/tournament-registrations?tournamentId=${tournamentId}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) return null;
+    const data: { status: string }[] = await res.json();
+    return data.filter((r) => r.status === "registered").length;
+  }
+
+  async function openDeleteConfirm(t: TournamentWithGame) {
+    setDeleteConfirm({ tournament: t, registrationCount: null });
+    const count = await fetchRegistrationCount(t.id);
+    setDeleteConfirm((prev) => prev && prev.tournament.id === t.id ? { ...prev, registrationCount: count } : prev);
+  }
+
+  async function openCancelConfirm(t: TournamentWithGame) {
+    setCancelConfirm({ tournament: t, registrationCount: null });
+    const count = await fetchRegistrationCount(t.id);
+    setCancelConfirm((prev) => prev && prev.tournament.id === t.id ? { ...prev, registrationCount: count } : prev);
+  }
+
+  async function confirmDelete() {
+    if (!deleteConfirm) return;
+    setActionLoading(true);
+    await fetch("/api/admin/tournaments", {
+      method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id: deleteConfirm.tournament.id }),
+    });
+    setActionLoading(false);
+    setDeleteConfirm(null);
+    router.refresh();
+  }
+
+  async function confirmCancel() {
+    if (!cancelConfirm) return;
+    setActionLoading(true);
+    const t = cancelConfirm.tournament;
+    await fetch("/api/admin/tournaments", {
+      method: "PUT",
+      headers: await authHeaders(),
+      body: JSON.stringify({
+        id:                 t.id,
+        name:               t.name,
+        gameId:             t.game_id,
+        date:               t.date,
+        maxParticipants:    t.max_participants,
+        status:             "completed",
+        locationType:       t.location_type,
+        imageUrl:           t.image_url,
+        description:        t.description,
+        isActive:           t.is_active,
+        isRegistrationOpen: false,
+        sortOrder:          t.sort_order,
+        cancelTournament:   true,
+      }),
+    });
+    setActionLoading(false);
+    setCancelConfirm(null);
     router.refresh();
   }
 
@@ -215,7 +271,16 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                         <span className="material-symbols-outlined text-sm">qr_code</span>
                       </button>
                     )}
-                    <button onClick={() => handleDelete(t.id)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors" title="Eliminar">
+                    {t.status !== "completed" && (
+                      <button
+                        onClick={() => openCancelConfirm(t)}
+                        className="p-1.5 bg-surface-container-high hover:bg-secondary/20 hover:text-secondary transition-colors"
+                        title="Cancelar torneo"
+                      >
+                        <span className="material-symbols-outlined text-sm">block</span>
+                      </button>
+                    )}
+                    <button onClick={() => openDeleteConfirm(t)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors" title="Eliminar">
                       <span className="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>
@@ -353,6 +418,124 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
               <button onClick={handleSave} disabled={loading}
                 className="w-full bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40 hover:neo-shadow-pink transition-all">
                 {loading ? "GUARDANDO…" : "GUARDAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
+          onClick={() => !actionLoading && setDeleteConfirm(null)}
+        >
+          <div
+            className="bg-surface-container w-full max-w-md p-8 relative border-4 border-error"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-error">warning</span>
+              ELIMINAR TORNEO
+            </h2>
+            <p className="font-headline font-bold text-sm text-on-surface truncate mb-4">
+              {deleteConfirm.tournament.name}
+            </p>
+
+            <div className="bg-error/10 border border-error/30 p-4 mb-6">
+              <p className="font-body text-sm text-on-surface">
+                {deleteConfirm.registrationCount === null ? (
+                  <span className="text-outline">Verificando inscripciones...</span>
+                ) : deleteConfirm.registrationCount === 0 ? (
+                  "Este torneo no tiene inscripciones activas."
+                ) : (
+                  <>
+                    Este torneo tiene{" "}
+                    <span className="font-headline font-black text-error">
+                      {deleteConfirm.registrationCount} inscripcion{deleteConfirm.registrationCount === 1 ? "" : "es"}
+                    </span>{" "}
+                    que también serán eliminadas permanentemente.
+                  </>
+                )}
+              </p>
+              <p className="font-body text-xs text-outline mt-2">
+                Esta acción no se puede deshacer. Considera <span className="text-secondary">CANCELAR TORNEO</span> si quieres preservar el historial.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={actionLoading}
+                className="flex-1 bg-surface-container-highest text-on-surface font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
+              >
+                CANCELAR
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={actionLoading || deleteConfirm.registrationCount === null}
+                className="flex-1 bg-error text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
+              >
+                {actionLoading ? "ELIMINANDO..." : "ELIMINAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel tournament confirmation */}
+      {cancelConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
+          onClick={() => !actionLoading && setCancelConfirm(null)}
+        >
+          <div
+            className="bg-surface-container w-full max-w-md p-8 relative border-4 border-secondary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary">block</span>
+              CANCELAR TORNEO
+            </h2>
+            <p className="font-headline font-bold text-sm text-on-surface truncate mb-4">
+              {cancelConfirm.tournament.name}
+            </p>
+
+            <div className="bg-secondary/10 border border-secondary/30 p-4 mb-6">
+              <p className="font-body text-sm text-on-surface">
+                {cancelConfirm.registrationCount === null ? (
+                  <span className="text-outline">Verificando inscripciones...</span>
+                ) : cancelConfirm.registrationCount === 0 ? (
+                  "El torneo se marcará como finalizado y el registro quedará cerrado."
+                ) : (
+                  <>
+                    Se cancelarán{" "}
+                    <span className="font-headline font-black text-secondary">
+                      {cancelConfirm.registrationCount} inscripcion{cancelConfirm.registrationCount === 1 ? "" : "es"}
+                    </span>{" "}
+                    activas. El torneo y su historial se conservan.
+                  </>
+                )}
+              </p>
+              <p className="font-body text-xs text-outline mt-2">
+                Los datos no se eliminan. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelConfirm(null)}
+                disabled={actionLoading}
+                className="flex-1 bg-surface-container-highest text-on-surface font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
+              >
+                VOLVER
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={actionLoading || cancelConfirm.registrationCount === null}
+                className="flex-1 bg-secondary text-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
+              >
+                {actionLoading ? "CANCELANDO..." : "CONFIRMAR CANCELACIÓN"}
               </button>
             </div>
           </div>

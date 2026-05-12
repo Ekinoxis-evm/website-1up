@@ -81,31 +81,46 @@ export type Database = {
       }
       tournament_results: {
         Row: {
-          id:              number
-          tournament_id:   number
-          user_profile_id: number
-          position:        number
-          points:          number
-          awarded_at:      string
-          awarded_by:      string | null
+          id:                    number
+          tournament_id:         number
+          user_profile_id:       number
+          position:              number
+          points:                number
+          awarded_at:            string
+          awarded_by:            string | null
+          prize_status:          Database["public"]["Enums"]["prize_delivery_status"]
+          prize_tx_hash:         string | null
+          prize_sent_at:         string | null
+          prize_sent_by:         string | null
+          prize_comprobante_url: string | null
         }
         Insert: {
-          id?:              number
-          tournament_id:    number
-          user_profile_id:  number
-          position:         number
-          points:           number
-          awarded_at?:      string
-          awarded_by?:      string | null
+          id?:                    number
+          tournament_id:          number
+          user_profile_id:        number
+          position:               number
+          points:                 number
+          awarded_at?:            string
+          awarded_by?:            string | null
+          prize_status?:          Database["public"]["Enums"]["prize_delivery_status"]
+          prize_tx_hash?:         string | null
+          prize_sent_at?:         string | null
+          prize_sent_by?:         string | null
+          prize_comprobante_url?: string | null
         }
         Update: {
-          id?:              number
-          tournament_id?:   number
-          user_profile_id?: number
-          position?:        number
-          points?:          number
-          awarded_at?:      string
-          awarded_by?:      string | null
+          id?:                    number
+          tournament_id?:         number
+          user_profile_id?:       number
+          position?:              number
+          points?:                number
+          awarded_at?:            string
+          awarded_by?:            string | null
+          prize_status?:          Database["public"]["Enums"]["prize_delivery_status"]
+          prize_tx_hash?:         string | null
+          prize_sent_at?:         string | null
+          prize_sent_by?:         string | null
+          prize_comprobante_url?: string | null
         }
         Relationships: [
           {
@@ -1338,6 +1353,7 @@ export type Database = {
       product_type: "course" | "pass"
       tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT"
       token_purchase_status: "pending" | "approved" | "rejected" | "cancelled"
+      prize_delivery_status: "no_prize" | "pending" | "sent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1479,6 +1495,7 @@ export const Constants = {
       product_type: ["course", "pass"],
       tipo_documento: ["CC", "CE", "TI", "PP", "NIT"],
       token_purchase_status: ["pending", "approved", "rejected", "cancelled"],
+      prize_delivery_status: ["no_prize", "pending", "sent"],
     },
   },
 } as const
@@ -1514,3 +1531,4 @@ export type TournamentPrize        = Database["public"]["Tables"]["tournament_pr
 export type TournamentRegistration   = Database["public"]["Tables"]["tournament_registrations"]["Row"];
 export type InternationalTournament  = Database["public"]["Tables"]["international_tournaments"]["Row"];
 export type TournamentResult         = Database["public"]["Tables"]["tournament_results"]["Row"];
+export type PrizeDeliveryStatus      = Database["public"]["Enums"]["prize_delivery_status"];

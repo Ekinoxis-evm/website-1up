@@ -3,7 +3,7 @@ import { uploadImage, type ImageFolder } from "@/lib/blob";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 
-const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados", "site", "brand-logos", "tournaments"] as const;
+const ALLOWED_FOLDERS = ["players", "courses", "games", "categories", "floors", "masters", "aliados", "site", "brand-logos", "tournaments", "tournament-prizes"] as const;
 type Folder = typeof ALLOWED_FOLDERS[number];
 
 async function checkAdmin(req: NextRequest) {
@@ -28,11 +28,17 @@ export async function POST(req: NextRequest) {
   if (!folder || !ALLOWED_FOLDERS.includes(folder as Folder)) {
     return NextResponse.json({ error: "folder inválido" }, { status: 400 });
   }
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "Solo se permiten imágenes" }, { status: 400 });
+  const allowsPdf = folder === "tournament-prizes";
+  const isImage   = file.type.startsWith("image/");
+  const isPdf     = file.type === "application/pdf";
+  if (!(isImage || (allowsPdf && isPdf))) {
+    return NextResponse.json(
+      { error: allowsPdf ? "Solo imágenes o PDF" : "Solo se permiten imágenes" },
+      { status: 400 },
+    );
   }
   if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "Imagen demasiado grande (máx 5MB)" }, { status: 400 });
+    return NextResponse.json({ error: "Archivo demasiado grande (máx 5MB)" }, { status: 400 });
   }
 
   const url = await uploadImage(file, folder as ImageFolder, entityId);
