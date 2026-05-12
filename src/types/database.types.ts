@@ -285,6 +285,7 @@ export type Database = {
         Row: {
           id:                   number
           name:                 string
+          slug:                 string | null
           game_id:              number | null
           date:                 string | null
           prize_pool_cop:       number | null
@@ -297,10 +298,14 @@ export type Database = {
           is_registration_open: boolean
           sort_order:           number
           created_at:           string
+          sponsor_name:         string | null
+          sponsor_website_url:  string | null
+          sponsor_logo_url:     string | null
         }
         Insert: {
           id?:                   number
           name:                  string
+          slug?:                 string | null
           game_id?:              number | null
           date?:                 string | null
           prize_pool_cop?:       number | null
@@ -313,10 +318,14 @@ export type Database = {
           is_registration_open?: boolean
           sort_order?:           number
           created_at?:           string
+          sponsor_name?:         string | null
+          sponsor_website_url?:  string | null
+          sponsor_logo_url?:     string | null
         }
         Update: {
           id?:                   number
           name?:                 string
+          slug?:                 string | null
           game_id?:              number | null
           date?:                 string | null
           prize_pool_cop?:       number | null
@@ -329,6 +338,9 @@ export type Database = {
           is_registration_open?: boolean
           sort_order?:           number
           created_at?:           string
+          sponsor_name?:         string | null
+          sponsor_website_url?:  string | null
+          sponsor_logo_url?:     string | null
         }
         Relationships: [
           {

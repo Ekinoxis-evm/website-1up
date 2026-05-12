@@ -47,7 +47,7 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
   return (
     <div className="bg-surface-container flex flex-col">
       {/* Cover — links to detail page */}
-      <Link href={`/torneos/${t.id}`} className="relative aspect-video bg-surface-container-high overflow-hidden block">
+      <Link href={`/torneos/${t.slug ?? t.id}`} className="relative aspect-video bg-surface-container-high overflow-hidden block">
         {t.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
@@ -76,7 +76,7 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
         {t.games && (
           <p className="font-headline font-bold text-xs uppercase tracking-widest text-secondary">{t.games.name}</p>
         )}
-        <Link href={`/torneos/${t.id}`}>
+        <Link href={`/torneos/${t.slug ?? t.id}`}>
           <h3 className="font-headline font-black text-xl uppercase tracking-tighter leading-tight text-on-surface hover:text-primary-container transition-colors">
             {t.name}
           </h3>
@@ -102,9 +102,20 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
           <p className="font-body text-sm text-on-surface/60 line-clamp-2">{t.description}</p>
         )}
 
+        {t.sponsor_name && (
+          <div className="flex items-center gap-2 bg-surface-container-high px-3 py-2">
+            {t.sponsor_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-5 w-auto object-contain shrink-0" />
+            )}
+            <span className="font-headline text-[10px] uppercase tracking-widest text-outline">Patrocinado por</span>
+            <span className="font-headline font-black text-[10px] uppercase text-on-surface">{t.sponsor_name}</span>
+          </div>
+        )}
+
         <div className="mt-auto pt-2 flex gap-3 items-center flex-wrap">
           <Link
-            href={`/torneos/${t.id}`}
+            href={`/torneos/${t.slug ?? t.id}`}
             className="font-headline font-bold text-xs uppercase tracking-widest text-outline hover:text-on-surface transition-colors flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-sm">open_in_full</span>

@@ -26,12 +26,14 @@ type FormState = {
   locationType: "presencial" | "online" | "mixto"; imageUrl: string;
   description: string; isActive: boolean; isRegistrationOpen: boolean;
   sortOrder: number; prizes: PrizeFormRow[];
+  sponsorName: string; sponsorWebsiteUrl: string; sponsorLogoUrl: string;
 };
 
 const EMPTY: FormState = {
   name: "", gameId: "", date: "", maxParticipants: "",
   status: "upcoming", locationType: "presencial", imageUrl: "",
   description: "", isActive: true, isRegistrationOpen: false, sortOrder: 0, prizes: [],
+  sponsorName: "", sponsorWebsiteUrl: "", sponsorLogoUrl: "",
 };
 
 const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" };
@@ -80,7 +82,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
   const [form, setForm]       = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [qrTournament, setQrTournament] = useState<{ id: number; name: string } | null>(null);
+  const [qrTournament, setQrTournament] = useState<{ id: number; slug: string | null; name: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -105,6 +107,9 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
       isRegistrationOpen: t.is_registration_open,
       sortOrder:          t.sort_order,
       prizes:             [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position).map(prizeToFormRow),
+      sponsorName:        t.sponsor_name ?? "",
+      sponsorWebsiteUrl:  t.sponsor_website_url ?? "",
+      sponsorLogoUrl:     t.sponsor_logo_url ?? "",
     });
     setOpen(true);
   }
@@ -264,7 +269,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                     </button>
                     {t.status !== "completed" && (
                       <button
-                        onClick={() => setQrTournament({ id: t.id, name: t.name })}
+                        onClick={() => setQrTournament({ id: t.id, slug: t.slug ?? null, name: t.name })}
                         className="p-1.5 bg-surface-container-high hover:bg-secondary-container/20 transition-colors"
                         title="QR Check-in"
                       >
@@ -394,6 +399,22 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 <textarea value={form.description} onChange={(e) => f("description", e.target.value)}
                   rows={3} placeholder="Detalles del torneo..."
                   className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none" />
+              </div>
+
+              {/* Sponsor */}
+              <div className="bg-surface-container-high p-4 space-y-3">
+                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
+                  Patrocinador <span className="font-normal normal-case">(opcional)</span>
+                </p>
+                <input value={form.sponsorName} onChange={(e) => f("sponsorName", e.target.value)}
+                  placeholder="Nombre del patrocinador"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
+                <input value={form.sponsorWebsiteUrl} onChange={(e) => f("sponsorWebsiteUrl", e.target.value)}
+                  placeholder="https://sitio-del-sponsor.com"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none" />
+                <input value={form.sponsorLogoUrl} onChange={(e) => f("sponsorLogoUrl", e.target.value)}
+                  placeholder="URL del logo (o usa Aliados para subir uno)"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none" />
               </div>
 
               {/* Sort + toggles row */}
@@ -566,7 +587,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
 
             <div className="flex justify-center mb-6 bg-white p-4">
               <QRCode
-                value={`${BASE_URL}/torneos/${qrTournament.id}/checkin`}
+                value={`${BASE_URL}/torneos/${qrTournament.slug ?? qrTournament.id}/checkin`}
                 size={200}
                 bgColor="#ffffff"
                 fgColor="#0a0a0a"
@@ -574,7 +595,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
             </div>
 
             <p className="font-body text-xs text-outline/60 text-center mb-4 break-all">
-              {BASE_URL}/torneos/{qrTournament.id}/checkin
+              {BASE_URL}/torneos/{qrTournament.slug ?? qrTournament.id}/checkin
             </p>
 
             <p className="font-body text-xs text-outline/50 text-center">

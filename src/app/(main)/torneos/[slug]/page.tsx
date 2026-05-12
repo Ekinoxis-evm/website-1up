@@ -29,43 +29,54 @@ const STATUS_BADGE: Record<Tournament["status"], string> = {
   completed: "bg-surface-container-high text-outline",
 };
 
-async function fetchTournament(id: string): Promise<TournamentFull | null> {
-  const numericId = Number(id);
+async function fetchTournament(slug: string): Promise<TournamentFull | null> {
+  // Primary: look up by slug
+  const { data: bySlug } = await supabase
+    .from("tournaments")
+    .select("*, games(id, name), tournament_prizes(*)")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (bySlug) return bySlug as TournamentFull;
+
+  // Fallback: numeric ID (supports old QR codes / bookmarks)
+  const numericId = Number(slug);
   if (!Number.isFinite(numericId) || numericId <= 0) return null;
-  const { data } = await supabase
+  const { data: byId } = await supabase
     .from("tournaments")
     .select("*, games(id, name), tournament_prizes(*)")
     .eq("id", numericId)
     .eq("is_active", true)
     .maybeSingle();
-  return (data as TournamentFull | null) ?? null;
+  return (byId as TournamentFull | null) ?? null;
 }
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
-  const { id } = await params;
-  const t = await fetchTournament(id);
+  const { slug } = await params;
+  const t = await fetchTournament(slug);
   if (!t) return { title: "Torneo no encontrado — 1UP Gaming Tower" };
+  const canonical = `https://1upesports.org/torneos/${t.slug ?? t.id}`;
   return {
     title:       `${t.name} — Torneos 1UP`,
     description: t.description ?? "Detalles del torneo en el ecosistema 1UP Gaming Tower.",
     openGraph: {
       title:       `${t.name} — Torneos 1UP`,
       description: t.description ?? "Detalles del torneo en el ecosistema 1UP Gaming Tower.",
-      url:         `https://1upesports.org/torneos/${t.id}`,
+      url:         canonical,
       type:        "website",
       images:      t.image_url ? [{ url: t.image_url }] : [{ url: "/1up.png" }],
     },
-    alternates: { canonical: `https://1upesports.org/torneos/${t.id}` },
+    alternates: { canonical },
   };
 }
 
 export default async function TournamentDetailPage(
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { id } = await params;
-  const t = await fetchTournament(id);
+  const { slug } = await params;
+  const t = await fetchTournament(slug);
   if (!t) notFound();
 
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
@@ -73,7 +84,6 @@ export default async function TournamentDetailPage(
   return (
     <section className="py-12 px-8 md:px-16 bg-background min-h-screen">
       <div className="max-w-4xl">
-        {/* Back link */}
         <Link
           href="/torneos"
           className="inline-flex items-center gap-1 font-headline font-bold text-xs uppercase tracking-widest text-outline hover:text-primary-container transition-colors mb-8"
@@ -83,17 +93,13 @@ export default async function TournamentDetailPage(
         </Link>
 
         <div className="bg-surface-container">
-          {/* Cover */}
           <div className="relative aspect-video bg-surface-container-high overflow-hidden">
             {t.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span
-                  className="material-symbols-outlined text-8xl text-outline/20"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
+                <span className="material-symbols-outlined text-8xl text-outline/20" style={{ fontVariationSettings: "'FILL' 1" }}>
                   emoji_events
                 </span>
               </div>
@@ -101,11 +107,8 @@ export default async function TournamentDetailPage(
           </div>
 
           <div className="p-8 md:p-10 space-y-8">
-            {/* Meta row */}
             <div className="flex flex-wrap gap-2">
-              <span
-                className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${STATUS_BADGE[t.status]}`}
-              >
+              <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${STATUS_BADGE[t.status]}`}>
                 {STATUS_LABEL[t.status]}
               </span>
               <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-outline">
@@ -118,7 +121,6 @@ export default async function TournamentDetailPage(
               )}
             </div>
 
-            {/* Title */}
             <div>
               <h1 className="font-headline font-black text-4xl md:text-5xl uppercase tracking-tighter leading-tight text-on-surface">
                 {t.name}
@@ -126,17 +128,13 @@ export default async function TournamentDetailPage(
               <div className="h-1 w-20 bg-primary-container mt-3" />
             </div>
 
-            {/* Info grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {t.date && (
                 <div>
                   <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha</p>
                   <p className="font-body text-sm text-on-surface">
                     {new Date(t.date).toLocaleDateString("es-CO", {
-                      weekday:  "long",
-                      day:      "2-digit",
-                      month:    "long",
-                      year:     "numeric",
+                      weekday: "long", day: "2-digit", month: "long", year: "numeric",
                       timeZone: "America/Bogota",
                     })}
                   </p>
@@ -153,17 +151,13 @@ export default async function TournamentDetailPage(
               )}
             </div>
 
-            {/* Description */}
             {t.description && (
               <div>
                 <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Sobre el torneo</p>
-                <p className="font-body text-sm text-on-surface/80 leading-relaxed whitespace-pre-line">
-                  {t.description}
-                </p>
+                <p className="font-body text-sm text-on-surface/80 leading-relaxed whitespace-pre-line">{t.description}</p>
               </div>
             )}
 
-            {/* Prizes podium */}
             {prizes.length > 0 && (
               <div>
                 <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">Premios</p>
@@ -171,7 +165,27 @@ export default async function TournamentDetailPage(
               </div>
             )}
 
-            {/* CTA */}
+            {/* Sponsor block */}
+            {t.sponsor_name && (
+              <div className="bg-surface-container-low p-5 flex items-center gap-4">
+                {t.sponsor_logo_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-10 w-auto object-contain shrink-0" />
+                )}
+                <div>
+                  <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-0.5">Patrocinador</p>
+                  {t.sponsor_website_url ? (
+                    <a href={t.sponsor_website_url} target="_blank" rel="noopener noreferrer"
+                      className="font-headline font-black text-sm text-primary-container hover:underline">
+                      {t.sponsor_name}
+                    </a>
+                  ) : (
+                    <p className="font-headline font-black text-sm text-on-surface">{t.sponsor_name}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {t.is_registration_open && t.status !== "completed" && (
               <div className="pt-2">
                 <RegisterButton
@@ -183,13 +197,11 @@ export default async function TournamentDetailPage(
                 />
               </div>
             )}
-
             {!t.is_registration_open && t.status !== "completed" && (
               <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40">
                 Registro próximamente
               </p>
             )}
-
             {t.status === "completed" && (
               <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40">
                 Torneo finalizado
