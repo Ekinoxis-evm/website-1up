@@ -27,7 +27,6 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
   const [selectedBank, setSelectedBank]       = useState<BankAccount | null>(null);
   const [copiedField, setCopiedField]         = useState<string | null>(null);
   const [comprobantePath, setComprobantePath] = useState<string | null>(null);
-  const [comprobanteUrl, setComprobanteUrl]   = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
   const [uploadLoading, setUploadLoading]     = useState(false);
   const [uploadError, setUploadError]         = useState<string | null>(null);
@@ -88,13 +87,12 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
       const d = await res.json().catch(() => ({}));
       setUploadError(d.error ?? "Error al subir el archivo"); return;
     }
-    const { url, path } = await res.json() as { url: string; path: string };
-    setComprobanteUrl(url);
+    const { path } = await res.json() as { path: string };
     setComprobantePath(path);
   }
 
   async function handleSubmit() {
-    if (!comprobantePath || !comprobanteUrl || !selectedBank) return;
+    if (!comprobantePath || !selectedBank) return;
     setSubmitLoading(true); setSubmitError(null);
 
     const token = await getAccessToken();
@@ -106,7 +104,6 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
         walletAddress,
         bankAccountId:   selectedBank.id,
         comprobantePath,
-        comprobanteUrl,
       }),
     });
 
@@ -122,7 +119,7 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
 
   function handleClose() {
     setStep(1); setSelectedBank(null); setBankAccounts([]);
-    setComprobantePath(null); setComprobanteUrl(null); setComprobantePreview(null);
+    setComprobantePath(null); setComprobantePreview(null);
     setSubmitError(null); setUploadError(null);
     onClose();
   }
@@ -272,7 +269,7 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
               >
                 <span className="material-symbols-outlined text-primary-container text-3xl">upload_file</span>
                 <span className="font-headline font-bold text-sm uppercase tracking-wide">
-                  {uploadLoading ? "Subiendo…" : comprobanteUrl ? "Cambiar archivo" : "Seleccionar archivo"}
+                  {uploadLoading ? "Subiendo…" : comprobantePath ? "Cambiar archivo" : "Seleccionar archivo"}
                 </span>
                 <span className="font-body text-xs text-outline">JPG, PNG, WEBP, PDF · máx. 5MB</span>
               </button>
@@ -283,7 +280,7 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={comprobantePreview} alt="Comprobante" className="w-full max-h-40 object-contain bg-surface-container-lowest" />
               )}
-              {!comprobantePreview && comprobanteUrl && (
+              {!comprobantePreview && comprobantePath && (
                 <p className="font-body text-xs text-secondary flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                   PDF cargado correctamente
@@ -295,7 +292,7 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmit}
-                  disabled={!comprobanteUrl || submitLoading}
+                  disabled={!comprobantePath || submitLoading}
                   className="flex-1 bg-primary-container text-white font-headline font-black uppercase py-3 disabled:opacity-40"
                 >
                   {submitLoading ? "Enviando…" : "ENVIAR SOLICITUD"}

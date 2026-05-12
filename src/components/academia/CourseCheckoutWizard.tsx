@@ -48,7 +48,6 @@ export function CourseCheckoutWizard({
   const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [comprobantePath, setComprobantePath] = useState<string | null>(null);
-  const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -192,13 +191,12 @@ export function CourseCheckoutWizard({
       setUploadError(d.error ?? "Error al subir el archivo");
       return;
     }
-    const { url, path } = await res.json() as { url: string; path: string };
-    setComprobanteUrl(url);
+    const { path } = await res.json() as { path: string };
     setComprobantePath(path);
   }
 
   async function submitBank() {
-    if (!comprobantePath || !comprobanteUrl || !selectedBank) return;
+    if (!comprobantePath || !selectedBank) return;
     setPhase("bank_submitting"); setErrorMsg("");
     const res = await fetch("/api/user/course-orders", {
       method:  "POST",
@@ -208,7 +206,6 @@ export function CourseCheckoutWizard({
         paymentMethod:   "bank",
         bankAccountId:   selectedBank.id,
         comprobantePath,
-        comprobanteUrl,
       }),
     });
     const data = await res.json();
@@ -455,7 +452,7 @@ export function CourseCheckoutWizard({
                   ) : comprobantePreview ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={comprobantePreview} alt="preview" className="max-h-32 mx-auto object-contain" />
-                  ) : comprobanteUrl ? (
+                  ) : comprobantePath ? (
                     <div className="flex flex-col items-center gap-2">
                       <span className="material-symbols-outlined text-3xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                       <span className="font-headline text-xs uppercase text-tertiary">Archivo subido</span>
@@ -474,7 +471,7 @@ export function CourseCheckoutWizard({
               <div className="flex gap-3">
                 <button
                   onClick={submitBank}
-                  disabled={phase === "bank_submitting" || !comprobanteUrl}
+                  disabled={phase === "bank_submitting" || !comprobantePath}
                   className="flex-1 bg-tertiary text-background font-headline font-black py-3 uppercase disabled:opacity-40"
                 >
                   {phase === "bank_submitting" ? "ENVIANDO…" : "ENVIAR INSCRIPCIÓN"}

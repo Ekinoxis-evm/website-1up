@@ -29,19 +29,18 @@ export async function uploadImage(
 export async function uploadComprobante(
   file: File,
   privyUserId: string,
-): Promise<{ url: string; path: string }> {
+): Promise<{ path: string }> {
   const ext = file.name.split(".").pop() || "jpg";
   const hash = crypto.createHash("md5").update(privyUserId).digest("hex").slice(0, 8);
-  const path = `comprobantes/pending/${hash}-${Date.now()}.${ext}`;
+  const path = `pending/${hash}-${Date.now()}.${ext}`;
 
   const { error } = await supabaseAdmin.storage
-    .from("images")
+    .from("comprobantes")
     .upload(path, file, { contentType: file.type, upsert: true });
 
   if (error) throw new Error(error.message);
 
-  const { data } = supabaseAdmin.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl, path };
+  return { path };
 }
 
 export async function moveComprobanteToOrder(
@@ -49,14 +48,27 @@ export async function moveComprobanteToOrder(
   orderId: number,
   ext: string,
 ): Promise<string> {
-  const finalPath = `comprobantes/${orderId}/receipt.${ext}`;
+  const finalPath = `${orderId}/receipt.${ext}`;
 
   const { error } = await supabaseAdmin.storage
-    .from("images")
+    .from("comprobantes")
     .move(pendingPath, finalPath);
 
   if (error) throw new Error(error.message);
 
-  const { data } = supabaseAdmin.storage.from("images").getPublicUrl(finalPath);
-  return data.publicUrl;
+  return finalPath;
+}
+
+// Returns a 1-hour signed URL for admin access to a private comprobante.
+// Legacy records store a full public URL (https://…) — those are returned as-is.
+export async function getComprobanteSignedUrl(
+  pathOrUrl: string,
+  expiresIn = 3600,
+): Promise<string | null> {
+  if (pathOrUrl.startsWith("http")) return pathOrUrl;
+  const { data, error } = await supabaseAdmin.storage
+    .from("comprobantes")
+    .createSignedUrl(pathOrUrl, expiresIn);
+  if (error || !data) return null;
+  return data.signedUrl;
 }

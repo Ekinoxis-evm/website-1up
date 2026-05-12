@@ -5,6 +5,21 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.22.2] — 2026-05-12
+
+### Security
+
+- **Private `comprobantes` bucket** — payment receipts (token purchase, pass, and course enrollments) now upload to a private Supabase Storage bucket (`public: false`). Files have no permanent guessable URL; admins receive 1-hour signed URLs generated on demand via `getComprobanteSignedUrl`. The `images` bucket SELECT policy now excludes `comprobantes/*` paths, blocking API enumeration of legacy files.
+- **`hall_of_fame` view hardened** — switched from `SECURITY DEFINER` to `SECURITY INVOKER`. Added a narrow `hall_of_fame_public_read` RLS policy on `user_profiles` so only profiles with a tournament podium result are readable by anon/authenticated. All other user profiles remain private.
+- **Three wizard components** (`BuyTokensWizard`, `BuyPassBankWizard`, `CourseCheckoutWizard`) — removed `comprobanteUrl` state and all references. Upload response now returns `{ path }` only. Submit gates and reset logic updated to use `comprobantePath`.
+- **Three admin GET routes** (`/api/admin/token-orders`, `/api/admin/pass-orders`, `/api/admin/enrollments`) — generate signed URLs for `comprobante_url` before responding. Legacy full-URL records pass through transparently.
+- **Three user order routes** — removed `comprobanteUrl` from request body; path-prefix validation updated from `comprobantes/pending/` to `pending/` (private bucket path layout); DB field stores path instead of public URL.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.22.1] — 2026-05-12
 
 ### Security

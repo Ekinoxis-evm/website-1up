@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Archivo demasiado grande (máx 5MB)" }, { status: 400 });
 
   try {
-    const result = await uploadComprobante(file, claims.userId);
-    return NextResponse.json(result);
+    const { path } = await uploadComprobante(file, claims.userId);
+    return NextResponse.json({ path });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

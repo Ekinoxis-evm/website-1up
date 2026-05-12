@@ -61,7 +61,6 @@ export async function POST(req: NextRequest) {
     walletAddress?:   string;
     bankAccountId?:   number;
     comprobantePath?: string;
-    comprobanteUrl?:  string;
   };
 
   const { courseId, paymentMethod } = body;
@@ -183,13 +182,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── BANK PATH ─────────────────────────────────────────────────
-  const { bankAccountId, comprobantePath, comprobanteUrl } = body;
+  const { bankAccountId, comprobantePath } = body;
 
   if (!bankAccountId)
     return NextResponse.json({ error: "Cuenta bancaria requerida" }, { status: 400 });
-  if (!comprobantePath || !comprobanteUrl)
+  if (!comprobantePath)
     return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
-  if (!comprobantePath.startsWith("comprobantes/pending/"))
+  if (!comprobantePath.startsWith("pending/"))
     return NextResponse.json({ error: "Ruta de comprobante inválida" }, { status: 400 });
 
   const { data: bankAccount } = await supabaseAdmin
@@ -215,7 +214,7 @@ export async function POST(req: NextRequest) {
       payment_method:       "bank",
       payment_status:       "pending",
       bank_account_id:      bankAccountId,
-      comprobante_url:      comprobanteUrl,
+      comprobante_url:      comprobantePath,
     })
     .select()
     .single();

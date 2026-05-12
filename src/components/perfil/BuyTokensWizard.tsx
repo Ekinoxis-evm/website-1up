@@ -31,7 +31,6 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
   const [selectedBank, setSelectedBank]   = useState<BankAccount | null>(null);
   const [copiedField, setCopiedField]     = useState<string | null>(null);
   const [comprobantePath, setComprobantePath]   = useState<string | null>(null);
-  const [comprobanteUrl, setComprobanteUrl]     = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError]     = useState<string | null>(null);
@@ -100,13 +99,12 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
       const d = await res.json().catch(() => ({}));
       setUploadError(d.error ?? "Error al subir el archivo"); return;
     }
-    const { url, path } = await res.json() as { url: string; path: string };
-    setComprobanteUrl(url);
+    const { path } = await res.json() as { path: string };
     setComprobantePath(path);
   }
 
   async function handleSubmit() {
-    if (!comprobantePath || !comprobanteUrl || !selectedBank) return;
+    if (!comprobantePath || !selectedBank) return;
     setSubmitLoading(true); setSubmitError(null);
 
     const token = await getAccessToken();
@@ -118,7 +116,6 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
         copAmount: copInt,
         bankAccountId: selectedBank.id,
         comprobantePath,
-        comprobanteUrl,
       }),
     });
 
@@ -135,7 +132,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
 
   function handleClose() {
     setStep(1); setCopAmount(""); setSelectedBank(null); setBankAccounts([]);
-    setComprobantePath(null); setComprobanteUrl(null); setComprobantePreview(null);
+    setComprobantePath(null); setComprobantePreview(null);
     setSubmitError(null); setUploadError(null); setOrderId(null);
     onClose();
   }
@@ -387,7 +384,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
                   ) : comprobantePreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={comprobantePreview} alt="preview" className="max-h-32 mx-auto object-contain" />
-                  ) : comprobanteUrl ? (
+                  ) : comprobantePath ? (
                     <div className="flex flex-col items-center gap-2">
                       <span className="material-symbols-outlined text-3xl text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                       <span className="font-headline text-xs uppercase text-tertiary">Archivo subido</span>
@@ -412,7 +409,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmit}
-                  disabled={submitLoading || !comprobanteUrl}
+                  disabled={submitLoading || !comprobantePath}
                   className="flex-1 bg-tertiary text-background font-headline font-black py-3 uppercase disabled:opacity-40"
                 >
                   {submitLoading ? "ENVIANDO..." : "ENVIAR ORDEN"}

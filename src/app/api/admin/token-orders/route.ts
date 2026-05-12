@@ -4,6 +4,7 @@ import { isAdmin } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { sendTokenOrderApprovedEmail, sendTokenOrderRejectedEmail } from "@/lib/email";
+import { getComprobanteSignedUrl } from "@/lib/blob";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -26,7 +27,13 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+
+  const enriched = await Promise.all((data ?? []).map(async (order) => {
+    if (!order.comprobante_url) return order;
+    const signedUrl = await getComprobanteSignedUrl(order.comprobante_url);
+    return { ...order, comprobante_url: signedUrl };
+  }));
+  return NextResponse.json(enriched);
 }
 
 export async function PATCH(req: NextRequest) {

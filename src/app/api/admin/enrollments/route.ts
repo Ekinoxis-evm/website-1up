@@ -14,6 +14,7 @@ import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { sendCourseOrderApprovedEmail, sendCourseOrderRejectedEmail } from "@/lib/email";
+import { getComprobanteSignedUrl } from "@/lib/blob";
 
 export async function GET(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -62,7 +63,12 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json(data ?? []);
+  const enriched = await Promise.all((data ?? []).map(async (enrollment) => {
+    if (!enrollment.comprobante_url) return enrollment;
+    const signedUrl = await getComprobanteSignedUrl(enrollment.comprobante_url);
+    return { ...enrollment, comprobante_url: signedUrl };
+  }));
+  return NextResponse.json(enriched);
 }
 
 export async function PATCH(req: NextRequest) {

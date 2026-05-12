@@ -45,12 +45,11 @@ export async function POST(req: NextRequest) {
     copAmount?: number;
     bankAccountId?: number;
     comprobantePath?: string;
-    comprobanteUrl?: string;
     nombre?: string;
     celular?: string;
   };
 
-  const { walletAddress, copAmount, bankAccountId, comprobantePath, comprobanteUrl } = body;
+  const { walletAddress, copAmount, bankAccountId, comprobantePath } = body;
 
   if (!walletAddress || !isAddress(walletAddress))
     return NextResponse.json({ error: "Wallet inválida" }, { status: 400 });
@@ -61,10 +60,10 @@ export async function POST(req: NextRequest) {
   if (!bankAccountId)
     return NextResponse.json({ error: "Cuenta bancaria requerida" }, { status: 400 });
 
-  if (!comprobantePath || !comprobanteUrl)
+  if (!comprobantePath)
     return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
 
-  if (!comprobantePath.startsWith("comprobantes/pending/"))
+  if (!comprobantePath.startsWith("pending/"))
     return NextResponse.json({ error: "Ruta de comprobante inválida" }, { status: 400 });
 
   const { data: bankAccount } = await supabaseAdmin
@@ -120,7 +119,7 @@ export async function POST(req: NextRequest) {
       token_amount:     tokenAmount,
       exchange_rate_cop: 1000,
       bank_account_id:  bankAccountId,
-      comprobante_url:  comprobanteUrl,
+      comprobante_url:  comprobantePath,
       status:           "pending",
     })
     .select("id")

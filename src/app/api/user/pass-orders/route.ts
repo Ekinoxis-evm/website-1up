@@ -52,21 +52,20 @@ export async function POST(req: NextRequest) {
   if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { txHash, walletAddress, paymentMethod, bankAccountId, comprobantePath, comprobanteUrl } =
+  const { txHash, walletAddress, paymentMethod, bankAccountId, comprobantePath } =
     body as {
       txHash?: string;
       walletAddress?: string;
       paymentMethod?: string;
       bankAccountId?: number;
       comprobantePath?: string;
-      comprobanteUrl?: string;
     };
 
   const method = paymentMethod === "bank" ? "bank" : "token";
 
   // Bank transfer path
   if (method === "bank") {
-    return handleBankOrder(claims.userId, walletAddress, bankAccountId, comprobantePath, comprobanteUrl);
+    return handleBankOrder(claims.userId, walletAddress, bankAccountId, comprobantePath);
   }
 
   // Token (blockchain) path
@@ -194,12 +193,11 @@ async function handleBankOrder(
   walletAddress: string | undefined,
   bankAccountId: number | undefined,
   comprobantePath: string | undefined,
-  comprobanteUrl: string | undefined,
 ): Promise<NextResponse> {
   if (!walletAddress) return NextResponse.json({ error: "walletAddress es requerido." }, { status: 400 });
   if (!bankAccountId) return NextResponse.json({ error: "Cuenta bancaria requerida." }, { status: 400 });
-  if (!comprobantePath || !comprobanteUrl) return NextResponse.json({ error: "Comprobante requerido." }, { status: 400 });
-  if (!comprobantePath.startsWith("comprobantes/pending/"))
+  if (!comprobantePath) return NextResponse.json({ error: "Comprobante requerido." }, { status: 400 });
+  if (!comprobantePath.startsWith("pending/"))
     return NextResponse.json({ error: "Ruta de comprobante inválida." }, { status: 400 });
 
   const { data: bankAccount } = await supabaseAdmin
@@ -226,7 +224,7 @@ async function handleBankOrder(
       wallet_address:          walletAddress,
       payment_method:          "bank",
       bank_account_id:         bankAccountId,
-      comprobante_url:         comprobanteUrl,
+      comprobante_url:         comprobantePath,
       status:                  "pending_bank",
       token_price_at_purchase: config.price_token,
       token_amount_paid:       config.price_token,
