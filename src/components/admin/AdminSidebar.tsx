@@ -48,11 +48,10 @@ const GROUPS: NavGroup[] = [
     label: "1UP Pass & Tokens",
     icon: "token",
     items: [
-      { href: "/admin/1pass",            icon: "card_membership",  label: "1UP Pass"      },
-      { href: "/admin/pass-orders",      icon: "verified",         label: "Compras Pass"  },
-      { href: "/admin/pass-bank-orders", icon: "pending_actions",  label: "Pass — Banco"  },
-      { href: "/admin/token-orders",     icon: "currency_exchange",label: "Órdenes 1UP"   },
-      { href: "/admin/bank-accounts",    icon: "account_balance",  label: "Cuentas Banco" },
+      { href: "/admin/1pass",         icon: "card_membership",  label: "1UP Pass"       },
+      { href: "/admin/pass-orders",   icon: "verified",         label: "Órdenes Pass"   },
+      { href: "/admin/token-orders",  icon: "currency_exchange",label: "Órdenes $1UP"   },
+      { href: "/admin/bank-accounts", icon: "account_balance",  label: "Cuentas Banco"  },
     ],
   },
   {

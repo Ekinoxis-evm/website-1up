@@ -8,8 +8,10 @@ import type { PassOrderStatus } from "@/types/database.types";
 type Order = {
   id: number;
   status: PassOrderStatus;
+  payment_method: string;
   wallet_address: string;
   tx_hash: string | null;
+  comprobante_url: string | null;
   token_amount_paid: number;
   token_price_at_purchase: number;
   duration_days: number;
@@ -17,19 +19,21 @@ type Order = {
   expires_at: string | null;
   block_number: number | null;
   admin_notes: string | null;
+  rejection_reason: string | null;
   created_at: string;
   user_profiles: { nombre: string | null; apellidos: string | null; email: string | null; username: string | null } | null;
+  bank_accounts: { bank_name: string; account_type: string | null; account_number: string; holder_name: string } | null;
 };
 
-const STATUS_LABELS: Record<PassOrderStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   pending_tx:         "Pendiente TX",
   confirmed:          "Confirmado",
-  failed:             "Fallido",
+  failed:             "Fallido/Rechazado",
   expired_unverified: "No Verificado",
   pending_bank:       "Pendiente Banco",
 };
 
-const STATUS_COLORS: Record<PassOrderStatus, string> = {
+const STATUS_COLORS: Record<string, string> = {
   pending_tx:         "bg-outline/10 text-outline",
   confirmed:          "bg-tertiary/20 text-tertiary",
   failed:             "bg-error/20 text-error",
@@ -37,64 +41,83 @@ const STATUS_COLORS: Record<PassOrderStatus, string> = {
   pending_bank:       "bg-secondary-container/40 text-secondary",
 };
 
-const FILTER_OPTIONS: { label: string; value: PassOrderStatus | "all" }[] = [
-  { label: "Todos",      value: "all"               },
-  { label: "Activos",    value: "confirmed"          },
-  { label: "Pendiente",  value: "pending_tx"         },
-  { label: "Fallidos",   value: "failed"             },
-];
-
 const BASESCAN = "https://basescan.org/tx/";
 
 interface Props { orders: Order[] }
+
+function userName(o: Order) {
+  const u = o.user_profiles;
+  return u
+    ? [u.nombre, u.apellidos].filter(Boolean).join(" ") || u.username || u.email || `#${o.id}`
+    : `#${o.id}`;
+}
 
 export function AdminPassOrdersClient({ orders }: Props) {
   const { getAccessToken } = usePrivy();
   const router = useRouter();
 
-  const [filter, setFilter]       = useState<PassOrderStatus | "all">("all");
-  const [editId, setEditId]       = useState<number | null>(null);
-  const [editNotes, setEditNotes] = useState("");
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState("");
+  const [tab, setTab]               = useState<"token" | "banco">("token");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [actionId, setActionId]     = useState<number | null>(null);
+  const [notes, setNotes]           = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [err, setErr]               = useState("");
 
-  const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const tokenOrders = orders.filter((o) => o.payment_method === "token");
+  const bancoOrders = orders.filter((o) => o.payment_method === "bank");
+  const activeList  = tab === "token" ? tokenOrders : bancoOrders;
+
+  const filtered = statusFilter === "all"
+    ? activeList
+    : activeList.filter((o) => o.status === statusFilter);
 
   const confirmedCount = orders.filter((o) => o.status === "confirmed").length;
   const activeNow      = orders.filter(
     (o) => o.status === "confirmed" && o.expires_at && new Date(o.expires_at) > new Date()
   ).length;
+  const pendingBanco   = bancoOrders.filter((o) => o.status === "pending_bank").length;
 
   async function saveNotes(id: number) {
-    setSaving(true);
-    setError("");
+    setSaving(true); setErr("");
     const token = await getAccessToken();
     const res = await fetch("/api/admin/pass-orders", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ id, adminNotes: editNotes }),
+      body: JSON.stringify({ id, adminNotes: notes }),
     });
     setSaving(false);
-    if (!res.ok) {
-      const d = await res.json();
-      setError(d.error ?? "Error al guardar.");
-      return;
-    }
-    setEditId(null);
+    if (!res.ok) { const d = await res.json(); setErr(d.error ?? "Error al guardar."); return; }
+    setActionId(null);
     router.refresh();
   }
 
-  function openEdit(o: Order) {
-    setEditId(o.id);
-    setEditNotes(o.admin_notes ?? "");
-    setError("");
+  async function doAction(id: number, action: "approve" | "reject") {
+    setSaving(true); setErr("");
+    const token = await getAccessToken();
+    const res = await fetch("/api/admin/pass-orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, action, adminNotes: notes || undefined, rejectionReason: rejectionReason || undefined }),
+    });
+    setSaving(false);
+    if (!res.ok) { const d = await res.json(); setErr(d.error ?? "Error"); return; }
+    setActionId(null); setNotes(""); setRejectionReason("");
+    router.refresh();
+  }
+
+  function openAction(o: Order) {
+    setActionId(actionId === o.id ? null : o.id);
+    setNotes(o.admin_notes ?? "");
+    setRejectionReason("");
+    setErr("");
   }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-headline font-black text-3xl uppercase tracking-tighter">
-          COMPRAS <span className="text-primary-container">1UP PASS</span>
+          ÓRDENES <span className="text-primary-container">1UP PASS</span>
         </h1>
         <div className="h-1 w-16 bg-primary-container mt-2" />
       </div>
@@ -109,72 +132,101 @@ export function AdminPassOrdersClient({ orders }: Props) {
           <p className="font-headline text-xs uppercase tracking-widest text-outline mb-1">Confirmadas</p>
           <p className="font-headline font-black text-4xl text-tertiary">{confirmedCount}</p>
         </div>
-        <div className="bg-surface-container p-5 border-l-4 border-secondary-container">
+        <div className="bg-surface-container p-5 border-l-4 border-primary-container">
           <p className="font-headline text-xs uppercase tracking-widest text-outline mb-1">Activos Ahora</p>
           <p className="font-headline font-black text-4xl">{activeNow}</p>
         </div>
-        <div className="bg-surface-container p-5 border-l-4 border-error">
-          <p className="font-headline text-xs uppercase tracking-widest text-outline mb-1">Fallidos</p>
-          <p className="font-headline font-black text-4xl text-error">
-            {orders.filter((o) => o.status === "failed").length}
+        <div className="bg-surface-container p-5 border-l-4 border-secondary-container">
+          <p className="font-headline text-xs uppercase tracking-widest text-outline mb-1">Pendiente Banco</p>
+          <p className={`font-headline font-black text-4xl ${pendingBanco > 0 ? "text-secondary" : ""}`}>
+            {pendingBanco}
           </p>
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex gap-2 flex-wrap">
-        {FILTER_OPTIONS.map((f) => (
+      {/* Tabs */}
+      <div className="flex gap-0">
+        {(["token", "banco"] as const).map((t) => (
           <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`font-headline font-bold text-xs uppercase tracking-wider px-4 py-1.5 transition-colors ${
-              filter === f.value
+            key={t}
+            onClick={() => { setTab(t); setStatusFilter("all"); setActionId(null); }}
+            className={`px-6 py-2 font-headline font-black text-xs uppercase tracking-widest transition-colors ${
+              tab === t
                 ? "bg-primary-container text-white"
-                : "bg-surface-container text-on-surface/60 hover:text-on-surface"
+                : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
             }`}
           >
-            {f.label}
+            {t === "token"
+              ? `Token $1UP (${tokenOrders.length})`
+              : `Banco (${bancoOrders.length})${pendingBanco > 0 ? ` · ${pendingBanco} pendientes` : ""}`}
           </button>
         ))}
       </div>
 
-      {/* Table */}
+      {/* Status filter pills */}
+      <div className="flex gap-2 flex-wrap">
+        {["all",
+          ...(tab === "token"
+            ? ["confirmed", "pending_tx", "failed", "expired_unverified"]
+            : ["pending_bank", "confirmed", "failed"])
+        ].map((f) => (
+          <button
+            key={f}
+            onClick={() => setStatusFilter(f)}
+            className={`font-headline font-bold text-xs uppercase tracking-wider px-4 py-1.5 transition-colors ${
+              statusFilter === f
+                ? "bg-primary-container text-white"
+                : "bg-surface-container text-on-surface/60 hover:text-on-surface"
+            }`}
+          >
+            {f === "all" ? "Todos" : STATUS_LABELS[f] ?? f}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
       <div className="space-y-2">
         {filtered.length === 0 && (
           <p className="font-body text-sm text-outline py-8 text-center">Sin órdenes.</p>
         )}
+
         {filtered.map((o) => {
-          const user = o.user_profiles;
-          const userName = user
-            ? [user.nombre, user.apellidos].filter(Boolean).join(" ") || user.username || user.email || `#${o.id}`
-            : `#${o.id}`;
+          const name    = userName(o);
+          const isOpen  = actionId === o.id;
           const isExpired = o.expires_at ? new Date(o.expires_at) < new Date() : true;
 
           return (
             <div key={o.id} className="bg-surface-container p-4 space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-start">
+
                 {/* Status + user */}
                 <div className="col-span-2 md:col-span-1">
-                  <span className={`font-headline text-[10px] px-2 py-0.5 uppercase ${STATUS_COLORS[o.status]}`}>
-                    {STATUS_LABELS[o.status]}
-                  </span>
-                  {o.status === "confirmed" && (
-                    <span className={`ml-2 font-headline text-[10px] px-2 py-0.5 uppercase ${isExpired ? "bg-error/10 text-error" : "bg-primary-container/20 text-primary"}`}>
-                      {isExpired ? "Expirado" : "Activo"}
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    <span className={`font-headline text-[10px] px-2 py-0.5 uppercase ${STATUS_COLORS[o.status] ?? ""}`}>
+                      {STATUS_LABELS[o.status] ?? o.status}
                     </span>
+                    {o.status === "confirmed" && (
+                      <span className={`font-headline text-[10px] px-2 py-0.5 uppercase ${isExpired ? "bg-error/10 text-error" : "bg-primary-container/20 text-primary"}`}>
+                        {isExpired ? "Expirado" : "Activo"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-body text-sm text-on-background">{name}</p>
+                  {o.user_profiles?.email && (
+                    <p className="font-body text-xs text-outline truncate">{o.user_profiles.email}</p>
                   )}
-                  <p className="font-body text-sm text-on-background mt-1">{userName}</p>
                 </div>
 
                 {/* Amount */}
                 <div>
                   <p className="text-[10px] font-headline uppercase text-outline mb-0.5">Pagado</p>
-                  <p className="font-headline font-black text-on-background">
+                  <p className="font-headline font-black">
                     {o.token_amount_paid.toLocaleString()} <span className="text-xs text-outline">$1UP</span>
                   </p>
+                  <p className="font-body text-xs text-outline">{o.duration_days} días</p>
                 </div>
 
-                {/* Duration / expiry */}
+                {/* Expiry */}
                 <div>
                   <p className="text-[10px] font-headline uppercase text-outline mb-0.5">Vence</p>
                   <p className="font-body text-sm text-on-background/80">
@@ -182,67 +234,144 @@ export function AdminPassOrdersClient({ orders }: Props) {
                   </p>
                 </div>
 
-                {/* TX hash */}
-                <div>
-                  <p className="text-[10px] font-headline uppercase text-outline mb-0.5">TX</p>
-                  {o.tx_hash ? (
-                    <a
-                      href={`${BASESCAN}${o.tx_hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-xs text-primary hover:underline"
-                    >
-                      {o.tx_hash.slice(0, 10)}…{o.tx_hash.slice(-6)}
-                    </a>
-                  ) : (
-                    <span className="font-body text-xs text-outline">Banco</span>
-                  )}
-                </div>
+                {/* TX hash (token) or Bank + Comprobante (banco) */}
+                {tab === "token" ? (
+                  <div>
+                    <p className="text-[10px] font-headline uppercase text-outline mb-0.5">TX</p>
+                    {o.tx_hash ? (
+                      <a
+                        href={`${BASESCAN}${o.tx_hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs text-primary hover:underline"
+                      >
+                        {o.tx_hash.slice(0, 10)}…{o.tx_hash.slice(-6)}
+                      </a>
+                    ) : (
+                      <span className="font-body text-xs text-outline">—</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-headline uppercase text-outline">Banco</p>
+                    {o.bank_accounts ? (
+                      <p className="font-body text-xs">{o.bank_accounts.bank_name} · {o.bank_accounts.account_number}</p>
+                    ) : <p className="font-body text-xs text-outline">—</p>}
+                    {o.comprobante_url && (
+                      <a
+                        href={o.comprobante_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-headline font-bold text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">open_in_new</span>
+                        Comprobante
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-start justify-end">
-                  <button
-                    onClick={() => openEdit(o)}
-                    className="font-headline font-bold text-xs uppercase text-outline hover:text-on-surface transition-colors flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-sm">edit_note</span>
-                    Notas
-                  </button>
+                  {tab === "banco" && o.status === "pending_bank" ? (
+                    <button
+                      onClick={() => openAction(o)}
+                      className="font-headline font-bold text-xs uppercase text-outline hover:text-on-surface transition-colors flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">rate_review</span>
+                      Revisar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openAction(o)}
+                      className="font-headline font-bold text-xs uppercase text-outline hover:text-on-surface transition-colors flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit_note</span>
+                      Notas
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Admin notes */}
-              {editId === o.id ? (
-                <div className="space-y-2 pt-2 border-t border-surface-container-high">
-                  <textarea
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    rows={2}
-                    placeholder="Notas internas..."
-                    className="w-full bg-surface-container-lowest p-3 font-body text-sm text-on-background border-none resize-none"
-                  />
-                  {error && <p className="font-body text-xs text-error">{error}</p>}
-                  <div className="flex gap-2">
+              {/* Rejection reason */}
+              {o.status === "failed" && o.rejection_reason && (
+                <p className="font-body text-xs text-error italic">Rechazo: {o.rejection_reason}</p>
+              )}
+
+              {/* Expandable action panel */}
+              {isOpen && (
+                <div className="space-y-3 pt-3 border-t border-surface-container-high">
+                  <div>
+                    <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">
+                      Notas internas
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Notas opcionales…"
+                      className="w-full bg-surface-container-lowest p-3 font-body text-sm border-none resize-none focus:outline-none"
+                    />
+                  </div>
+
+                  {tab === "banco" && o.status === "pending_bank" && (
+                    <div>
+                      <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">
+                        Motivo de rechazo <span className="font-normal normal-case text-outline/50">(solo si rechazas)</span>
+                      </label>
+                      <input
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Ej: Monto incorrecto, comprobante ilegible…"
+                        className="w-full bg-surface-container-lowest p-3 font-body text-sm border-none focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {err && <p className="font-body text-xs text-error">{err}</p>}
+
+                  <div className="flex gap-2 flex-wrap">
+                    {tab === "banco" && o.status === "pending_bank" ? (
+                      <>
+                        <button
+                          onClick={() => doAction(o.id, "approve")}
+                          disabled={saving}
+                          className="bg-tertiary text-white font-headline font-black text-xs uppercase px-5 py-2.5 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                          {saving ? "Procesando…" : "Aprobar"}
+                        </button>
+                        <button
+                          onClick={() => doAction(o.id, "reject")}
+                          disabled={saving || !rejectionReason.trim()}
+                          className="bg-error text-white font-headline font-black text-xs uppercase px-5 py-2.5 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
+                          Rechazar
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => saveNotes(o.id)}
+                        disabled={saving}
+                        className="bg-primary-container text-white font-headline font-black text-xs uppercase px-4 py-2 disabled:opacity-50"
+                      >
+                        {saving ? "Guardando…" : "Guardar"}
+                      </button>
+                    )}
                     <button
-                      onClick={() => saveNotes(o.id)}
-                      disabled={saving}
-                      className="bg-primary-container text-white font-headline font-black text-xs uppercase px-4 py-2 disabled:opacity-50"
-                    >
-                      {saving ? "Guardando…" : "Guardar"}
-                    </button>
-                    <button
-                      onClick={() => setEditId(null)}
+                      onClick={() => setActionId(null)}
                       className="bg-surface-container-high text-on-surface font-headline font-black text-xs uppercase px-4 py-2"
                     >
                       Cancelar
                     </button>
                   </div>
                 </div>
-              ) : o.admin_notes ? (
-                <p className="font-body text-xs text-outline/70 pt-2 border-t border-surface-container-high italic">
-                  {o.admin_notes}
-                </p>
-              ) : null}
+              )}
+
+              {!isOpen && o.admin_notes && (
+                <p className="font-body text-xs text-outline/70 italic">{o.admin_notes}</p>
+              )}
             </div>
           );
         })}
