@@ -19,7 +19,7 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Styling | Tailwind CSS v3 — Neo-Brutalist design system |
 | Auth | Privy (`@privy-io/react-auth` + `@privy-io/server-auth`) |
 | Database | Supabase (`@supabase/supabase-js`) |
-| File Storage | Supabase Storage (`images` bucket — public, 5MB limit) |
+| File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private, signed URLs) |
 | Payments | MercadoPago (`mercadopago` SDK v2) |
 | QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
 | Runtime | Node.js 24 |
@@ -304,11 +304,11 @@ npm run dev
 
 ---
 
-## Image Storage
+## File Storage
 
-All uploaded images go to the **Supabase Storage `images` bucket** (public, 5MB, jpg/png/webp/gif/avif).
+### `images` bucket — public, 5 MB, jpg/png/webp/gif/avif
 
-Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in metadata). Re-uploading always overwrites the same key via `upsert: true`, so no orphaned files accumulate. New entities without an ID yet land at `{folder}/pending/{timestamp}.{ext}`.
+Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in metadata). Re-uploading always overwrites the same key via `upsert: true`. New entities without an ID yet land at `{folder}/pending/{timestamp}.{ext}`.
 
 | Path | Used by |
 |------|---------|
@@ -320,8 +320,16 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/masters/{id}/cover` | Master photos |
 | `images/aliados/{id}/cover` | Partner logos and banner sponsor logos |
 | `images/tournaments/{id}/cover` | Tournament cover images |
-| `images/tournament-prizes/{resultId}/cover` | COP prize comprobantes (jpg/png/webp/pdf, 5MB) |
 | `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
+
+### `comprobantes` bucket — **private**, 5 MB, jpg/png/webp/pdf
+
+Payment receipts uploaded by users during token purchase, pass purchase, and course enrollment. No permanent public URL exists — admin routes generate 1-hour signed URLs via `getComprobanteSignedUrl()` in `src/lib/blob.ts`.
+
+| Path | Used by |
+|------|---------|
+| `pending/{userHash}-{timestamp}.{ext}` | Temporary path before order ID is assigned |
+| `{orderId}/receipt.{ext}` | Final path after order is created |
 
 Static brand icons (instagram, tiktok, etc.) live in `/public/socialmedia/` — not uploaded, shipped with the app.
 
