@@ -340,69 +340,48 @@ export type Database = {
           },
         ]
       }
-      brand_logos: {
-        Row: {
-          id:          number
-          name:        string
-          logo_url:    string
-          website_url: string | null
-          sort_order:  number
-          is_active:   boolean
-          created_at:  string
-        }
-        Insert: {
-          id?:         number
-          name:        string
-          logo_url:    string
-          website_url?: string | null
-          sort_order?:  number
-          is_active?:   boolean
-          created_at?:  string
-        }
-        Update: {
-          id?:         number
-          name?:       string
-          logo_url?:   string
-          website_url?: string | null
-          sort_order?:  number
-          is_active?:   boolean
-          created_at?:  string
-        }
-        Relationships: []
-      }
       aliados: {
         Row: {
-          api_key: string | null
-          api_url: string | null
-          created_at: string | null
-          email: string | null
-          id: number
-          is_active: boolean | null
-          logo_url: string | null
-          name: string
-          nit: string | null
+          api_key:         string | null
+          api_url:         string | null
+          created_at:      string | null
+          email:           string | null
+          id:              number
+          is_active:       boolean | null
+          logo_url:        string | null
+          name:            string
+          nit:             string | null
+          website_url:     string | null
+          sort_order:      number
+          show_in_banner:  boolean
         }
         Insert: {
-          api_key?: string | null
-          api_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: number
-          is_active?: boolean | null
-          logo_url?: string | null
-          name: string
-          nit?: string | null
+          api_key?:        string | null
+          api_url?:        string | null
+          created_at?:     string | null
+          email?:          string | null
+          id?:             number
+          is_active?:      boolean | null
+          logo_url?:       string | null
+          name:            string
+          nit?:            string | null
+          website_url?:    string | null
+          sort_order?:     number
+          show_in_banner?: boolean
         }
         Update: {
-          api_key?: string | null
-          api_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: number
-          is_active?: boolean | null
-          logo_url?: string | null
-          name?: string
-          nit?: string | null
+          api_key?:        string | null
+          api_url?:        string | null
+          created_at?:     string | null
+          email?:          string | null
+          id?:             number
+          is_active?:      boolean | null
+          logo_url?:       string | null
+          name?:           string
+          nit?:            string | null
+          website_url?:    string | null
+          sort_order?:     number
+          show_in_banner?: boolean
         }
         Relationships: []
       }
@@ -1525,7 +1504,6 @@ export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"
 export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
 export type PassStatusEnum   = Database["public"]["Enums"]["pass_status_enum"];
 export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];
-export type BrandLogo        = Database["public"]["Tables"]["brand_logos"]["Row"];
 export type Tournament       = Database["public"]["Tables"]["tournaments"]["Row"];
 export type TournamentPrize        = Database["public"]["Tables"]["tournament_prizes"]["Row"];
 export type TournamentRegistration   = Database["public"]["Tables"]["tournament_registrations"]["Row"];

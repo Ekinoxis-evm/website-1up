@@ -247,11 +247,10 @@ npm run dev
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
 | `/admin/tournament-results` | Podium results — select tournament → assign 1°/2°/3° from registered players → save points (10/5/3 default, custom override) |
-| `/admin/brand-logos` | Brands Banner CRUD — logos for the animated marquee on home (name, logo, optional link, sort order) |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
 | `/admin/social-links` | Social link URLs per platform — footer icons (instagram, tiktok, kick, youtube, x, twitch) + community invite links (discord, whatsapp — shown in CommunitySection, filtered from footer) |
-| `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
+| `/admin/aliados` | Aliados & Sponsors CRUD — two tabs: **Banner** (show_in_banner = true, home marquee) and **API / Verificación** (integration partners with NIT, email, API URL/key). Replaces `/admin/brand-logos`. |
 | `/admin/submissions` | Recruitment form submissions (read-only) |
 | `/admin/users` | Admin user management |
 
@@ -282,7 +281,7 @@ npm run dev
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
 | `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired) |
-| `aliados` | Partner organizations — name, NIT, email, API URL/key |
+| `aliados` | Partner organizations AND banner sponsors — name, NIT, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active. `show_in_banner = true` → appears in home marquee. Replaces the former `brand_logos` table. |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |
 | `academia_content` | Videos/docs/quizzes per course (published after enrollment) |
@@ -294,7 +293,6 @@ npm run dev
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
-| `brand_logos` | Home marquee banner — name, `logo_url`, `website_url` (optional, makes logo clickable), `sort_order`, `is_active` |
 | `tournaments` | Esports tournaments — game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), is_registration_open, sort_order |
 | `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens, amount_cop. DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
@@ -318,8 +316,7 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/categories/{id}/cover` | Game category images |
 | `images/floors/{id}/cover` | Floor images (Gaming Tower) |
 | `images/masters/{id}/cover` | Master photos |
-| `images/aliados/{id}/cover` | Partner logos |
-| `images/brand-logos/{id}/cover` | Home marquee brand/sponsor logos |
+| `images/aliados/{id}/cover` | Partner logos and banner sponsor logos |
 | `images/tournaments/{id}/cover` | Tournament cover images |
 | `images/tournament-prizes/{resultId}/cover` | COP prize comprobantes (jpg/png/webp/pdf, 5MB) |
 | `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |

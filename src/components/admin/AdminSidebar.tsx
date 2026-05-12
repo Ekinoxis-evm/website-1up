@@ -7,55 +7,129 @@ import { usePrivy } from "@privy-io/react-auth";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
 
-const GROUPS = [
+type NavItem = { href: string; icon: string; label: string };
+type NavGroup = { label: string; icon: string; items: NavItem[] };
+
+const GROUPS: NavGroup[] = [
   {
     label: "Sitio Web",
+    icon: "language",
     items: [
-      { href: "/admin",              icon: "dashboard",       label: "Dashboard"     },
-      { href: "/admin/games",        icon: "sports_esports",  label: "Juegos"        },
-      { href: "/admin/floors",       icon: "domain",          label: "Gaming Tower"  },
-      { href: "/admin/players",      icon: "groups",          label: "Jugadores"     },
-      { href: "/admin/competitions", icon: "emoji_events",    label: "Competiciones" },
-      { href: "/admin/masters",      icon: "star",            label: "Masters"       },
-      { href: "/admin/site-images",  icon: "image",           label: "Imágenes Sitio" },
-      { href: "/admin/brand-logos",  icon: "storefront",      label: "Logos Banner"   },
-      { href: "/admin/torneos",                   icon: "emoji_events",  label: "Torneos"          },
-      { href: "/admin/tournament-registrations",  icon: "how_to_reg",    label: "Inscripciones"    },
-      { href: "/admin/torneos-internacionales",   icon: "public",        label: "Intl. Torneos"    },
-      { href: "/admin/tournament-results",        icon: "leaderboard",   label: "Hall of Fame"     },
+      { href: "/admin/games",       icon: "sports_esports", label: "Juegos"         },
+      { href: "/admin/floors",      icon: "domain",         label: "Gaming Tower"   },
+      { href: "/admin/aliados",     icon: "handshake",      label: "Aliados"        },
+      { href: "/admin/site-images", icon: "image",          label: "Imágenes Sitio" },
+      { href: "/admin/social-links",icon: "share",          label: "Redes"          },
     ],
   },
   {
-    label: "Academia & App",
+    label: "Competiciones",
+    icon: "emoji_events",
     items: [
-      { href: "/admin/courses",          icon: "school",          label: "Cursos"        },
-      { href: "/admin/1pass",            icon: "card_membership", label: "1UP Pass"      },
-      { href: "/admin/discounts",        icon: "local_offer",     label: "Descuentos"    },
-      { href: "/admin/enrollments",      icon: "receipt_long",    label: "Inscripciones" },
+      { href: "/admin/torneos",                  icon: "emoji_events",  label: "Torneos"          },
+      { href: "/admin/tournament-registrations", icon: "how_to_reg",    label: "Inscripciones"    },
+      { href: "/admin/tournament-results",       icon: "leaderboard",   label: "Hall of Fame"     },
+      { href: "/admin/torneos-internacionales",  icon: "public",        label: "Intl. Torneos"    },
+      { href: "/admin/players",                  icon: "groups",        label: "Jugadores"        },
+      { href: "/admin/competitions",             icon: "military_tech", label: "Competiciones"    },
     ],
   },
   {
-    label: "Tokens $1UP",
+    label: "Academia",
+    icon: "school",
     items: [
-      { href: "/admin/token-orders",     icon: "currency_exchange", label: "Órdenes 1UP"      },
-      { href: "/admin/bank-accounts",    icon: "account_balance",   label: "Cuentas Banco"    },
-      { href: "/admin/pass-orders",      icon: "verified",          label: "Compras Pass"     },
-      { href: "/admin/pass-bank-orders", icon: "pending_actions",   label: "Pass — Banco"     },
+      { href: "/admin/masters",     icon: "star",          label: "Masters"       },
+      { href: "/admin/courses",     icon: "school",        label: "Cursos"        },
+      { href: "/admin/enrollments", icon: "receipt_long",  label: "Inscripciones" },
+      { href: "/admin/discounts",   icon: "local_offer",   label: "Descuentos"    },
+    ],
+  },
+  {
+    label: "1UP Pass & Tokens",
+    icon: "token",
+    items: [
+      { href: "/admin/1pass",            icon: "card_membership",  label: "1UP Pass"      },
+      { href: "/admin/pass-orders",      icon: "verified",         label: "Compras Pass"  },
+      { href: "/admin/pass-bank-orders", icon: "pending_actions",  label: "Pass — Banco"  },
+      { href: "/admin/token-orders",     icon: "currency_exchange",label: "Órdenes 1UP"   },
+      { href: "/admin/bank-accounts",    icon: "account_balance",  label: "Cuentas Banco" },
     ],
   },
   {
     label: "Sistema",
+    icon: "settings",
     items: [
-      { href: "/admin/referral-codes",  icon: "confirmation_number",   label: "Referidos"   },
-      { href: "/admin/privy-users",    icon: "manage_accounts",       label: "Usuarios"    },
-      { href: "/admin/user-profiles",  icon: "people",                label: "Perfiles App" },
-      { href: "/admin/social-links",   icon: "share",                 label: "Redes"       },
-      { href: "/admin/aliados",        icon: "handshake",             label: "Aliados"     },
-      { href: "/admin/submissions",    icon: "inbox",                 label: "Solicitudes" },
-      { href: "/admin/users",          icon: "admin_panel_settings",  label: "Admins"      },
+      { href: "/admin/privy-users",   icon: "manage_accounts",      label: "Usuarios"     },
+      { href: "/admin/user-profiles", icon: "people",               label: "Perfiles App" },
+      { href: "/admin/referral-codes",icon: "confirmation_number",  label: "Referidos"    },
+      { href: "/admin/submissions",   icon: "inbox",                label: "Solicitudes"  },
+      { href: "/admin/users",         icon: "admin_panel_settings", label: "Admins"       },
     ],
   },
 ];
+
+function groupContainsPath(group: NavGroup, pathname: string) {
+  return group.items.some(
+    ({ href }) => pathname === href || (href !== "/admin" && pathname.startsWith(href))
+  );
+}
+
+function NavGroupSection({ group, defaultOpen }: { group: NavGroup; defaultOpen: boolean }) {
+  const pathname = usePathname();
+  const [expanded, setExpanded] = useState(defaultOpen);
+  const active = groupContainsPath(group, pathname);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className={`w-full flex items-center justify-between px-3 py-2 font-headline font-black text-[10px] uppercase tracking-widest transition-colors ${
+          active ? "text-primary" : "text-outline/60 hover:text-on-surface/70"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="material-symbols-outlined text-sm"
+            style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
+          >
+            {group.icon}
+          </span>
+          {group.label}
+        </div>
+        <span className="material-symbols-outlined text-sm transition-transform duration-200" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+          expand_more
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          {group.items.map(({ href, icon, label }) => {
+            const isActive = pathname === href || (href !== "/admin" && pathname.startsWith(href));
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 pl-8 pr-3 py-2.5 font-headline font-bold uppercase text-xs tracking-tight transition-all ${
+                  isActive
+                    ? "bg-primary-container/20 text-primary border-l-2 border-primary-container"
+                    : "text-on-surface/60 hover:text-on-surface hover:bg-surface-container-high"
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined text-sm"
+                  style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  {icon}
+                </span>
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -67,42 +141,37 @@ export function AdminSidebar() {
     window.location.href = `${ADMIN_URL}/login`;
   }
 
-  // Close drawer on route change
   useEffect(() => { setOpen(false); }, [pathname]);
 
   const navContent = (
     <>
-      <nav className="flex flex-col gap-6">
+      {/* Dashboard — always visible, not collapsible */}
+      <div className="mb-2">
+        <Link
+          href="/admin"
+          className={`flex items-center gap-3 px-3 py-3 font-headline font-bold uppercase text-xs tracking-tight transition-all ${
+            pathname === "/admin"
+              ? "bg-primary-container/20 text-primary border-l-2 border-primary-container"
+              : "text-on-surface/60 hover:text-on-surface hover:bg-surface-container-high"
+          }`}
+        >
+          <span
+            className="material-symbols-outlined text-sm"
+            style={pathname === "/admin" ? { fontVariationSettings: "'FILL' 1" } : undefined}
+          >
+            dashboard
+          </span>
+          Dashboard
+        </Link>
+      </div>
+
+      <nav className="flex flex-col gap-1">
         {GROUPS.map((group) => (
-          <div key={group.label}>
-            <p className="font-headline font-black text-[10px] uppercase tracking-widest text-outline/50 px-2 mb-1">
-              {group.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {group.items.map(({ href, icon, label }) => {
-                const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`flex items-center gap-3 px-3 py-3 font-headline font-bold uppercase text-xs tracking-tight transition-all ${
-                      active
-                        ? "bg-primary-container/20 text-primary border-l-2 border-primary-container"
-                        : "text-on-surface/60 hover:text-on-surface hover:bg-surface-container-high"
-                    }`}
-                  >
-                    <span
-                      className="material-symbols-outlined text-sm"
-                      style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                    >
-                      {icon}
-                    </span>
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <NavGroupSection
+            key={group.label}
+            group={group}
+            defaultOpen={groupContainsPath(group, pathname)}
+          />
         ))}
       </nav>
 
@@ -148,14 +217,14 @@ export function AdminSidebar() {
         />
       )}
 
-      {/* Sidebar — slide-in on mobile, fixed on desktop */}
+      {/* Sidebar — h-screen + overflow-y-auto so it scrolls */}
       <aside
-        className={`flex flex-col w-64 md:w-56 min-h-screen bg-surface-container border-r border-outline-variant/20
+        className={`flex flex-col w-64 md:w-56 h-screen bg-surface-container border-r border-outline-variant/20
           fixed left-0 top-0 z-50 py-8 px-4 overflow-y-auto transition-transform duration-200
           ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         {/* Header row */}
-        <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex items-center justify-between mb-6 px-2">
           <div>
             <div className="font-headline font-black text-primary italic text-xl">1UP</div>
             <div className="font-body text-xs text-outline uppercase tracking-widest mt-1">Admin Panel</div>

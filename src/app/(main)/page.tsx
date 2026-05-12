@@ -31,7 +31,7 @@ export default async function HomePage() {
     supabase.from("game_categories").select("*").order("sort_order"),
     supabase.from("games").select("*").order("sort_order"),
     supabase.from("pass_benefits").select("*").order("sort_order"),
-    supabase.from("brand_logos").select("*").eq("is_active", true).order("sort_order"),
+    supabase.from("aliados").select("*").eq("is_active", true).eq("show_in_banner", true).order("sort_order"),
   ]);
 
   const localBusiness = {

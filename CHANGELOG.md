@@ -5,6 +5,34 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.19.0] — 2026-05-12
+
+### Added
+
+- **Admin sidebar — collapsible groups** (`src/components/admin/AdminSidebar.tsx`): flat item list replaced with 5 collapsible groups (Sitio Web, Competiciones, Academia, 1UP Pass & Tokens, Sistema). Each group has an icon + chevron. The group containing the active route auto-expands on load. Dashboard stays pinned above all groups. Sidebar changed from `min-h-screen` to `h-screen` so `overflow-y-auto` now works and all items are reachable by scrolling.
+- **`show_in_banner`, `website_url`, `sort_order` columns on `aliados`** (DB migration `consolidate_brand_logos_into_aliados`): aliados that should appear in the home marquee banner are flagged with `show_in_banner = true`. `website_url` makes the logo clickable. `sort_order` controls banner position.
+
+### Changed
+
+- **`brand_logos` table eliminated — consolidated into `aliados`**: all existing `brand_logos` rows migrated to `aliados` with `show_in_banner = true`. The `brand_logos` table is dropped. `BrandsBanner` now reads from `aliados WHERE show_in_banner = true AND is_active = true ORDER BY sort_order`.
+- **`AdminAliadosClient`** (`src/components/admin/AdminAliadosClient.tsx`): rebuilt with two tabs — **Banner** (entries with `show_in_banner = true`, visual sponsors) and **API / Verificación** (entries without, integration partners). Modal now includes logo upload via `ImageUpload`, `website_url`, `sort_order`, and a "Mostrar en banner del home" checkbox. API fields (NIT, email, api_url, api_key) remain optional.
+- **`/api/admin/aliados`**: added GET endpoint (admin-auth); POST/PUT/DELETE updated with the three new fields.
+- **Admin sidebar — Masters moved to Academia group**, Aliados moved from Sistema to Sitio Web.
+- **`/admin/brand-logos`**: redirects to `/admin/aliados`. `/api/admin/brand-logos`: returns 410 Gone.
+- **CommunitySection** (`src/components/home/CommunitySection.tsx`): removed colored brand background (`bg-[#5865F2]` / `bg-[#25D366]`) from Discord/WhatsApp icons — PNGs now render directly without a wrapper div.
+
+### Removed
+
+- `brand_logos` Supabase table (data migrated to `aliados`).
+- `AdminBrandLogosClient` component (dead code — page now redirects).
+- `"brand-logos"` from `ImageFolder` union type (`src/lib/blob.ts`), `ALLOWED_FOLDERS` in upload route, and `ImageUpload` prop type.
+- `BrandLogo` type export from `database.types.ts`.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.18.0] — 2026-05-12
 
 ### Added

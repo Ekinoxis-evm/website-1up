@@ -60,7 +60,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST\|PUT\|DELETE /api/admin/courses` | isAdmin | Course CRUD |
 | `POST\|PUT\|DELETE /api/admin/discounts` | isAdmin | Discount rule CRUD |
 | `POST\|PUT\|DELETE /api/admin/masters` | isAdmin | Masters CRUD |
-| `POST\|PUT\|DELETE /api/admin/aliados` | isAdmin | Aliados CRUD |
+| `GET\|POST\|PUT\|DELETE /api/admin/aliados` | isAdmin | Aliados CRUD (GET lists all; POST/PUT include `website_url`, `sort_order`, `show_in_banner`) |
 | `POST\|PUT\|DELETE /api/admin/academia-content` | isAdmin | Academia content CRUD |
 | `PUT /api/admin/social-links` | isAdmin | Footer social links update |
 | `GET /api/admin/enrollments` | isAdmin | Enrollment list |
@@ -75,7 +75,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/user/onboarding` | Privy user | Complete onboarding — saves all profile fields, validates referral code, sets onboarding_completed_at |
 | `GET /api/user/referral-codes/validate` | Public | Validate a referral code (returns `{ valid, reason }`) |
 | `GET\|POST\|PUT /api/admin/referral-codes` | isAdmin | Referral code CRUD (create, toggle active, update description/max_uses) |
-| `GET\|POST\|PUT\|DELETE /api/admin/brand-logos` | isAdmin | Brand logo CRUD (GET is public — active only) |
+| `GET\|POST\|PUT\|DELETE /api/admin/brand-logos` | — | **Removed** — returns 410. Use `/api/admin/aliados` with `show_in_banner: true`. |
 | `GET\|POST\|PUT\|DELETE /api/admin/tournaments` | isAdmin | Tournament CRUD (GET is public — active only, joined with game name) |
 | `GET\|POST\|DELETE /api/user/tournament-registrations` | Privy user | List own registrations / register for tournament (RPC) / cancel |
 | `GET\|PATCH /api/admin/tournament-registrations` | isAdmin | List all registrations (filter by tournamentId) / update status (attended/no_show) |
@@ -100,7 +100,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `recruitment_submissions` | name, email, phone, source |
 | `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, barrio, birth_date (DATE), onboarding_completed_at, referred_by_code, comfenalco_afiliado, verified_aliados[], pass_status (pass_status_enum: never/active/expired — auto-synced by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE; nightly pg_cron job flips active→expired at 04:00 UTC) |
 | `referral_codes` | code (unique), description, is_active, max_uses, used_count — optional at onboarding (addable later on /app/identidad), admin-managed |
-| `aliados` | name, nit, email, api_url, api_key, logo_url, is_active |
+| `aliados` | name, nit, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active — API integration partners AND visual banner sponsors. `show_in_banner = true` → appears in home marquee. `brand_logos` table was merged here. |
 | `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |
 | `enrollments` | user_profile_id, course_id, final_price_cop, payment_status, mp_payment_id |
 | `academia_content` | course_id FK, content_type, title, url, is_published |
@@ -111,7 +111,6 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
 | `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
 | `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
-| `brand_logos` | name, logo_url, website_url (optional — makes logo clickable), sort_order, is_active — animated marquee banner on home |
 | `tournaments` | name, game_id FK (nullable → games), date, prize_pool_cop (deprecated — use tournament_prizes), max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, is_active, is_registration_open, sort_order |
 | `tournament_prizes` | tournament_id FK → tournaments (CASCADE), position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens (nullable NUMERIC), amount_cop (nullable INTEGER) — DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at — UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
@@ -154,8 +153,7 @@ Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`
 | `categories/{id}/cover` | Game category images |
 | `floors/{id}/cover` | Floor images (Gaming Tower) |
 | `masters/{id}/cover` | Master photos |
-| `aliados/{id}/cover` | Partner logos |
-| `brand-logos/{id}/cover` | Brand/sponsor logos for home marquee banner |
+| `aliados/{id}/cover` | Partner logos and banner sponsor logos (consolidated from brand-logos) |
 | `tournaments/{id}/cover` | Tournament cover images |
 | `site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 | `comprobantes/pending/{privyUserIdHash}-{timestamp}.{ext}` | Payment receipt — temporary path before order ID exists |
