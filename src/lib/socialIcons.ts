@@ -21,4 +21,10 @@ export const SOCIAL_LABEL: Record<string, string> = {
   twitch:    "Twitch",
   github:    "GitHub",
   linkedin:  "LinkedIn",
+  discord:   "Discord",
+  whatsapp:  "WhatsApp",
 };
+
+// Community invite platforms — shown in CommunitySection, filtered OUT of Footer
+export const COMMUNITY_PLATFORMS = ["discord", "whatsapp"] as const;
+export type CommunityPlatform = (typeof COMMUNITY_PLATFORMS)[number];

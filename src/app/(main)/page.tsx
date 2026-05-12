@@ -24,6 +24,7 @@ import { TorneosSection } from "@/components/home/TorneosSection";
 import { MarketplaceSection } from "@/components/home/MarketplaceSection";
 import { RecruitmentForm } from "@/components/home/RecruitmentForm";
 import { PassSection } from "@/components/tower/PassSection";
+import { CommunitySection } from "@/components/home/CommunitySection";
 
 export default async function HomePage() {
   const [{ data: allCategories }, { data: allGames }, { data: benefits }, { data: brandLogos }] = await Promise.all([
@@ -55,6 +56,7 @@ export default async function HomePage() {
       <PassSection benefits={benefits ?? []} />
       <AcademiaSection />
       <TorneosSection />
+      <CommunitySection />
       <MarketplaceSection />
       <TalentPipeline />
       <RecruitmentForm categories={allCategories ?? []} games={allGames ?? []} />

@@ -5,6 +5,35 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.17.0] — 2026-05-12
+
+### Added
+
+- **"Únete a nuestra comunidad" section** (`src/components/home/CommunitySection.tsx`): new Server Component that reads `social_links` filtering for `platform IN ('discord', 'whatsapp')` where `is_active = true`. Renders bold community invite cards (Material Symbols icons, platform accent colors) with tagline and call-to-action. Placed after `TorneosSection` on the home page and after `MasterGrid` on the Academia page. Returns `null` silently when no community links are active, so no admin setup is required.
+- **Discord + WhatsApp rows in `social_links`** (inserted via Supabase MCP): `discord` (sort_order 7) and `whatsapp` (sort_order 8) pointing to the official 1UP community invites. Managed entirely from the existing Admin → Redes Sociales panel.
+- **`COMMUNITY_PLATFORMS` constant + `CommunityPlatform` type** (`src/lib/socialIcons.ts`): `["discord", "whatsapp"]` — used as the source-of-truth filter for both `CommunitySection` and the Footer exclusion.
+- **`SOCIAL_LABEL` extended** (`src/lib/socialIcons.ts`): added `discord: "Discord"` and `whatsapp: "WhatsApp"` entries.
+
+### Changed
+
+- **Footer** (`src/components/layout/Footer.tsx`): community platforms (`discord`, `whatsapp`) are now filtered out of the social icon row. They have no `/public/socialmedia/` PNG and belong in the CommunitySection invite cards, not the footer.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.16.1] — 2026-05-12
+
+### Changed
+
+- **Minimum send amount in wallet tab** (`src/components/perfil/WalletTab.tsx`): `handleSend` now rejects amounts below 1 $1UP with a Spanish error message. The amount input uses `min={1}` and a hint label ("Mínimo: 1 $1UP por envío") is shown below the field.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.16.0] — 2026-05-12
 
 ### Added

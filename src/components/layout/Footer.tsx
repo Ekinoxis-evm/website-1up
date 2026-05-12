@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { SOCIAL_ICON, SOCIAL_LABEL } from "@/lib/socialIcons";
+import { SOCIAL_ICON, SOCIAL_LABEL, COMMUNITY_PLATFORMS } from "@/lib/socialIcons";
 
 export async function Footer() {
   const { data: socialLinks } = await supabase
@@ -8,6 +8,7 @@ export async function Footer() {
     .select("*")
     .eq("is_active", true)
     .not("url", "is", null)
+    .not("platform", "in", `(${COMMUNITY_PLATFORMS.join(",")})`)
     .order("sort_order");
 
   return (

@@ -4,6 +4,7 @@ import { HeroAcademia } from "@/components/academia/HeroAcademia";
 import { CourseCatalog } from "@/components/academia/CourseCatalog";
 import { LearningPath } from "@/components/academia/LearningPath";
 import { PaymentFeedback } from "@/components/academia/PaymentFeedback";
+import { CommunitySection } from "@/components/home/CommunitySection";
 import { MasterGrid } from "@/components/masters/MasterGrid";
 import type { Metadata } from "next";
 import type { Master } from "@/types/database.types";
@@ -62,6 +63,8 @@ export default async function AcademiaPage() {
         <div className="h-1 w-20 bg-primary-container" />
       </section>
       <MasterGrid masters={masterList} coursesByMaster={coursesByMaster} />
+
+      <CommunitySection />
 
       <Suspense>
         <PaymentFeedback />

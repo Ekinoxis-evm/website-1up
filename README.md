@@ -213,7 +213,7 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/app` | Wallet — $1UP balance, send (QR scanner), receive (QR code), purchase orders, Blockscout tx history |
+| `/app` | Wallet — $1UP balance, send (min 1 $1UP, QR scanner), receive (QR code), purchase orders, Blockscout tx history |
 | `/app/mis-torneos` | My tournament registrations — card list with status badges (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), links to tournament detail pages |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
