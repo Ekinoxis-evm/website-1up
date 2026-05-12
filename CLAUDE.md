@@ -14,7 +14,7 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 5. **Glass nav.** TopAppBar always uses `glass-panel` class — never opaque.
 6. **Auth on every admin API route.** `verifyToken` + `isAdmin` before any DB operation. No exceptions.
 7. **`revalidatePath()` after every mutation.** Call it for both the public page AND the admin page. Footer is in the shared layout — use `revalidatePath("/", "layout")` when mutating `social_links` so all public pages refresh.
-8. **Update docs after every change.** After any addition, fix, or feature: update `CHANGELOG.md` (new version entry), `README.md` (if routes/tables/stack changed), and this file (if rules/routes/env vars changed). No exception — docs drift is technical debt.
+8. **Update docs after every change.** After any addition, fix, or feature: update `CHANGELOG.md` (new version entry), `README.md` (if routes/tables/stack changed), and this file (if rules/routes/env vars changed). Also update `docs/FICHA-TECNICA.md` on every MINOR or MAJOR release — bump its version number (2.x), update the "Última actualización" date, and correct any sections affected by the change (endpoints, tables, login providers, integrations). No exception — docs drift is technical debt.
 
 ---
 
