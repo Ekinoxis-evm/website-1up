@@ -6,7 +6,7 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.2 |
+| **Versión** | 2.3 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | Mayo de 2026 |
 | **Clasificación** | Público / Para presentación institucional |
@@ -118,7 +118,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | 7 | ¿Tiene API propia o integra APIs de terceros? | **Ambas.** API REST interna vía Next.js API Routes. Integraciones activas: Privy, Supabase, MercadoPago, Resend, Blockscout API v2, Base L2 RPC. |
 | 8 | ¿Usa autenticación? ¿Cómo? | **Sí — Privy como IdP.** JWT Bearer Token verificado server-side. Proveedores: email, Google OAuth, Discord OAuth. Tres niveles de acceso: público, usuario registrado, administrador. |
 | 9 | ¿Es responsive? ¿Con qué CSS? | **Sí — mobile-first.** Tailwind CSS v3 con breakpoints estándar. Bottom nav en móvil; top bar o sidebar en desktop. |
-| 10 | ¿Hay tests automatizados? | App web: no implementados aún (TypeScript strict + ESLint + QA manual). Smart contracts: **suite completa con Foundry (Forge)** — tests unitarios, coverage y gas report activos. |
+| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 52 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos). Smart contracts: **suite completa con Foundry (Forge)** — tests unitarios, coverage y gas report activos. |
 
 ---
 
@@ -157,9 +157,10 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | Componente | Proveedor | Detalles |
 |-----------|---------|---------|
 | Base de datos relacional | **Supabase (PostgreSQL)** | Managed cloud — Región: us-east-1 |
-| Row-Level Security (RLS) | Supabase | Habilitado por tabla — primera línea de seguridad |
-| Almacenamiento de archivos | **Supabase Storage** | Bucket `images` (público, máx. 5 MB por archivo) |
-| Tipos de archivos | Imágenes, comprobantes de pago | JPG, PNG, WEBP, PDF |
+| Row-Level Security (RLS) | Supabase | Habilitado en las 27 tablas del esquema público — primera línea de seguridad |
+| Almacenamiento — imágenes | **Supabase Storage** (`images`) | Bucket público — fotos, portadas, logos. Máx. 5 MB por archivo |
+| Almacenamiento — comprobantes | **Supabase Storage** (`comprobantes`) | Bucket **privado** — comprobantes de pago (token, pass, cursos). Sin URL permanente; acceso exclusivo vía URLs firmadas de 1 hora generadas server-side |
+| Tipos de archivos | Imágenes / documentos | JPG, PNG, WEBP, GIF, AVIF (imágenes) · JPG, PNG, WEBP, PDF (comprobantes) |
 | ORM / cliente | Supabase JS v2 | Sin Drizzle/Prisma — cliente nativo |
 
 ### 5.4 Smart Contracts (capa blockchain — construida, pendiente de integración)
@@ -183,7 +184,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 |---------|---------|-----|--------|
 | Alojamiento de aplicación web | **Vercel** | Producción y preview deploys | Activo |
 | Base de datos | **Supabase** | Cloud managed PostgreSQL | Activo |
-| Almacenamiento de archivos | **Supabase Storage** | CDN con acceso público controlado | Activo |
+| Almacenamiento de archivos | **Supabase Storage** | Bucket `images` (público) + bucket `comprobantes` (privado, URLs firmadas) | Activo |
 | Correo transaccional | **Resend** | Notificaciones y confirmaciones | Activo |
 | Autenticación y wallets | **Privy** | IdP + infraestructura de wallets embebidas (TEE) | Activo |
 | Pagos con tarjeta | **MercadoPago** | Pasarela de pagos (Colombia) | Activo |
@@ -324,15 +325,14 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `tournament_prizes` | Premios por posición (1–3): tipo (tokens/COP/ambos), montos |
 | `tournament_registrations` | Inscripciones a torneos: usuario, torneo, estado (registered/cancelled/attended/no_show) |
 | `tournament_results` | Resultados de podio: usuario, torneo, posición, puntos |
-| `hall_of_fame` | Vista PostgreSQL: ranking por puntos totales — oro, plata, bronce |
+| `hall_of_fame` | Vista PostgreSQL (SECURITY INVOKER): ranking por puntos totales — oro, plata, bronce. Solo expone perfiles con resultado de podio — demás perfiles permanecen privados |
 | `pass_config` | Configuración del 1UP Pass: precio, wallet receptora, duración |
 | `pass_orders` | Órdenes de pass: usuario, método de pago, tx_hash, fechas, estado |
 | `token_purchase_orders` | Órdenes OTC de $1UP: usuario, montos, comprobante, estado, aprobación admin |
 | `bank_accounts` | Cuentas bancarias para pagos OTC — mostradas en modal de compra |
 | `discount_rules` | Reglas de descuento: tipo de trigger, porcentaje, aplicación, aliado FK, vigencia |
-| `aliados` | Partners con API de verificación para descuentos |
+| `aliados` | Partners: API de verificación para descuentos + logos del marquee. Columnas `api_key` y `api_url` revocadas a nivel de columna para roles anon/authenticated |
 | `referral_codes` | Códigos de referido: código único, usos máximos, contador, estado |
-| `brand_logos` | Logos de marcas/sponsors: imagen, URL, orden — marquee animado en home |
 | `international_tournaments` | Torneos internacionales de referencia (sin registro ni capacidad) |
 | `social_links` | Links de redes sociales del footer — editables desde admin |
 | `game_categories` | Categorías de juego: nombre, slug, imagen |
@@ -504,18 +504,65 @@ La plataforma implementa un sistema de diseño neo-brutalista personalizado, con
 
 ## 15. SEGURIDAD DE LA PLATAFORMA
 
+### 15.1 Capas de defensa
+
 | Capa | Mecanismo | Descripción |
 |------|-----------|-------------|
 | **Autenticación** | Privy JWT | Token firmado, verificado server-side en cada request protegido |
 | **Autorización** | isAdmin() | Email verificado contra env var + tabla DB antes de toda operación admin |
-| **Base de datos** | Supabase RLS | Row-Level Security como primera línea — el cliente anon nunca accede a datos de otros usuarios |
+| **Base de datos** | Supabase RLS | Row-Level Security habilitado en las 27 tablas — primera línea de defensa contra acceso directo vía PostgREST con la clave anon pública |
 | **Rutas de API** | Service role isolation | Admin API Routes usan `supabaseAdmin` (service role) — nunca el cliente anon |
 | **Pagos** | HMAC-SHA256 | Webhooks de MercadoPago verificados por firma antes de modificar cualquier registro |
 | **Precios** | Server-side only | Los precios y descuentos se calculan exclusivamente en servidor — nunca se confían valores del frontend |
 | **Secretos** | Vercel Env Vars | Ninguna credencial en el repositorio — todo gestionado en Vercel o `.env.local` (gitignored) |
-| **Uploads** | Tipo + tamaño | Archivos validados por MIME type y tamaño (máx. 5 MB) antes de almacenarse |
+| **Uploads** | Tipo + tamaño + bucket privado | Comprobantes validados por MIME type y tamaño (máx. 5 MB); almacenados en bucket privado sin URL permanente |
 | **Wallet** | TEE (Privy) | Las claves privadas de wallets embebidas nunca salen del Trusted Execution Environment de Privy |
 | **Gas** | EIP-7702 paymaster | El gas de transacciones on-chain de usuarios es patrocinado por Privy — el usuario nunca necesita ETH |
+
+### 15.2 Auditoría de seguridad completa — Mayo 2026
+
+En mayo de 2026 se realizó una auditoría integral de seguridad sobre la base de datos y el código de la plataforma. Los hallazgos y correcciones aplicadas se documentan a continuación.
+
+#### Supabase RLS — habilitación masiva
+
+| Tabla | Situación previa | Corrección aplicada |
+|-------|-----------------|---------------------|
+| `admin_users` | Sin RLS — cualquier caller anon podía INSERT su email y obtener acceso admin | RLS habilitado, sin políticas = acceso exclusivo por service role |
+| `user_profiles` | Políticas `USING (true)` — cualquier usuario autenticado leía todos los perfiles (PII: teléfono, documento, fecha de nacimiento) y podía actualizar perfiles ajenos | Políticas eliminadas — acceso exclusivo por service role vía API routes |
+| `pass_orders` | Sin RLS — wallets, tx hashes y comprobantes expuestos al cliente anon | RLS habilitado, sin políticas = service role only |
+| `token_purchase_orders` | Sin RLS — datos financieros y comprobantes expuestos | RLS habilitado, sin políticas = service role only |
+| `enrollment` | Sin RLS | RLS habilitado, sin políticas = service role only |
+| `recruitment_submissions` | Sin RLS | RLS habilitado, sin políticas = service role only |
+| `referral_codes` | Sin RLS | RLS habilitado, sin políticas = service role only |
+| 16 tablas de contenido público | Sin RLS — PostgREST permitía INSERT/UPDATE/DELETE directo sin autenticación | RLS habilitado con políticas SELECT-only para anon/authenticated |
+
+#### Escalada de privilegios cerrada
+
+La tabla `admin_users` sin RLS permitía a cualquier actor anónimo insertar su propio email directamente vía la API REST de Supabase (PostgREST + clave anon pública). En el siguiente request, `isAdmin()` —que usa service role y ve todas las filas— le habría concedido acceso total al panel de administración. Cerrado: RLS habilitado sin políticas, la tabla es ahora inaccesible desde el cliente anon.
+
+#### Protección de columnas sensibles
+
+`aliados.api_key` y `aliados.api_url` revocadas a nivel de columna (`REVOKE SELECT (api_key, api_url) FROM anon, authenticated`) — la lectura pública de aliados activos funciona pero estas columnas son invisibles fuera del service role.
+
+#### RPCs endurecidas
+
+| Función | Corrección |
+|---------|-----------|
+| `register_for_tournament` | `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` — era invocable sin autenticación vía PostgREST |
+| `sync_user_pass_status` | `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` — función de trigger no destinada a invocación directa |
+| Ambas funciones | `SET search_path = public` — previene ataques de inyección por search_path en funciones SECURITY DEFINER |
+
+#### Documentos financieros privatizados
+
+Los comprobantes de pago (transferencias bancarias OTC) se almacenaban en el bucket público `images`. Migrados a un bucket privado `comprobantes` (sin acceso público). Las rutas de API admin generan URLs firmadas de 1 hora bajo demanda; el frontend nunca recibe ni almacena URLs permanentes. Compatibilidad hacia atrás: registros legacy con `https://` completo pasan directamente.
+
+#### Vista hall_of_fame endurecida
+
+La vista tenía `SECURITY DEFINER` —ejecutaba como propietario, bypasando RLS— y exponía potencialmente todos los perfiles de usuario. Cambiada a `SECURITY INVOKER`. Se añadió una política RLS estrecha en `user_profiles` que permite lectura anon exclusivamente para los perfiles que tienen al menos un resultado de podio en `tournament_results`. El resto de perfiles permanece completamente privado.
+
+#### Estado final del advisor de Supabase
+
+Tras la auditoría: **0 errores, 0 advertencias**. Solo avisos informativos (`rls_enabled_no_policy`) para tablas que son intencionalmente de acceso exclusivo por service role — comportamiento correcto y deliberado.
 
 ---
 
@@ -644,4 +691,4 @@ Ninguna credencial, clave de API, clave privada de billetera o secreto está alm
 
 ---
 
-**Versión 2.2 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
+**Versión 2.3 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
