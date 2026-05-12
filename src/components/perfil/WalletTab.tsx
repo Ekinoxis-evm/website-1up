@@ -163,11 +163,16 @@ export function WalletTab() {
     return () => { cancelAnimationFrame(animFrame); streamRef.current?.getTracks().forEach((t) => t.stop()); };
   }, [scanOpen]);
 
+  const MIN_SEND_AMOUNT = 1;
+  const maxSendAmount = balance !== null ? parseFloat(balance) : 0;
+
   async function handleSend() {
     if (!walletAddress) return;
     if (!isAddress(sendTo)) { setSendError("Dirección inválida"); return; }
     const amt = parseFloat(sendAmount);
     if (isNaN(amt) || amt <= 0) { setSendError("Monto inválido"); return; }
+    if (amt < MIN_SEND_AMOUNT) { setSendError(`El mínimo por envío es ${MIN_SEND_AMOUNT} $1UP`); return; }
+    if (amt > maxSendAmount) { setSendError(`Saldo insuficiente. Máximo: ${maxSendAmount} $1UP`); return; }
 
     setSendLoading(true);
     setSendError(null);
@@ -447,14 +452,28 @@ export function WalletTab() {
                   </div>
                 </div>
                 <div>
-                  <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Monto $1UP</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Monto $1UP</label>
+                    {balance !== null && (
+                      <button
+                        type="button"
+                        onClick={() => { setSendAmount(balance); setSendError(null); }}
+                        className="text-[10px] font-headline font-black uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+                      >
+                        MAX ({balance})
+                      </button>
+                    )}
+                  </div>
                   <input
                     value={sendAmount}
                     onChange={(e) => { setSendAmount(e.target.value); setSendError(null); }}
-                    type="number" min="0" step="any"
+                    type="number" min={MIN_SEND_AMOUNT} max={maxSendAmount} step="any"
                     placeholder="0.00"
                     className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-black text-xl border-none"
                   />
+                  <p className="text-[10px] font-body text-on-surface/30 mt-1">
+                    Mínimo {MIN_SEND_AMOUNT} $1UP · Máximo {maxSendAmount} $1UP
+                  </p>
                 </div>
                 {sendError && <p className="text-error font-body text-sm">{sendError}</p>}
                 <div className="flex gap-3 pt-2">

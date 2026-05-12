@@ -27,7 +27,7 @@ Format follows `.claude/skills/release-management.md`.
 
 ### Changed
 
-- **Minimum send amount in wallet tab** (`src/components/perfil/WalletTab.tsx`): `handleSend` now rejects amounts below 1 $1UP with a Spanish error message. The amount input uses `min={1}` and a hint label ("Mínimo: 1 $1UP por envío") is shown below the field.
+- **Send amount limits in wallet tab** (`src/components/perfil/WalletTab.tsx`): `handleSend` now enforces a minimum of 1 $1UP and a maximum equal to the user's live balance. Invalid amounts show Spanish error messages. The amount input carries `min` / `max` HTML attributes, a "MAX" shortcut button autofills the full balance, and a hint line shows both bounds ("Mínimo 1 $1UP · Máximo X $1UP").
 
 ### Delivered by
 - Ekinoxis
