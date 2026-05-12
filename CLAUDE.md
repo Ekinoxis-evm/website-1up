@@ -220,6 +220,33 @@ npm run lint       # ESLint
 
 ---
 
+## Privy + Google OAuth Setup
+
+Login methods configured: **email** and **google** (`loginMethods: ["email", "google"]` in `src/components/providers/PrivyClientProvider.tsx`). Discord is disabled.
+
+Custom Privy auth domain: **`privy.1upesports.org`** (set in Privy Dashboard → Settings → Custom Auth Domain).
+
+**Critical: even with a custom auth domain, the Google callback Privy sends is the standard one.**
+
+### Google Cloud Console (one-time)
+Credentials → OAuth 2.0 Client → **Authorized redirect URIs** — must contain exactly:
+```
+https://auth.privy.io/api/v1/oauth/callback
+```
+Do NOT use `https://privy.1upesports.org/api/v1/oauth/callback` — Privy always sends the `auth.privy.io` callback to Google regardless of the custom domain.
+
+### Privy Dashboard (one-time)
+- **Allowed origins**: `https://1upesports.org`, `https://app.1upesports.org`, `https://admin.1upesports.org`
+- **Allowed OAuth redirect URLs**: `https://app.1upesports.org/login` (this is the `redirect_to` Privy sends to its own `/oauth/init` endpoint — must be an exact match, no trailing slash)
+
+### Debugging checklist
+If Google login breaks again (401 from `privy.1upesports.org/api/v1/oauth/init`):
+1. Privy is rejecting the `redirect_to` → check **Allowed OAuth redirect URLs** in Privy dashboard
+2. If it reaches Google and returns `redirect_uri_mismatch` → the Google Cloud Console is missing `https://auth.privy.io/api/v1/oauth/callback`
+3. The exact rejected URI is encoded in the Google error page URL (`authError` param, base64 protobuf) — decode to confirm
+
+---
+
 ## Gas Sponsorship
 
 All $1UP token sends from embedded wallets use **Privy native gas sponsorship (EIP-7702)**. Privy upgrades the embedded wallet to a Kernel smart contract in-place — same address, no migration — and its paymaster covers the gas fee.
