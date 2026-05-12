@@ -24,7 +24,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 | URL | Layout group | Purpose |
 |-----|-------------|---------|
-| `/` | `(main)` | Home — Hero, Brands Banner, 1UP Pass, AcademiaSection, TorneosSection, MarketplaceSection, TalentPipeline ("Sobre Nosotros"), Recruitment |
+| `/` | `(main)` | Home — Hero, Brands Banner, 1UP Pass, AcademiaSection, TorneosSection, CommunitySection (discord/whatsapp from social_links), MarketplaceSection, TalentPipeline ("Sobre Nosotros"), Recruitment |
 | `/torneos` | `(main)` | Tournament list — upcoming/live/completed cards with game, prize, registration CTA. RecruitmentForm at bottom. |
 | `/gaming-tower` | `(main)` | 6-floor breakdown, 1UP Pass benefits, per-category games (JuegosDisplay hideHero), Map |
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
@@ -32,7 +32,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/team` | `(main)` | **Redirects to `/`** — Masters on `/academia`, recruitment on `/torneos` |
 | `/torneos/[id]` | `(main)` | Tournament detail — cover, badges, prizes podium, RegisterButton CTA. `generateMetadata` with per-tournament OG. |
 | `/torneos/[id]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin |
-| `/academia` | `(main)` | Course catalog + Masters profiles + MercadoPago checkout |
+| `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + MercadoPago checkout |
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page — `safeRedirectTarget()` allowlist, redirects back to `?redirect=` URL after auth |
@@ -104,7 +104,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |
 | `enrollments` | user_profile_id, course_id, final_price_cop, payment_status, mp_payment_id |
 | `academia_content` | course_id FK, content_type, title, url, is_published |
-| `social_links` | platform, url, is_active, sort_order — footer social icons |
+| `social_links` | platform, url, is_active, sort_order — footer social icons (instagram/tiktok/kick/youtube/x/twitch) + community invite links (discord/whatsapp — rendered in `CommunitySection`, filtered OUT of Footer via `COMMUNITY_PLATFORMS` constant in `src/lib/socialIcons.ts`) |
 | `site_content` | key (PK), image_url — site-level images (equipment_highlight, learning_path) |
 | `admin_users` | email, added_by |
 | `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — OTC payment destinations shown in BUY modal |
@@ -116,7 +116,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `tournament_prizes` | tournament_id FK → tournaments (CASCADE), position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens (nullable NUMERIC), amount_cop (nullable INTEGER) — DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at — UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | name, organizer, date, country, city, game_id FK (nullable → games), registration_link, image_url, description, is_active, sort_order — no prizes/registrations/capacity lifecycle |
-| `tournament_results` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), position (1–3), points, awarded_by — UNIQUE per tournament+position and per tournament+user |
+| `tournament_results` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), position (1–3), points, awarded_by, prize_status (prize_delivery_status: no_prize/pending/sent — auto-set on INSERT from tournament_prizes), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url — UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW: user_profile_id, username, nombre, apellidos, gold_count, silver_count, bronze_count, total_points — ordered by points DESC then gold_count DESC |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.

@@ -87,7 +87,7 @@ src/
 public/
   manifest.json       # PWA manifest — display: standalone, theme #e91e8c, shortcuts (Wallet/Torneos/Academia)
   sw.js               # Service worker — offline fallback cache strategy
-  socialmedia/        # Brand PNG icons: instagram, tiktok, kick, youtube, x, twitch, github, linkedin
+  socialmedia/        # Brand PNG icons: instagram, tiktok, kick, youtube, x, twitch, github, linkedin, discord, whatsapp
 ```
 
 ---
@@ -213,7 +213,7 @@ npm run dev
 
 | Route | Description |
 |-------|-------------|
-| `/app` | Wallet — $1UP balance, send (min 1 $1UP, QR scanner), receive (QR code), purchase orders, Blockscout tx history |
+| `/app` | Wallet — $1UP balance, send (min 1 $1UP, max = live balance, QR scanner), receive (QR code), purchase orders, Blockscout tx history (paginated 10/page, Colombia timezone) |
 | `/app/mis-torneos` | My tournament registrations — card list with status badges (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), links to tournament detail pages |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
@@ -250,7 +250,7 @@ npm run dev
 | `/admin/brand-logos` | Brands Banner CRUD — logos for the animated marquee on home (name, logo, optional link, sort order) |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
-| `/admin/social-links` | Footer social link URLs per platform (instagram, tiktok, kick, youtube, x, twitch) |
+| `/admin/social-links` | Social link URLs per platform — footer icons (instagram, tiktok, kick, youtube, x, twitch) + community invite links (discord, whatsapp — shown in CommunitySection, filtered from footer) |
 | `/admin/aliados` | Partner CRUD (name, NIT, email, API URL/key) |
 | `/admin/submissions` | Recruitment form submissions (read-only) |
 | `/admin/users` | Admin user management |
@@ -299,7 +299,7 @@ npm run dev
 | `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens, amount_cop. DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
-| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by. UNIQUE per tournament+position and per tournament+user |
+| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url. UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
 
 ---
@@ -321,6 +321,7 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/aliados/{id}/cover` | Partner logos |
 | `images/brand-logos/{id}/cover` | Home marquee brand/sponsor logos |
 | `images/tournaments/{id}/cover` | Tournament cover images |
+| `images/tournament-prizes/{resultId}/cover` | COP prize comprobantes (jpg/png/webp/pdf, 5MB) |
 | `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
 
 Static brand icons (instagram, tiktok, etc.) live in `/public/socialmedia/` — not uploaded, shipped with the app.

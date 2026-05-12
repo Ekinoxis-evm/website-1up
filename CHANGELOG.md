@@ -5,18 +5,41 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.18.0] — 2026-05-12
+
+### Added
+
+- **Paginated transaction history in wallet tab** (`src/components/perfil/WalletTab.tsx`): replaces the multi-column grid with a single-column list paginated at 10 items per page. ANTERIOR / SIGUIENTE buttons with a "X / Y" counter appear only when there are more than 10 transactions. Page resets to 0 on every fresh Blockscout fetch. Transaction dates now display in `America/Bogota` timezone.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.17.1] — 2026-05-12
+
+### Fixed
+
+- **MAX button balance in wallet send modal** (`src/components/perfil/WalletTab.tsx`): `use1upBalance` formats balance with `toLocaleString("en-US")` producing `"1,234.56"`. A `type=number` input rejects comma-separated strings so the field stayed blank. `parseFloat("1,234.56")` also silently returns `1` (stops at the comma), making `maxSendAmount` wrong. Both usages now strip commas before using the value programmatically; the display label still shows the friendly formatted number.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.17.0] — 2026-05-12
 
 ### Added
 
-- **"Únete a nuestra comunidad" section** (`src/components/home/CommunitySection.tsx`): new Server Component that reads `social_links` filtering for `platform IN ('discord', 'whatsapp')` where `is_active = true`. Renders bold community invite cards (Material Symbols icons, platform accent colors) with tagline and call-to-action. Placed after `TorneosSection` on the home page and after `MasterGrid` on the Academia page. Returns `null` silently when no community links are active, so no admin setup is required.
+- **"Únete a nuestra comunidad" section** (`src/components/home/CommunitySection.tsx`): new Server Component that reads `social_links` filtering for `platform IN ('discord', 'whatsapp')` where `is_active = true`. Renders bold community invite cards (brand PNG icons from `/public/socialmedia/`, platform accent colors) with tagline and call-to-action. Placed after `TorneosSection` on the home page and after `MasterGrid` on the Academia page. Returns `null` silently when no community links are active, so no admin setup is required.
 - **Discord + WhatsApp rows in `social_links`** (inserted via Supabase MCP): `discord` (sort_order 7) and `whatsapp` (sort_order 8) pointing to the official 1UP community invites. Managed entirely from the existing Admin → Redes Sociales panel.
 - **`COMMUNITY_PLATFORMS` constant + `CommunityPlatform` type** (`src/lib/socialIcons.ts`): `["discord", "whatsapp"]` — used as the source-of-truth filter for both `CommunitySection` and the Footer exclusion.
 - **`SOCIAL_LABEL` extended** (`src/lib/socialIcons.ts`): added `discord: "Discord"` and `whatsapp: "WhatsApp"` entries.
 
 ### Changed
 
-- **Footer** (`src/components/layout/Footer.tsx`): community platforms (`discord`, `whatsapp`) are now filtered out of the social icon row. They have no `/public/socialmedia/` PNG and belong in the CommunitySection invite cards, not the footer.
+- **Footer** (`src/components/layout/Footer.tsx`): community platforms (`discord`, `whatsapp`) are now filtered out of the social icon row via `.not("platform", "in", ...)`. They belong in the CommunitySection invite cards, not the generic footer icon strip.
+- **`SOCIAL_ICON` map extended** (`src/lib/socialIcons.ts`): added explicit `discord` and `whatsapp` entries pointing to `/public/socialmedia/discord.png` and `/public/socialmedia/whatsapp.png`. Both PNGs are now committed to the repo. Without explicit entries, components like `MasterCard` and `PlayerCard` that use `SOCIAL_ICON[platform]` with no fallback would render a broken `src={undefined}`.
 
 ### Delivered by
 - Ekinoxis
