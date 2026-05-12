@@ -480,6 +480,7 @@ export type Database = {
           master_id: number | null
           name: string
           price_cop: number | null
+          price_token: number | null
           sort_order: number | null
         }
         Insert: {
@@ -493,6 +494,7 @@ export type Database = {
           master_id?: number | null
           name: string
           price_cop?: number | null
+          price_token?: number | null
           sort_order?: number | null
         }
         Update: {
@@ -506,6 +508,7 @@ export type Database = {
           master_id?: number | null
           name?: string
           price_cop?: number | null
+          price_token?: number | null
           sort_order?: number | null
         }
         Relationships: [
@@ -573,6 +576,9 @@ export type Database = {
       }
       enrollments: {
         Row: {
+          approved_tx_hash: string | null
+          bank_account_id: number | null
+          comprobante_url: string | null
           course_id: number | null
           created_at: string | null
           discount_pct_applied: number | null
@@ -583,11 +589,19 @@ export type Database = {
           mp_preference_id: string | null
           original_price_cop: number
           paid_at: string | null
+          payment_method: string
           payment_status: Database["public"]["Enums"]["payment_status"] | null
           product_type: Database["public"]["Enums"]["product_type"]
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          tx_hash: string | null
           user_profile_id: number
         }
         Insert: {
+          approved_tx_hash?: string | null
+          bank_account_id?: number | null
+          comprobante_url?: string | null
           course_id?: number | null
           created_at?: string | null
           discount_pct_applied?: number | null
@@ -598,11 +612,19 @@ export type Database = {
           mp_preference_id?: string | null
           original_price_cop: number
           paid_at?: string | null
+          payment_method?: string
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           product_type: Database["public"]["Enums"]["product_type"]
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tx_hash?: string | null
           user_profile_id: number
         }
         Update: {
+          approved_tx_hash?: string | null
+          bank_account_id?: number | null
+          comprobante_url?: string | null
           course_id?: number | null
           created_at?: string | null
           discount_pct_applied?: number | null
@@ -613,11 +635,23 @@ export type Database = {
           mp_preference_id?: string | null
           original_price_cop?: number
           paid_at?: string | null
+          payment_method?: string
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           product_type?: Database["public"]["Enums"]["product_type"]
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tx_hash?: string | null
           user_profile_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enrollments_course_id_fkey"
             columns: ["course_id"]

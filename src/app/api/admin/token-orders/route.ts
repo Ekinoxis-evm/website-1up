@@ -3,6 +3,7 @@ import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
+import { sendTokenOrderApprovedEmail, sendTokenOrderRejectedEmail } from "@/lib/email";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -48,43 +49,74 @@ export async function PATCH(req: NextRequest) {
 
   const { data: order } = await supabaseAdmin
     .from("token_purchase_orders")
-    .select("id, status")
+    .select("id, status, email, wallet_address, token_amount, cop_amount, user_profile_id, user_profiles(nombre, apellidos, email)")
     .eq("id", body.id)
     .single();
 
   if (!order) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
   if (order.status !== "pending") return NextResponse.json({ error: "Solo se pueden gestionar órdenes pendientes" }, { status: 409 });
 
+  const profile = Array.isArray(order.user_profiles) ? order.user_profiles[0] : order.user_profiles;
+  const userEmail = profile?.email ?? order.email ?? null;
+  const userName  = profile
+    ? ([profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || userEmail || `#${order.id}`)
+    : (userEmail ?? `#${order.id}`);
+
   if (body.action === "approve") {
     if (!body.txHash?.trim())
       return NextResponse.json({ error: "txHash requerido para aprobar" }, { status: 400 });
+
+    const txHash = body.txHash.trim();
 
     await supabaseAdmin
       .from("token_purchase_orders")
       .update({
         status:           "approved",
-        approved_tx_hash: body.txHash.trim(),
+        approved_tx_hash: txHash,
         admin_notes:      body.adminNotes?.trim() || null,
         reviewed_by:      adminEmail,
         reviewed_at:      new Date().toISOString(),
         updated_at:       new Date().toISOString(),
       })
       .eq("id", body.id);
+
+    if (userEmail) {
+      sendTokenOrderApprovedEmail({
+        userEmail,
+        userName,
+        orderId:       order.id,
+        tokenAmount:   Number(order.token_amount),
+        walletAddress: order.wallet_address,
+        txHash,
+      }).catch(() => null);
+    }
   } else {
     if (!body.rejectionReason?.trim())
       return NextResponse.json({ error: "rejectionReason requerido para rechazar" }, { status: 400 });
+
+    const reason = body.rejectionReason.trim();
 
     await supabaseAdmin
       .from("token_purchase_orders")
       .update({
         status:            "rejected",
-        rejection_reason:  body.rejectionReason.trim(),
+        rejection_reason:  reason,
         admin_notes:       body.adminNotes?.trim() || null,
         reviewed_by:       adminEmail,
         reviewed_at:       new Date().toISOString(),
         updated_at:        new Date().toISOString(),
       })
       .eq("id", body.id);
+
+    if (userEmail) {
+      sendTokenOrderRejectedEmail({
+        userEmail,
+        userName,
+        orderId:         order.id,
+        copAmount:       Number(order.cop_amount),
+        rejectionReason: reason,
+      }).catch(() => null);
+    }
   }
 
   revalidatePath("/admin/token-orders");

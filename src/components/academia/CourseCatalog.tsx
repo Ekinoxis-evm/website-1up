@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
+import { CourseCheckoutWizard } from "./CourseCheckoutWizard";
 
 type MasterSummary = { id: number; name: string; photo_url: string | null };
 
@@ -21,14 +22,17 @@ const CAT_STYLE: Record<string, { badge: string; border: string }> = {
   Gaming:      { badge: "bg-primary-container text-white",     border: "border-primary-container"  },
 };
 
-type CheckoutStatus = "idle" | "loading" | "redirecting" | "error";
-
 export function CourseCatalog({ courses, masters }: Props) {
   const [active, setActive] = useState<Cat>("All");
   const [activeMaster, setActiveMaster] = useState<number | "all">("all");
   const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { wallets } = useWallets();
   const [isAffiliate, setIsAffiliate] = useState(false);
-  const [checkoutStatus, setCheckoutStatus] = useState<Record<number, CheckoutStatus>>({});
+  const [checkoutCourse, setCheckoutCourse] = useState<Course | null>(null);
+  const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
+
+  const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+  const walletAddress  = embeddedWallet?.address ?? wallets[0]?.address ?? null;
 
   const masterMap = Object.fromEntries(masters.map((m) => [m.id, m]));
 
@@ -57,41 +61,19 @@ export function CourseCatalog({ courses, masters }: Props) {
 
   useEffect(() => { fetchAffiliateStatus(); }, [fetchAffiliateStatus]);
 
-  async function handleEnroll(course: Course) {
+  // Load recipient address (shared with pass) — needed for token course payments
+  useEffect(() => {
+    fetch("/api/user/pass-config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => { if (cfg?.recipient_address) setRecipientAddress(cfg.recipient_address); })
+      .catch(() => null);
+  }, []);
+
+  function handleEnroll(course: Course) {
     if (!ready) return;
-
-    if (!authenticated) {
-      login();
-      return;
-    }
-
+    if (!authenticated) { login(); return; }
     if (!course.price_cop) return;
-
-    setCheckoutStatus((prev) => ({ ...prev, [course.id]: "loading" }));
-
-    try {
-      const token = await getAccessToken();
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ courseId: course.id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("[Checkout]", data.error);
-        setCheckoutStatus((prev) => ({ ...prev, [course.id]: "error" }));
-        setTimeout(() => setCheckoutStatus((prev) => ({ ...prev, [course.id]: "idle" })), 3000);
-        return;
-      }
-
-      setCheckoutStatus((prev) => ({ ...prev, [course.id]: "redirecting" }));
-      window.location.href = data.checkoutUrl;
-    } catch {
-      setCheckoutStatus((prev) => ({ ...prev, [course.id]: "error" }));
-      setTimeout(() => setCheckoutStatus((prev) => ({ ...prev, [course.id]: "idle" })), 3000);
-    }
+    setCheckoutCourse(course);
   }
 
   function getPriceDisplay(course: Course) {
@@ -180,7 +162,6 @@ export function CourseCatalog({ courses, masters }: Props) {
         {visible.map((course) => {
           const style = CAT_STYLE[course.category] ?? CAT_STYLE.Gaming;
           const priceDisplay = getPriceDisplay(course);
-          const cStatus = checkoutStatus[course.id] ?? "idle";
 
           return (
             <div
@@ -259,18 +240,10 @@ export function CourseCatalog({ courses, masters }: Props) {
                   {course.price_cop ? (
                     <button
                       onClick={() => handleEnroll(course)}
-                      disabled={cStatus === "loading" || cStatus === "redirecting"}
-                      className={`font-headline font-black text-xs px-5 py-2 skew-fix transition-all disabled:opacity-70 ${
-                        cStatus === "error"
-                          ? "bg-error text-white"
-                          : "bg-primary-container text-white hover:neo-shadow-pink"
-                      }`}
+                      className="font-headline font-black text-xs px-5 py-2 skew-fix transition-all bg-primary-container text-white hover:neo-shadow-pink"
                     >
                       <span className="block skew-content">
-                        {cStatus === "loading"    ? "..." :
-                         cStatus === "redirecting" ? "REDIRIGIENDO" :
-                         cStatus === "error"       ? "ERROR" :
-                         authenticated             ? "INSCRIBIRSE" : "LOGIN"}
+                        {authenticated ? "INSCRIBIRSE" : "LOGIN"}
                       </span>
                     </button>
                   ) : (
@@ -290,6 +263,16 @@ export function CourseCatalog({ courses, masters }: Props) {
           </p>
         )}
       </div>
+
+      {checkoutCourse && (
+        <CourseCheckoutWizard
+          course={checkoutCourse}
+          walletAddress={walletAddress}
+          recipientAddress={recipientAddress}
+          getAccessToken={getAccessToken}
+          onClose={() => setCheckoutCourse(null)}
+        />
+      )}
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { sendPassBankApprovedEmail, sendPassBankRejectedEmail } from "@/lib/email";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -47,7 +48,7 @@ export async function PATCH(req: NextRequest) {
   if (action === "approve" || action === "reject") {
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from("pass_orders")
-      .select("*")
+      .select("*, user_profiles(nombre, apellidos, email)")
       .eq("id", id)
       .eq("payment_method", "bank")
       .eq("status", "pending_bank")
@@ -55,12 +56,19 @@ export async function PATCH(req: NextRequest) {
 
     if (fetchErr || !order) return NextResponse.json({ error: "Orden no encontrada o ya procesada." }, { status: 404 });
 
+    const profile = Array.isArray(order.user_profiles) ? order.user_profiles[0] : order.user_profiles;
+    const userEmail = profile?.email ?? order.email ?? null;
+    const userName  = profile
+      ? ([profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || userEmail || `#${order.id}`)
+      : (userEmail ?? `#${order.id}`);
+
     if (action === "reject") {
+      const reason = rejectionReason?.trim() ?? "";
       const { data, error } = await supabaseAdmin
         .from("pass_orders")
         .update({
           status:           "failed",
-          rejection_reason: rejectionReason ?? null,
+          rejection_reason: reason || null,
           admin_notes:      adminNotes ?? null,
           reviewed_by:      email,
           reviewed_at:      new Date().toISOString(),
@@ -69,7 +77,18 @@ export async function PATCH(req: NextRequest) {
         .select()
         .single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      if (userEmail) {
+        sendPassBankRejectedEmail({
+          userEmail,
+          userName,
+          orderId:         order.id,
+          rejectionReason: reason || "Sin motivo especificado.",
+        }).catch(() => null);
+      }
+
       revalidatePath("/admin/pass-bank-orders");
+      revalidatePath("/app/pass");
       return NextResponse.json(data);
     }
 
@@ -102,6 +121,18 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (userEmail) {
+      sendPassBankApprovedEmail({
+        userEmail,
+        userName,
+        orderId:      order.id,
+        tokenAmount:  Number(order.token_amount_paid),
+        durationDays: order.duration_days,
+        expiresAt:    expiresAt.toISOString(),
+      }).catch(() => null);
+    }
+
     revalidatePath("/admin/pass-bank-orders");
     revalidatePath("/app/pass");
     return NextResponse.json(data);
