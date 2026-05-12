@@ -160,7 +160,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 7. `incremental_masters_social_categories.sql` — `masters` table: adds `kick_url`, `twitch_url`, `github_url`, `categories[]`
 8. `create_site_content` — `site_content` table seeded with `equipment_highlight` and `learning_path` rows
 9. `extend_user_profiles_v1_6` — adds `nombre`, `apellidos`, `username`, `phone_country`, `phone_number`, `game_ids` to `user_profiles`; unique partial index on `username WHERE username IS NOT NULL`
-10. `create_bank_accounts` + `create_token_purchase_orders` — OTC $1UP purchase tables + `token_purchase_status` enum; unique partial index on `user_profile_id WHERE status = 'pending'`
+10. `create_bank_accounts` + `create_token_purchase_orders` — $1UP token purchase purchase tables + `token_purchase_status` enum; unique partial index on `user_profile_id WHERE status = 'pending'`
 11. `create_pass_config` — single-row config table; seeded with initial price (30,000 $1UP), recipient address, 30-day duration
 12. `create_pass_orders` — pass purchase records + `pass_order_status` enum (`pending_tx | confirmed | failed | expired_unverified`); unique index on `tx_hash`
 13. `extend_user_profiles_onboarding` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`
@@ -241,7 +241,7 @@ npm run dev
 | `/admin/enrollments` | Read-only payment log with revenue total |
 | `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
 | `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
-| `/admin/token-orders` | OTC $1UP purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
+| `/admin/token-orders` | $1UP token purchase purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
 | `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
 | `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sort order |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
@@ -288,8 +288,8 @@ npm run dev
 | `social_links` | Footer social icons — platform, url, is_active, sort_order |
 | `site_content` | Site-level images — key (PK), image_url (equipment_highlight, learning_path) |
 | `admin_users` | DB-stored admins (env var admins always override) |
-| `bank_accounts` | OTC payment destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
-| `token_purchase_orders` | OTC $1UP purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
+| `bank_accounts` | Bank transfer destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
+| `token_purchase_orders` | $1UP token purchase purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |

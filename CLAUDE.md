@@ -66,7 +66,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET /api/admin/enrollments` | isAdmin | Enrollment list |
 | `GET\|POST\|DELETE /api/admin/users` | isAdmin | Admin user management |
 | `POST /api/admin/upload` | isAdmin | Image upload → Supabase Storage |
-| `GET\|PATCH /api/admin/token-orders` | isAdmin | List OTC orders / approve or reject |
+| `GET\|PATCH /api/admin/token-orders` | isAdmin | List token purchase orders / approve or reject |
 | `POST\|PUT\|DELETE /api/admin/bank-accounts` | isAdmin | Bank account CRUD |
 | `GET /api/user/pass-config` | Public | Pass price, recipient address, duration |
 | `GET\|POST /api/user/pass-orders` | Privy user | List own pass orders / submit after confirmed tx |
@@ -107,7 +107,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `social_links` | platform, url, is_active, sort_order — footer social icons (instagram/tiktok/kick/youtube/x/twitch) + community invite links (discord/whatsapp — rendered in `CommunitySection`, filtered OUT of Footer via `COMMUNITY_PLATFORMS` constant in `src/lib/socialIcons.ts`) |
 | `site_content` | key (PK), image_url — site-level images (equipment_highlight, learning_path) |
 | `admin_users` | email, added_by |
-| `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — OTC payment destinations shown in BUY modal |
+| `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — bank transfer destinations shown in BUY modal |
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
 | `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
 | `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
@@ -267,7 +267,7 @@ const { hash } = await sendTransaction(
 **Files that use this pattern:**
 - `src/components/perfil/WalletTab.tsx` — user send modal
 - `src/components/perfil/BuyPassWizard.tsx` — pass purchase
-- `src/components/admin/AdminTokenOrdersClient.tsx` — admin approve OTC order
+- `src/components/admin/AdminTokenOrdersClient.tsx` — admin approve token purchase order
 
 **Dashboard requirements (one-time setup):**
 - Privy Dashboard → Gas Sponsorship tab → enable for **Base mainnet**

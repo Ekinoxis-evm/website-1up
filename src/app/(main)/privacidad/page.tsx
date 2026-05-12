@@ -70,7 +70,7 @@ export default function PrivacidadPage() {
               <li>Dirección de billetera digital en la red Base (Ethereum L2).</li>
               <li>Historial de transacciones de tokens $1UP.</li>
               <li>Comprobantes de pago (transferencias bancarias) subidos voluntariamente.</li>
-              <li>Monto en COP de órdenes de compra OTC (tokens o 1UP Pass).</li>
+              <li>Monto en COP de órdenes de compra de tokens $1UP y 1UP Pass.</li>
             </ul>
           </SubSection>
 
