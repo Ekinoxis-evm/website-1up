@@ -1,16 +1,14 @@
 import { supabase } from "@/lib/supabase";
-import { COMMUNITY_PLATFORMS } from "@/lib/socialIcons";
+import { SOCIAL_ICON, COMMUNITY_PLATFORMS } from "@/lib/socialIcons";
 
-const PLATFORM_META: Record<string, { label: string; icon: string; accent: string; tagline: string }> = {
+const PLATFORM_META: Record<string, { label: string; accent: string; tagline: string }> = {
   discord: {
     label:   "Discord",
-    icon:    "forum",
     accent:  "bg-[#5865F2]",
     tagline: "Chatea, coordina partidas y conecta con la comunidad.",
   },
   whatsapp: {
     label:   "WhatsApp",
-    icon:    "chat",
     accent:  "bg-[#25D366]",
     tagline: "Grupos de torneos, noticias y actualizaciones al instante.",
   },
@@ -58,13 +56,13 @@ export async function CommunitySection() {
               rel="noopener noreferrer"
               className="group flex items-start gap-4 p-6 bg-surface-container hover:bg-surface-container-high transition-colors border-l-4 border-tertiary"
             >
-              <div className={`${meta.accent} p-3 shrink-0`}>
-                <span
-                  className="material-symbols-outlined text-white text-2xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  {meta.icon}
-                </span>
+              <div className={`${meta.accent} p-3 shrink-0 flex items-center justify-center`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={SOCIAL_ICON[link.platform]}
+                  alt={meta.label}
+                  className="w-7 h-7 object-contain"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-headline font-black text-lg uppercase tracking-tight text-on-surface group-hover:text-tertiary transition-colors">

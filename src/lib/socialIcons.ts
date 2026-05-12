@@ -9,6 +9,8 @@ export const SOCIAL_ICON: Record<string, string> = {
   twitch:    "/socialmedia/twitch.png",
   github:    "/socialmedia/github.png",
   linkedin:  "/socialmedia/linkedn.png",
+  discord:   "/socialmedia/discord.png",
+  whatsapp:  "/socialmedia/whatsapp.png",
 };
 
 export const SOCIAL_LABEL: Record<string, string> = {
