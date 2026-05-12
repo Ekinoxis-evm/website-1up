@@ -164,7 +164,7 @@ export function WalletTab() {
   }, [scanOpen]);
 
   const MIN_SEND_AMOUNT = 1;
-  const maxSendAmount = balance !== null ? parseFloat(balance) : 0;
+  const maxSendAmount = balance !== null ? parseFloat(balance.replace(/,/g, "")) : 0;
 
   async function handleSend() {
     if (!walletAddress) return;
@@ -457,7 +457,7 @@ export function WalletTab() {
                     {balance !== null && (
                       <button
                         type="button"
-                        onClick={() => { setSendAmount(balance); setSendError(null); }}
+                        onClick={() => { setSendAmount(balance!.replace(/,/g, "")); setSendError(null); }}
                         className="text-[10px] font-headline font-black uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
                       >
                         MAX ({balance})
