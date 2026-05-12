@@ -6,7 +6,6 @@ export type MergedUser = {
   privyId: string;
   createdAt: string;
   isGuest: boolean;
-  // Privy linked accounts
   email: string | null;
   googleEmail: string | null;
   discordEmail: string | null;
@@ -15,7 +14,6 @@ export type MergedUser = {
   hasEmail: boolean;
   hasGoogle: boolean;
   hasDiscord: boolean;
-  // Profile (user_profiles)
   hasProfile: boolean;
   nombre: string | null;
   apellidos: string | null;
@@ -26,10 +24,8 @@ export type MergedUser = {
   tipoDocumento: string | null;
   numeroDocumento: string | null;
   comfenalcoAfiliado: boolean | null;
-  // Enrollments
   courseCount: number;
   hasPass: boolean;
-  // Meta
   blockscoutAvailable: boolean;
 };
 
@@ -57,11 +53,7 @@ function truncateDid(did: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function totalTokens(users: MergedUser[]): string {
@@ -80,18 +72,21 @@ function totalTokens(users: MergedUser[]): string {
   return n.toLocaleString("es-CO");
 }
 
-const SORT_OPTIONS: { key: SortKey; label: string; icon: string }[] = [
-  { key: "tokens-desc", label: "$1UP ↓", icon: "arrow_downward" },
-  { key: "tokens-asc",  label: "$1UP ↑", icon: "arrow_upward"   },
-  { key: "name",        label: "Nombre",  icon: "sort_by_alpha"  },
-  { key: "date-new",    label: "Reciente", icon: "schedule"      },
-  { key: "date-old",    label: "Antiguo",  icon: "history"       },
-];
-
 function tokenBigInt(raw: string | null): bigint {
   if (!raw) return BigInt(0);
   try { return BigInt(raw); } catch { return BigInt(0); }
 }
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "tokens-desc", label: "$1UP ↓"   },
+  { key: "tokens-asc",  label: "$1UP ↑"   },
+  { key: "name",        label: "Nombre"    },
+  { key: "date-new",    label: "Reciente"  },
+  { key: "date-old",    label: "Antiguo"   },
+];
+
+const TH = "font-headline text-[10px] uppercase tracking-widest text-outline text-left px-3 py-2.5 whitespace-nowrap";
+const TD = "px-3 py-3 align-top";
 
 type Props = { users: MergedUser[] };
 
@@ -110,16 +105,13 @@ export function AdminPrivyUsersClient({ users }: Props) {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) => {
-      const email = (u.email ?? u.googleEmail ?? u.discordEmail ?? "").toLowerCase();
+      const email  = (u.email ?? u.googleEmail ?? u.discordEmail ?? "").toLowerCase();
       const wallet = (u.walletAddress ?? "").toLowerCase();
       const cedula = (u.numeroDocumento ?? "").toLowerCase();
-      const did = u.privyId.toLowerCase();
-      const name = `${u.nombre ?? ""} ${u.apellidos ?? ""}`.toLowerCase();
-      const uname = (u.username ?? "").toLowerCase();
-      return (
-        email.includes(q) || wallet.includes(q) || cedula.includes(q) ||
-        did.includes(q) || name.includes(q) || uname.includes(q)
-      );
+      const did    = u.privyId.toLowerCase();
+      const name   = `${u.nombre ?? ""} ${u.apellidos ?? ""}`.toLowerCase();
+      const uname  = (u.username ?? "").toLowerCase();
+      return email.includes(q) || wallet.includes(q) || cedula.includes(q) || did.includes(q) || name.includes(q) || uname.includes(q);
     });
   }, [users, search]);
 
@@ -130,30 +122,22 @@ export function AdminPrivyUsersClient({ users }: Props) {
     }
     return [...list].sort((a, b) => {
       switch (sortBy) {
-        case "tokens-desc": {
-          const diff = tokenBigInt(b.tokenBalance) - tokenBigInt(a.tokenBalance);
-          return diff > 0 ? 1 : diff < 0 ? -1 : 0;
-        }
-        case "tokens-asc": {
-          const diff = tokenBigInt(a.tokenBalance) - tokenBigInt(b.tokenBalance);
-          return diff > 0 ? 1 : diff < 0 ? -1 : 0;
-        }
+        case "tokens-desc": { const d = tokenBigInt(b.tokenBalance) - tokenBigInt(a.tokenBalance); return d > 0 ? 1 : d < 0 ? -1 : 0; }
+        case "tokens-asc":  { const d = tokenBigInt(a.tokenBalance) - tokenBigInt(b.tokenBalance); return d > 0 ? 1 : d < 0 ? -1 : 0; }
         case "name": {
           const an = `${a.nombre ?? ""} ${a.apellidos ?? ""}`.trim().toLowerCase();
           const bn = `${b.nombre ?? ""} ${b.apellidos ?? ""}`.trim().toLowerCase();
           return an.localeCompare(bn, "es");
         }
-        case "date-new":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "date-old":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "date-new": return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "date-old": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
     });
   }, [searched, sortBy, gameFilter]);
 
-  const withWallet = users.filter((u) => u.walletAddress).length;
+  const withWallet  = users.filter((u) => u.walletAddress).length;
   const withProfile = users.filter((u) => u.hasProfile).length;
-  const withPass = users.filter((u) => u.hasPass).length;
+  const withPass    = users.filter((u) => u.hasPass).length;
   const blockscoutOk = users[0]?.blockscoutAvailable ?? false;
 
   return (
@@ -169,13 +153,13 @@ export function AdminPrivyUsersClient({ users }: Props) {
         </p>
       </div>
 
-      {/* Stats */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {[
-          { label: "Total usuarios",  value: users.length,  icon: "group",                   color: "text-primary-container" },
-          { label: "Con perfil",      value: withProfile,   icon: "badge",                   color: "text-secondary"         },
-          { label: "Con wallet",      value: withWallet,    icon: "account_balance_wallet",   color: "text-tertiary"          },
-          { label: "1UP Pass activo", value: withPass,      icon: "card_membership",          color: "text-primary-container" },
+          { label: "Total usuarios",  value: users.length,  icon: "group",                 color: "text-primary-container" },
+          { label: "Con perfil",      value: withProfile,   icon: "badge",                 color: "text-secondary"         },
+          { label: "Con wallet",      value: withWallet,    icon: "account_balance_wallet", color: "text-tertiary"          },
+          { label: "1UP Pass activo", value: withPass,      icon: "card_membership",        color: "text-primary-container" },
         ].map(({ label, value, icon, color }) => (
           <div key={label} className="bg-surface-container px-5 py-4 border-l-4 border-outline-variant/30">
             <div className="flex items-center gap-2 mb-1">
@@ -187,7 +171,7 @@ export function AdminPrivyUsersClient({ users }: Props) {
         ))}
       </div>
 
-      {/* $1UP summary */}
+      {/* $1UP total */}
       {blockscoutOk && (
         <div className="bg-surface-container border-l-4 border-primary-container/50 px-5 py-3 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -200,9 +184,8 @@ export function AdminPrivyUsersClient({ users }: Props) {
         </div>
       )}
 
-      {/* Search + Sort + Filter */}
+      {/* Search + Sort + Game filter */}
       <div className="space-y-3 mb-6">
-        {/* Search row */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-sm">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
@@ -214,12 +197,9 @@ export function AdminPrivyUsersClient({ users }: Props) {
               className="w-full bg-surface-container-high border-none pl-9 pr-4 py-3 font-body text-sm text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary-container focus:outline-none"
             />
           </div>
-          <p className="font-body text-xs text-outline whitespace-nowrap">
-            {filtered.length} de {users.length}
-          </p>
+          <p className="font-body text-xs text-outline whitespace-nowrap">{filtered.length} de {users.length}</p>
         </div>
 
-        {/* Sort row */}
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline shrink-0">Ordenar:</p>
           {SORT_OPTIONS.map(({ key, label }) => (
@@ -237,7 +217,6 @@ export function AdminPrivyUsersClient({ users }: Props) {
           ))}
         </div>
 
-        {/* Game filter row */}
         {allGames.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline shrink-0">Juego:</p>
@@ -246,20 +225,12 @@ export function AdminPrivyUsersClient({ users }: Props) {
               return (
                 <button
                   key={g}
-                  onClick={() =>
-                    setGameFilter((prev) =>
-                      active ? prev.filter((x) => x !== g) : [...prev, g]
-                    )
-                  }
+                  onClick={() => setGameFilter((prev) => active ? prev.filter((x) => x !== g) : [...prev, g])}
                   className={`font-headline font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 transition-colors flex items-center gap-1 ${
-                    active
-                      ? "bg-secondary text-on-surface"
-                      : "bg-surface-container-high text-outline hover:text-on-surface"
+                    active ? "bg-secondary text-on-surface" : "bg-surface-container-high text-outline hover:text-on-surface"
                   }`}
                 >
-                  {active && (
-                    <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
-                  )}
+                  {active && <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>}
                   {g}
                 </button>
               );
@@ -277,138 +248,135 @@ export function AdminPrivyUsersClient({ users }: Props) {
         )}
       </div>
 
-      {/* List */}
+      {/* Table */}
       {filtered.length === 0 ? (
         <div className="bg-surface-container px-5 py-12 text-center">
           <span className="material-symbols-outlined text-4xl text-outline mb-3 block">manage_accounts</span>
           <p className="font-body text-sm text-outline">Sin resultados</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((u) => {
-            const displayEmail = u.email ?? u.googleEmail ?? u.discordEmail;
-            const displayName = [u.nombre, u.apellidos].filter(Boolean).join(" ") || null;
-            const hasBalance = u.tokenBalance && u.tokenBalance !== "0";
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] border-collapse">
+            <thead>
+              <tr className="bg-surface-container-high">
+                <th className={TH}>Usuario</th>
+                <th className={TH}>Wallet / $1UP</th>
+                <th className={TH}>Cédula</th>
+                <th className={TH}>Juegos</th>
+                <th className={TH}>Cursos</th>
+                <th className={TH}>Registrado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => {
+                const displayEmail = u.email ?? u.googleEmail ?? u.discordEmail;
+                const displayName  = [u.nombre, u.apellidos].filter(Boolean).join(" ") || null;
+                const hasBalance   = u.tokenBalance && u.tokenBalance !== "0";
 
-            return (
-              <div
-                key={u.privyId}
-                className="bg-surface-container hover:bg-surface-container-high transition-colors"
-              >
-                {/* Main row */}
-                <div className="grid grid-cols-1 lg:grid-cols-[2fr_1.2fr_1.2fr_1fr_auto] gap-x-4 gap-y-2 px-5 py-4 items-start">
-
-                  {/* Col 1 — Identity */}
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {u.isGuest && (
-                        <span className="font-headline text-[9px] uppercase tracking-widest text-outline border border-outline/30 px-1.5 py-0.5 shrink-0">INVITADO</span>
-                      )}
-                      {u.hasPass && (
-                        <span className="font-headline text-[9px] uppercase tracking-widest text-primary-container border border-primary-container/40 px-1.5 py-0.5 shrink-0 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>card_membership</span>
-                          1UP PASS
-                        </span>
-                      )}
-                    </div>
-                    {displayName && (
-                      <span className="font-headline font-black text-sm text-on-surface">{displayName}</span>
-                    )}
-                    {u.username && (
-                      <span className="font-body text-xs text-primary-container">@{u.username}</span>
-                    )}
-                    <span className="font-body text-sm text-on-surface/70 truncate">{displayEmail ?? "(sin email)"}</span>
-                    <span className="font-mono text-[10px] text-outline" title={u.privyId}>{truncateDid(u.privyId)}</span>
-                    {/* Linked account icons */}
-                    <div className="flex items-center gap-2 mt-1">
-                      {u.hasEmail && <span className="material-symbols-outlined text-xs text-primary-container" title="Email" style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>}
-                      {u.hasGoogle && <span className="material-symbols-outlined text-xs text-tertiary" title="Google" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>}
-                      {u.hasDiscord && <span className="material-symbols-outlined text-xs text-secondary" title="Discord" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>}
-                      {u.walletAddress && <span className="material-symbols-outlined text-xs text-on-surface/40" title="Wallet" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>}
-                    </div>
-                  </div>
-
-                  {/* Col 2 — Wallet / $1UP */}
-                  <div className="flex flex-col gap-1">
-                    <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">Wallet / $1UP</p>
-                    {u.walletAddress ? (
-                      <>
-                        <span className="font-mono text-xs text-on-surface" title={u.walletAddress}>
-                          {truncateAddr(u.walletAddress)}
-                        </span>
-                        {blockscoutOk ? (
-                          <span className={`font-headline font-black text-sm ${hasBalance ? "text-primary-container" : "text-outline"}`}>
-                            {formatBalance(u.tokenBalance)} $1UP
-                          </span>
-                        ) : (
-                          <span className="font-body text-xs text-outline">$1UP —</span>
+                return (
+                  <tr
+                    key={u.privyId}
+                    className="border-t border-surface-container-high bg-surface-container hover:bg-surface-container-high/50 transition-colors"
+                  >
+                    {/* Usuario */}
+                    <td className={TD}>
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        {u.isGuest && (
+                          <span className="font-headline text-[9px] uppercase tracking-widest text-outline border border-outline/30 px-1.5 py-0.5">INVITADO</span>
                         )}
-                      </>
-                    ) : (
-                      <span className="font-body text-xs text-outline/50">Sin wallet</span>
-                    )}
-                    {/* Phone */}
-                    {(u.phoneCountry || u.phoneNumber) && (
-                      <span className="font-body text-xs text-outline mt-1">
-                        {u.phoneCountry} {u.phoneNumber}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Col 3 — Cédula */}
-                  <div className="flex flex-col gap-0.5">
-                    <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">Cédula</p>
-                    {u.hasProfile && u.numeroDocumento ? (
-                      <>
-                        <span className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline/60">{u.tipoDocumento}</span>
-                        <span className="font-body text-sm text-on-surface">{u.numeroDocumento}</span>
-                        {u.comfenalcoAfiliado && (
-                          <span className="font-headline text-[9px] uppercase tracking-widest text-tertiary flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                            COMFENALCO
+                        {u.hasPass && (
+                          <span className="font-headline text-[9px] uppercase tracking-widest text-primary-container border border-primary-container/40 px-1.5 py-0.5 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>card_membership</span>
+                            1UP PASS
                           </span>
                         )}
-                      </>
-                    ) : u.hasProfile ? (
-                      <span className="font-body text-xs text-outline">Perfil sin cédula</span>
-                    ) : (
-                      <span className="font-body text-xs text-outline/40">Sin perfil</span>
-                    )}
-                  </div>
+                      </div>
+                      {displayName && <p className="font-headline font-black text-sm text-on-surface leading-tight">{displayName}</p>}
+                      {u.username && <p className="font-body text-xs text-primary-container">@{u.username}</p>}
+                      <p className="font-body text-sm text-on-surface/70 truncate max-w-[200px]">{displayEmail ?? "(sin email)"}</p>
+                      <p className="font-mono text-[10px] text-outline" title={u.privyId}>{truncateDid(u.privyId)}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {u.hasEmail   && <span className="material-symbols-outlined text-xs text-primary-container" title="Email"   style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>}
+                        {u.hasGoogle  && <span className="material-symbols-outlined text-xs text-tertiary"          title="Google"  style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>}
+                        {u.hasDiscord && <span className="material-symbols-outlined text-xs text-secondary"         title="Discord" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>}
+                        {u.walletAddress && <span className="material-symbols-outlined text-xs text-on-surface/40" title="Wallet"  style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>}
+                      </div>
+                    </td>
 
-                  {/* Col 4 — Cursos */}
-                  <div className="flex flex-col gap-0.5">
-                    <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">Cursos</p>
-                    {u.courseCount > 0 ? (
-                      <span className="bg-primary-container/20 text-primary-container font-headline font-black text-sm px-2.5 py-1 self-start">
-                        {u.courseCount}
-                      </span>
-                    ) : (
-                      <span className="font-body text-xs text-outline">—</span>
-                    )}
-                  </div>
+                    {/* Wallet / $1UP */}
+                    <td className={TD}>
+                      {u.walletAddress ? (
+                        <>
+                          <p className="font-mono text-xs text-on-surface" title={u.walletAddress}>{truncateAddr(u.walletAddress)}</p>
+                          {blockscoutOk ? (
+                            <p className={`font-headline font-black text-sm ${hasBalance ? "text-primary-container" : "text-outline"}`}>
+                              {formatBalance(u.tokenBalance)} $1UP
+                            </p>
+                          ) : (
+                            <p className="font-body text-xs text-outline">$1UP —</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="font-body text-xs text-outline/50">Sin wallet</p>
+                      )}
+                      {(u.phoneCountry || u.phoneNumber) && (
+                        <p className="font-body text-xs text-outline mt-1">{u.phoneCountry} {u.phoneNumber}</p>
+                      )}
+                    </td>
 
-                  {/* Col 5 — Date */}
-                  <div className="flex flex-col gap-0.5 items-end lg:items-start">
-                    <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">Registrado</p>
-                    <span className="font-body text-xs text-outline whitespace-nowrap">{formatDate(u.createdAt)}</span>
-                  </div>
-                </div>
+                    {/* Cédula */}
+                    <td className={TD}>
+                      {u.hasProfile && u.numeroDocumento ? (
+                        <>
+                          <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline/60">{u.tipoDocumento}</p>
+                          <p className="font-body text-sm text-on-surface">{u.numeroDocumento}</p>
+                          {u.comfenalcoAfiliado && (
+                            <p className="font-headline text-[9px] uppercase tracking-widest text-tertiary flex items-center gap-0.5 mt-0.5">
+                              <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                              COMFENALCO
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="font-body text-xs text-outline/40">{u.hasProfile ? "Sin cédula" : "Sin perfil"}</p>
+                      )}
+                    </td>
 
-                {/* Games strip */}
-                {u.gameNames.length > 0 && (
-                  <div className="border-t border-outline-variant/10 px-5 py-2 flex items-center gap-2 flex-wrap">
-                    <span className="material-symbols-outlined text-xs text-outline" style={{ fontVariationSettings: "'FILL' 1" }}>sports_esports</span>
-                    {u.gameNames.map((g) => (
-                      <span key={g} className="font-headline font-bold text-[10px] uppercase tracking-wider text-on-surface/50 bg-surface-container-high px-2 py-0.5">
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    {/* Juegos */}
+                    <td className={TD}>
+                      {u.gameNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {u.gameNames.map((g) => (
+                            <span key={g} className="font-headline font-bold text-[9px] uppercase tracking-wider text-on-surface/50 bg-surface-container-high px-2 py-0.5">
+                              {g}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-body text-xs text-outline/40">—</p>
+                      )}
+                    </td>
+
+                    {/* Cursos */}
+                    <td className={TD}>
+                      {u.courseCount > 0 ? (
+                        <span className="bg-primary-container/20 text-primary-container font-headline font-black text-sm px-2.5 py-1">
+                          {u.courseCount}
+                        </span>
+                      ) : (
+                        <span className="font-body text-xs text-outline">—</span>
+                      )}
+                    </td>
+
+                    {/* Registrado */}
+                    <td className={`${TD} font-body text-xs text-outline whitespace-nowrap`}>
+                      {formatDate(u.createdAt)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

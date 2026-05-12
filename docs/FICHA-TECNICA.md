@@ -6,7 +6,7 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.1 |
+| **Versión** | 2.2 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | Mayo de 2026 |
 | **Clasificación** | Público / Para presentación institucional |
@@ -472,7 +472,7 @@ La plataforma implementa un sistema de diseño neo-brutalista personalizado, con
 | Tipado estático | TypeScript 5 (modo strict) | Activo — cero errores requerido para deploy |
 | Linting | ESLint (config Next.js) | Activo |
 | Verificación de build | `next build` | Ejecutado antes de cada entrega |
-| Tests unitarios / integración | Vitest + Testing Library | Planificado — no implementado aún |
+| Tests unitarios / integración | Vitest | **Activo** — 52 tests en `src/__tests__/lib/` (utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy) |
 | Tests end-to-end | Playwright (propuesta) | Pendiente de definición |
 | QA manual | Checklist por release | Activo |
 
@@ -488,6 +488,7 @@ La plataforma implementa un sistema de diseño neo-brutalista personalizado, con
 ### 14.3 Flujo de QA antes de cada release
 
 ```
+[ ] npm run test:run      — cero tests fallidos (52 tests)
 [ ] npm run build         — cero errores de compilación
 [ ] npx tsc --noEmit      — cero errores TypeScript
 [ ] npm run lint          — cero advertencias ESLint
@@ -595,7 +596,7 @@ Ninguna credencial, clave de API, clave privada de billetera o secreto está alm
 
 | Mejora | Estado |
 |--------|--------|
-| Suite de tests automatizados (Vitest + Testing Library) | Planificado — no implementado |
+| Suite de tests automatizados (Vitest) | **Implementado** — 52 tests activos en `src/__tests__/lib/` |
 | Tests end-to-end (Playwright) | Pendiente de definición |
 | Auditoría de seguridad de contratos inteligentes | Pendiente — recomendada antes de escalar volumen on-chain |
 
@@ -643,4 +644,4 @@ Ninguna credencial, clave de API, clave privada de billetera o secreto está alm
 
 ---
 
-**Versión 2.1 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
+**Versión 2.2 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**

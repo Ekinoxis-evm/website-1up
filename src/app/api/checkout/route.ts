@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { createCoursePreference } from "@/lib/mercadopago";
+import { selectBestDiscount } from "@/lib/discount";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   // Try to fetch existing profile
@@ -33,23 +34,6 @@ async function getOrCreateProfile(privyUserId: string, email: string | undefined
   return created;
 }
 
-function selectBestDiscount(
-  rules: Array<{ id: number; discount_pct: number; trigger_type: string }>,
-  isComfenalcoAffiliate: boolean,
-): { ruleId: number | null; discountPct: number } {
-  let best = { ruleId: null as number | null, discountPct: 0 };
-
-  for (const rule of rules) {
-    // Skip comfenalco rule if user is not affiliated
-    if (rule.trigger_type === "comfenalco" && !isComfenalcoAffiliate) continue;
-
-    if (rule.discount_pct > best.discountPct) {
-      best = { ruleId: rule.id, discountPct: rule.discount_pct };
-    }
-  }
-
-  return best;
-}
 
 export async function POST(req: NextRequest) {
   // ── Auth ───────────────────────────────────────────────────────

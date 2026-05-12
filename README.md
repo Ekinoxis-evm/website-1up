@@ -187,6 +187,8 @@ npm run dev
 | `npm run build` | Production build (run before shipping) |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint check |
+| `npm run test` | Vitest in watch mode |
+| `npm run test:run` | Vitest single run (CI) |
 
 ---
 
@@ -198,12 +200,12 @@ npm run dev
 |-------|-------------|
 | `/` | Home — Hero, Brands Banner (animated marquee), 1UP Pass section, Academia teaser, Torneos teaser, Marketplace teaser, Nuestro Ecosistema (3-pillar), Recruitment form |
 | `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, registration CTA, month+game filters. International tournaments section. HallOfFame team competition history at bottom. Recruitment form. |
-| `/torneos/[id]` | Tournament detail — cover image, status/game/location badges, prize podium, `RegisterButton` CTA. Dynamic OG metadata per tournament. |
-| `/torneos/[id]/checkin` | QR check-in — inline Privy login (modal, no redirect), validates registration status, marks attendance via API. |
+| `/torneos/[slug]` | Tournament detail — cover image, status/game/location badges, prize podium, sponsor strip, `RegisterButton` CTA. Dynamic OG metadata per tournament. Numeric ID fallback for old QR codes/bookmarks. |
+| `/torneos/[slug]/checkin` | QR check-in — inline Privy login (modal, no redirect), validates registration status, marks attendance via API. Numeric ID fallback for old QR codes. |
 | `/gaming-tower` | 6-floor breakdown, 1UP Pass benefits, per-category games showcase (category image + game cards), Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Redirects to `/` — roster removed; Masters live on `/academia` |
-| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + MercadoPago checkout |
+| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + token/$1UP and bank transfer checkout (MercadoPago not yet active) |
 | `/juegos` | Redirects to `/gaming-tower` — games integrated into Tower page |
 | `/recreativo` | Casual gaming section |
 | `/marketplace` | Coming soon — merchandise + periféricos, paga con $1UP tokens. Dynamic social links from DB. |
@@ -238,12 +240,12 @@ npm run dev
 | `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
 | `/admin/pass-bank-orders` | Bank-transfer pass orders — approve (calculates expiry + stacking) or reject (with rejection reason). Pending orders require admin review within 24h. |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
-| `/admin/enrollments` | Read-only payment log with revenue total |
-| `/admin/privy-users` | All Privy users — merged with profiles, $1UP balance, enrollments, pass status |
-| `/admin/user-profiles` | Supabase user profiles (legacy read-only view, Comfenalco status) |
+| `/admin/enrollments` | Course enrollment table — filterable by status (approved/pending/rejected/cancelled) AND payment method (MercadoPago/Banco/$1UP Token). Inline approve/reject panel for pending token/bank enrollments. Revenue KPI at top. |
+| `/admin/privy-users` | All Privy users — table view with columns: Usuario / Wallet·$1UP / Cédula / Juegos / Cursos / Registrado. Search by email/wallet/cédula/nombre/@username, sort by $1UP balance or date, filter by game. |
+| `/admin/user-profiles` | Supabase user profiles — table view (Email / Documento / Comfenalco / Privy ID / Registro). Legacy read-only. |
 | `/admin/token-orders` | $1UP token purchase purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
-| `/admin/bank-accounts` | Bank accounts CRUD — controls which accounts are shown to users in the BUY modal |
-| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sort order |
+| `/admin/bank-accounts` | Bank accounts CRUD + treasury wallet — COP bank accounts shown to users in the BUY modal, plus the $1UP treasury wallet (`pass_config.recipient_address`) that receives all token payments (Pass + Courses) |
+| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
 | `/admin/tournament-results` | Podium results — select tournament → assign 1°/2°/3° from registered players → save points (10/5/3 default, custom override) |
@@ -275,7 +277,7 @@ npm run dev
 | `games` | Individual games per category |
 | `players` | Pro roster (social links, photo) |
 | `competitions` | Hall of Fame entries |
-| `courses` | Academia catalog (price, master_id FK, checkout via MP) |
+| `courses` | Academia catalog — `price_cop`, `price_token` (nullable — enables $1UP checkout), master_id FK, is_active |
 | `masters` | Coaches — photo, specialty, categories[], topics[], all 8 social links (instagram/tiktok/youtube/x/kick/twitch/github/linkedin) |
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
@@ -293,7 +295,7 @@ npm run dev
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
 | `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
-| `tournaments` | Esports tournaments — game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), is_registration_open, sort_order |
+| `tournaments` | Esports tournaments — `slug` (unique, auto-generated from name), game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), sponsor_name, sponsor_website_url, sponsor_logo_url, is_registration_open, sort_order |
 | `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens, amount_cop. DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |

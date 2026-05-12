@@ -30,9 +30,9 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/privacidad` | `(main)` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/juegos` | `(main)` | **Redirects to `/gaming-tower`** — games are now part of the Tower page |
 | `/team` | `(main)` | **Redirects to `/`** — Masters on `/academia`, recruitment on `/torneos` |
-| `/torneos/[id]` | `(main)` | Tournament detail — cover, badges, prizes podium, RegisterButton CTA. `generateMetadata` with per-tournament OG. |
-| `/torneos/[id]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin |
-| `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + MercadoPago checkout |
+| `/torneos/[slug]` | `(main)` | Tournament detail — cover, badges, prizes podium, sponsor strip, RegisterButton CTA. `generateMetadata` with per-tournament OG. Numeric ID fallback for old QR codes/bookmarks. |
+| `/torneos/[slug]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin. Numeric ID fallback for old QR codes. |
+| `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + token/bank checkout (MercadoPago not yet active) |
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page — `safeRedirectTarget()` allowlist, redirects back to `?redirect=` URL after auth |
@@ -93,7 +93,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `games` | name, category_id, image_url |
 | `players` | gamertag, real_name, role, photo_url, social URLs, is_active |
 | `competitions` | tournament_name, year, result, player_id |
-| `courses` | name, category, price_cop, duration_hours, image_url, master_id FK, is_active |
+| `courses` | name, category, price_cop, price_token (nullable — enables $1UP payment), duration_hours, image_url, master_id FK, is_active |
 | `masters` | name, specialty, bio, photo_url, instagram/tiktok/twitter/youtube/linkedin/kick/twitch/github URLs, categories[], topics[], is_active |
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color, image_url |
@@ -109,9 +109,9 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `admin_users` | email, added_by |
 | `bank_accounts` | bank_name, account_type (ahorros/corriente), account_number, holder_name, holder_document, instructions, is_active, sort_order — bank transfer destinations shown in BUY modal |
 | `token_purchase_orders` | user_profile_id FK, privy_user_id, email, nombre, celular_contacto, wallet_address, cop_amount, token_amount, exchange_rate_cop (frozen 1000), bank_account_id FK, comprobante_url, status (pending/approved/rejected/cancelled), admin_notes, rejection_reason, approved_tx_hash, reviewed_by, reviewed_at |
-| `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` |
+| `pass_config` | Single-row (id=1): price_token, recipient_address, duration_days, is_active, updated_by — admin-editable via `/admin/1pass` and `/admin/bank-accounts` (treasury wallet only) |
 | `pass_orders` | user_profile_id FK, privy_user_id, wallet_address, payment_method (token/bank), tx_hash (nullable — token path only), bank_account_id FK, comprobante_url, status (pending_bank/confirmed/failed/…), token_amount_paid, token_price_at_purchase, recipient_address, duration_days, block_number, paid_at, expires_at (stacks on renewal), rejection_reason, reviewed_by, reviewed_at |
-| `tournaments` | name, game_id FK (nullable → games), date, prize_pool_cop (deprecated — use tournament_prizes), max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, is_active, is_registration_open, sort_order |
+| `tournaments` | name, slug (unique — auto-generated from name, used in URLs), game_id FK (nullable → games), date, prize_pool_cop (deprecated — use tournament_prizes), max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), image_url, description, sponsor_name, sponsor_website_url, sponsor_logo_url, is_active, is_registration_open, sort_order |
 | `tournament_prizes` | tournament_id FK → tournaments (CASCADE), position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens (nullable NUMERIC), amount_cop (nullable INTEGER) — DB CHECK enforces type/amount consistency |
 | `tournament_registrations` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at — UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | name, organizer, date, country, city, game_id FK (nullable → games), registration_link, image_url, description, is_active, sort_order — no prizes/registrations/capacity lifecycle |

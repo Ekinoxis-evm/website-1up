@@ -1,13 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
-// Emails from env are always root admins (fast, no DB call needed)
-const ENV_ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
 export function isEnvAdmin(email: string): boolean {
-  return ENV_ADMIN_EMAILS.includes(email.toLowerCase());
+  const envEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return envEmails.includes(email.toLowerCase());
 }
 
 /**

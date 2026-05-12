@@ -5,6 +5,96 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.22.1] — 2026-05-12
+
+### Security
+
+- **Full Supabase RLS audit** — enabled Row Level Security on all 27 public schema tables. Previously 16 tables had RLS disabled, exposing full INSERT/UPDATE/DELETE to anyone with the public anon key.
+- **`admin_users` privilege escalation closed** — table now has RLS with no policies (service-role only). Before, any anonymous caller could insert a row via PostgREST and gain admin access on the next request.
+- **`pass_orders` locked** — RLS enabled, no public policies. Wallet addresses, tx hashes, and comprobante URLs are no longer readable/writable by anon.
+- **`user_profiles` policies fixed** — dropped `USING (true)` policies that let any authenticated user read all profiles (PII: phone, document ID, birth date) and update any other user's profile. All profile access now goes exclusively through service-role API routes.
+- **`aliados` api_key protected** — RLS enabled with public read for active partners; `api_key` and `api_url` columns revoked at column level from anon/authenticated roles.
+- **`recruitment_submissions`, `referral_codes` locked** — RLS enabled, service-role only.
+- **Public content tables hardened** — `game_categories`, `games`, `players`, `competitions`, `floor_info`, `pass_benefits`, `pass_config`, `social_links`, `tournaments`, `courses`, `site_content` now have RLS with SELECT-only policies for anon/authenticated. Blocks direct INSERT/UPDATE/DELETE via PostgREST while keeping public reads intact.
+- **`register_for_tournament` RPC locked** — revoked EXECUTE from PUBLIC, anon, and authenticated. Function was callable without authentication via PostgREST, allowing anyone to register arbitrary user profiles for tournaments.
+- **`sync_user_pass_status` RPC locked** — revoked EXECUTE from PUBLIC, anon, and authenticated. Trigger function not meant for direct invocation.
+- **Function search_path hardened** — set `search_path = public` on `register_for_tournament` and `sync_user_pass_status` to prevent search_path injection attacks.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.22.2] — 2026-05-12
+
+### Changed
+
+- **`AdminEnrollmentsClient`** — rebuilt as a proper `<table>`. Single header row; rows no longer repeat column labels. Added payment method filter (MercadoPago / Banco / $1UP Token) independent from the existing status filter. Inline approve/reject panel expands as a full-width row below the selected enrollment.
+- **`AdminPrivyUsersClient`** — rebuilt as a proper `<table>` (columns: Usuario / Wallet·$1UP / Cédula / Juegos / Cursos / Registrado). Games strip moved inline into the Juegos column. All search, sort, and game filters preserved.
+- **`AdminUserProfilesClient`** — rebuilt as a proper `<table>` (columns: Email / Documento / Comfenalco / Privy ID / Registro).
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.22.0] — 2026-05-12
+
+### Added
+
+- **Vitest test suite** — `vitest` installed as dev dependency. `npm run test` (watch) and `npm run test:run` (CI) scripts added. `vitest.config.ts` configured with node environment and `@/` path alias.
+- **52 automated tests across 7 test files** in `src/__tests__/lib/`:
+  - `utils.test.ts` — `formatCop`, `cn`
+  - `tournamentPoints.test.ts` — `pointsFor`, `POINTS_BY_POSITION`
+  - `discount.test.ts` — `selectBestDiscount` (discount selection logic)
+  - `admin.test.ts` — `isEnvAdmin`, `isAdmin` (env path + DB path)
+  - `mercadopago.test.ts` — `verifyWebhookSignature` (HMAC-SHA256)
+  - `comfenalco.test.ts` — config error, affiliated/not-affiliated, API error
+  - `privy.test.ts` — `verifyToken` (null, no Bearer, valid, expired)
+- **`src/lib/discount.ts`** — extracted `selectBestDiscount` from `src/app/api/checkout/route.ts` to make it independently importable and testable.
+
+### Changed
+
+- **`isEnvAdmin` in `src/lib/admin.ts`** — reads `process.env.ADMIN_EMAILS` inline on every call instead of caching at module load. Enables `vi.stubEnv` to work correctly in tests. Behavior in production is unchanged.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.21.0] — 2026-05-12
+
+### Added
+
+- **Tournament slug URLs** — tournaments now resolve at `/torneos/[slug]` (e.g., `/torneos/copa-valorant`). Numeric ID fallback preserved for backward compatibility with existing QR codes and bookmarks. Migration backfills slugs for all existing tournaments; UNIQUE constraint enforced on the `slug` column. Dedup appends `-{id}` on collision.
+- **Tournament sponsors** — each tournament now supports an optional sponsor (name, website URL, logo URL). Sponsor strip shown on tournament cards and detail page. Admin form includes a Sponsor section. API handles `sponsor_name`, `sponsor_website_url`, `sponsor_logo_url` on POST and PUT.
+- **Treasury wallet on bank accounts admin page** (`/admin/bank-accounts`) — `pass_config.recipient_address` now surfaced at the top of the bank accounts admin as a prominent card, alongside COP bank accounts. Centralizes all payment destinations in one view. Includes Copy and BaseScan link actions and inline edit mode.
+
+### Fixed
+
+- **Aliados banner blank** — `aliados` table had Row Level Security enabled with no policies defined, causing anon client to receive zero rows. Disabled RLS on `aliados` (consistent with all other non-sensitive tables in the project). Home page marquee now shows banner sponsors correctly.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.20.1] — 2026-05-12
+
+### Added
+
+- **`price_token` field on course admin form** — create/edit modal now shows the $1UP token price field alongside the COP price. Course table displays `{price_token} $1UP` when set. API (POST and PUT `/api/admin/courses`) persists the value.
+
+### Changed
+
+- **MercadoPago removed from `CourseCheckoutWizard`** — payment methods now limited to $1UP token (on-chain) and bank transfer (comprobante). MP option will be re-added once the integration is fully active. `Method` type is now `"token" | "bank"`.
+- **Treasury wallet card moved to pass config admin** (`/admin/1pass`) — `pass_config.recipient_address` displayed prominently with explanatory copy ("receives all $1UP payments for Pass + Courses"), Copy button, and BaseScan link. Edit stays in-place. Pass-specific config (price, duration, active toggle) is a separate card below.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.20.0] — 2026-05-12
 
 ### Added
