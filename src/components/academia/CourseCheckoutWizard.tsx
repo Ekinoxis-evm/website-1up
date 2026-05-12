@@ -17,8 +17,8 @@ type BankAccount = {
   instructions: string | null;
 };
 
-type Method = "mercadopago" | "token" | "bank";
-type Phase = "method" | "mp_loading" | "token_pay" | "token_sending" | "token_confirming" | "token_registering" |
+type Method = "token" | "bank";
+type Phase = "method" | "token_pay" | "token_sending" | "token_confirming" | "token_registering" |
              "bank_select" | "bank_pay" | "bank_uploading" | "bank_submitting" | "success" | "error";
 
 interface Props {
@@ -65,23 +65,6 @@ export function CourseCheckoutWizard({
     navigator.clipboard.writeText(value);
     setCopiedField(key);
     setTimeout(() => setCopiedField(null), 2000);
-  }
-
-  // ── MERCADOPAGO ──────────────────────────────────────────────
-  async function payWithMercadopago() {
-    setPhase("mp_loading"); setErrorMsg("");
-    const res = await fetch("/api/checkout", {
-      method:  "POST",
-      headers: await authHeaders(),
-      body:    JSON.stringify({ courseId: course.id }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.error ?? "Error al crear el pago.");
-      setPhase("error");
-      return;
-    }
-    window.location.href = data.checkoutUrl;
   }
 
   // ── TOKEN ─────────────────────────────────────────────────────
@@ -303,27 +286,6 @@ export function CourseCheckoutWizard({
                   Transfiere a una cuenta 1UP y sube el comprobante. Revisamos en máx. 24h.
                 </p>
               </button>
-
-              <button
-                onClick={() => { setMethod("mercadopago"); payWithMercadopago(); }}
-                className="w-full bg-surface-container-low p-5 text-left hover:bg-surface-container-high transition-colors"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-headline font-black text-base uppercase">MERCADOPAGO</span>
-                  <span className="font-headline font-black text-secondary text-lg">{formatCop(priceCop)}</span>
-                </div>
-                <p className="font-body text-xs text-on-surface/50">
-                  Tarjeta, PSE o efectivo — confirmación automática.
-                </p>
-              </button>
-            </div>
-          )}
-
-          {/* MP loading */}
-          {phase === "mp_loading" && (
-            <div className="flex flex-col items-center gap-4 py-12">
-              <span className="material-symbols-outlined text-secondary text-5xl animate-spin">refresh</span>
-              <p className="font-headline font-black text-base uppercase tracking-tighter">Redirigiendo a MercadoPago…</p>
             </div>
           )}
 
