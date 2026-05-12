@@ -93,6 +93,8 @@ export function WalletTab() {
   // Transaction history
   const [txHistory, setTxHistory]   = useState<TxItem[]>([]);
   const [txLoading, setTxLoading]   = useState(false);
+  const [txPage, setTxPage]         = useState(0);
+  const TX_PER_PAGE = 10;
 
   useEffect(() => {
     if (!walletAddress) return;
@@ -114,6 +116,7 @@ export function WalletTab() {
               : "receive",
         }));
         setTxHistory(items);
+        setTxPage(0);
       })
       .catch(() => setTxHistory([]))
       .finally(() => setTxLoading(false));
@@ -165,6 +168,10 @@ export function WalletTab() {
 
   const MIN_SEND_AMOUNT = 1;
   const maxSendAmount = balance !== null ? parseFloat(balance.replace(/,/g, "")) : 0;
+
+  const totalTxPages = Math.ceil(txHistory.length / TX_PER_PAGE);
+  const currentTxPage = Math.min(txPage, Math.max(0, totalTxPages - 1));
+  const pagedTxItems = txHistory.slice(currentTxPage * TX_PER_PAGE, (currentTxPage + 1) * TX_PER_PAGE);
 
   async function handleSend() {
     if (!walletAddress) return;
@@ -345,7 +352,10 @@ export function WalletTab() {
             </div>
           ) : (
             <>
-              <div className="px-6 pt-4 pb-2 flex justify-end">
+              <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+                <span className="text-[10px] font-body text-on-surface/30">
+                  {txHistory.length} transacciones
+                </span>
                 <a
                   href={walletAddress ? `https://basescan.org/address/${walletAddress}` : "#"}
                   target="_blank"
@@ -355,8 +365,9 @@ export function WalletTab() {
                   Basescan ↗
                 </a>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {txHistory.map((tx) => (
+
+              <div className="flex flex-col">
+                {pagedTxItems.map((tx) => (
                   <a
                     key={tx.hash}
                     href={`https://basescan.org/tx/${tx.hash}`}
@@ -390,7 +401,7 @@ export function WalletTab() {
                           {truncate(tx.direction === "send" ? tx.to : tx.from)}
                         </span>
                         <span className="font-body text-[10px] text-on-surface/30 shrink-0">
-                          {new Date(tx.timestamp).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+                          {new Date(tx.timestamp).toLocaleDateString("es-CO", { day: "numeric", month: "short", timeZone: "America/Bogota" })}
                         </span>
                       </div>
                     </div>
@@ -400,6 +411,30 @@ export function WalletTab() {
                   </a>
                 ))}
               </div>
+
+              {totalTxPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 bg-surface-container-lowest">
+                  <button
+                    onClick={() => setTxPage((p) => Math.max(0, p - 1))}
+                    disabled={currentTxPage === 0}
+                    className="flex items-center gap-1 font-headline font-black text-xs uppercase tracking-widest text-on-surface/60 disabled:opacity-25 hover:text-on-surface transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base">chevron_left</span>
+                    ANTERIOR
+                  </button>
+                  <span className="font-headline font-bold text-xs text-on-surface/40">
+                    {currentTxPage + 1} / {totalTxPages}
+                  </span>
+                  <button
+                    onClick={() => setTxPage((p) => Math.min(totalTxPages - 1, p + 1))}
+                    disabled={currentTxPage === totalTxPages - 1}
+                    className="flex items-center gap-1 font-headline font-black text-xs uppercase tracking-widest text-on-surface/60 disabled:opacity-25 hover:text-on-surface transition-colors"
+                  >
+                    SIGUIENTE
+                    <span className="material-symbols-outlined text-base">chevron_right</span>
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
