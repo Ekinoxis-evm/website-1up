@@ -15,7 +15,7 @@ interface Props {
 
 const EMPTY_COURSE = {
   name: "", category: "Gaming", description: "",
-  priceCop: "", durationHours: "4", imageUrl: "", masterId: "", sortOrder: "0",
+  priceCop: "", priceToken: "", durationHours: "4", imageUrl: "", masterId: "", sortOrder: "0",
 };
 
 type ContentForm = {
@@ -60,7 +60,8 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
     setEditing(c);
     setForm({
       name: c.name, category: c.category, description: c.description ?? "",
-      priceCop: String(c.price_cop ?? ""), durationHours: String(c.duration_hours ?? 4),
+      priceCop: String(c.price_cop ?? ""), priceToken: String(c.price_token ?? ""),
+      durationHours: String(c.duration_hours ?? 4),
       imageUrl: c.image_url ?? "", masterId: String(c.master_id ?? ""),
       sortOrder: String(c.sort_order ?? 0),
     });
@@ -74,6 +75,7 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
     const body = {
       name: form.name, category: form.category, description: form.description,
       priceCop: form.priceCop ? Number(form.priceCop) : null,
+      priceToken: form.priceToken ? Number(form.priceToken) : null,
       durationHours: Number(form.durationHours),
       imageUrl: form.imageUrl,
       masterId: form.masterId ? Number(form.masterId) : null,
@@ -180,7 +182,12 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
                 <td className="px-4 py-3">
                   <span className="bg-surface-container-highest font-headline font-black text-[10px] px-2 py-1 text-on-surface-variant uppercase">{c.category}</span>
                 </td>
-                <td className="px-4 py-3 font-body text-primary">{formatCop(c.price_cop)}</td>
+                <td className="px-4 py-3">
+                  <p className="font-body text-primary">{formatCop(c.price_cop)}</p>
+                  {c.price_token && (
+                    <p className="font-headline font-black text-[10px] text-tertiary mt-0.5">{c.price_token} $1UP</p>
+                  )}
+                </td>
                 <td className="px-4 py-3 font-body text-on-surface-variant">{c.duration_hours}h</td>
                 <td className="px-4 py-3">
                   <span className={`font-headline font-black text-xs px-2 py-1 ${itemCount > 0 ? "bg-tertiary/20 text-tertiary" : "bg-outline/10 text-outline"}`}>
@@ -257,28 +264,49 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
                   rows={2}
                   className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold resize-none"
                 />
-                <div className="grid grid-cols-3 gap-3">
-                  <input
-                    value={form.priceCop}
-                    onChange={(e) => setForm({ ...form, priceCop: e.target.value })}
-                    type="number"
-                    placeholder="Precio COP"
-                    className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
-                  />
-                  <input
-                    value={form.durationHours}
-                    onChange={(e) => setForm({ ...form, durationHours: e.target.value })}
-                    type="number"
-                    placeholder="Duración (h)"
-                    className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
-                  />
-                  <input
-                    value={form.sortOrder}
-                    onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
-                    type="number"
-                    placeholder="Orden"
-                    className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-1">Precio COP</p>
+                    <input
+                      value={form.priceCop}
+                      onChange={(e) => setForm({ ...form, priceCop: e.target.value })}
+                      type="number"
+                      placeholder="Ej: 350000"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-1">Precio $1UP <span className="normal-case font-normal">(habilita pago con tokens)</span></p>
+                    <input
+                      value={form.priceToken}
+                      onChange={(e) => setForm({ ...form, priceToken: e.target.value })}
+                      type="number"
+                      placeholder="Ej: 350 (dejar vacío = desactivado)"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-1">Duración (h)</p>
+                    <input
+                      value={form.durationHours}
+                      onChange={(e) => setForm({ ...form, durationHours: e.target.value })}
+                      type="number"
+                      placeholder="4"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-1">Orden</p>
+                    <input
+                      value={form.sortOrder}
+                      onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+                      type="number"
+                      placeholder="0"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold"
+                    />
+                  </div>
                 </div>
               </div>
 
