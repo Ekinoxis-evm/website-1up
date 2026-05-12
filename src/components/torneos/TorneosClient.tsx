@@ -86,7 +86,7 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
           {t.date && (
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-sm">calendar_month</span>
-              {new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+              {new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" })}
             </span>
           )}
           <PrizeBadge prizes={prizes} />

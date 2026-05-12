@@ -180,10 +180,10 @@ export async function sendTournamentRegistrationEmail(opts: {
   } = opts;
 
   const dateStr = tournamentDate
-    ? new Date(tournamentDate).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+    ? new Date(tournamentDate).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota" })
     : "Por confirmar";
   const timeStr = tournamentDate
-    ? new Date(tournamentDate).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(tournamentDate).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" })
     : "";
 
   const locLabel: Record<string, string> = { presencial: "Presencial — 1UP Gaming Tower, Cali", online: "Online", mixto: "Mixto (presencial + online)" };

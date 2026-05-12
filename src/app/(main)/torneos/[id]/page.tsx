@@ -133,14 +133,15 @@ export default async function TournamentDetailPage(
                   <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha</p>
                   <p className="font-body text-sm text-on-surface">
                     {new Date(t.date).toLocaleDateString("es-CO", {
-                      weekday: "long",
-                      day:     "2-digit",
-                      month:   "long",
-                      year:    "numeric",
+                      weekday:  "long",
+                      day:      "2-digit",
+                      month:    "long",
+                      year:     "numeric",
+                      timeZone: "America/Bogota",
                     })}
                   </p>
                   <p className="font-body text-sm text-on-surface/60">
-                    {new Date(t.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(t.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" })}
                   </p>
                 </div>
               )}

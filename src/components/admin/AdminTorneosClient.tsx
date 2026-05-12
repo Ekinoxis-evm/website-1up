@@ -38,6 +38,15 @@ const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Final
 const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary", completed: "text-outline" };
 const LOC_LABELS    = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
 
+// Colombia is always UTC-5 (no DST). Formats a stored UTC ISO string for datetime-local input.
+function toColombiaInput(utcIso: string): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Bogota",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(utcIso)).replace(" ", "T");
+}
+
 function prizeToFormRow(p: TournamentPrize): PrizeFormRow {
   return {
     position:     p.position as 1 | 2 | 3,
@@ -83,7 +92,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
     setForm({
       name:               t.name,
       gameId:             t.game_id ? String(t.game_id) : "",
-      date:               t.date ? t.date.slice(0, 16) : "",
+      date:               t.date ? toColombiaInput(t.date) : "",
       maxParticipants:    t.max_participants ? String(t.max_participants) : "",
       status:             t.status,
       locationType:       t.location_type,
@@ -101,7 +110,12 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
     if (!form.name) { setSaveError("El nombre es requerido."); return; }
     setLoading(true); setSaveError(null);
     const method = editing ? "PUT" : "POST";
-    const body   = { ...form, ...(editing ? { id: editing.id } : {}) };
+    const body   = {
+      ...form,
+      // datetime-local gives "YYYY-MM-DDTHH:mm" — append Colombia offset so PostgreSQL stores correct UTC
+      date: form.date ? `${form.date}:00-05:00` : null,
+      ...(editing ? { id: editing.id } : {}),
+    };
     const res = await fetch("/api/admin/tournaments", {
       method, headers: await authHeaders(), body: JSON.stringify(body),
     });
@@ -171,7 +185,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">{t.games?.name ?? "—"}</td>
                 <td className="px-4 py-3 font-body text-on-surface/70 whitespace-nowrap">
-                  {t.date ? new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                  {t.date ? new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }) : "—"}
                 </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">
                   {firstPrizeSummary(t.tournament_prizes ?? [])}

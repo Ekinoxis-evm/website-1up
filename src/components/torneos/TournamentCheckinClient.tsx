@@ -143,13 +143,14 @@ export function TournamentCheckinClient({ tournament }: { tournament: Tournament
                 <p className="font-body text-sm text-on-surface/70">
                   Comienza el{" "}
                   {new Date(tournament.date).toLocaleDateString("es-CO", {
-                    weekday: "long",
-                    day:     "2-digit",
-                    month:   "long",
-                    year:    "numeric",
+                    weekday:  "long",
+                    day:      "2-digit",
+                    month:    "long",
+                    year:     "numeric",
+                    timeZone: "America/Bogota",
                   })}
                   {" · "}
-                  {new Date(tournament.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(tournament.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" })}
                 </p>
               )}
               <p className="font-body text-xs text-outline/60 pt-2">
