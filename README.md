@@ -79,7 +79,7 @@ src/
     socialIcons.ts        # Platform → /public/socialmedia/ icon path mapping
     comfenalco.ts         # Comfenalco API client (stub — awaiting credentials)
     mercadopago.ts        # MP preference creation + webhook signature
-    email.ts              # Resend emails — token orders, pass purchases (token+bank), tournament registrations
+    email.ts              # Resend emails — token orders, pass purchases (token+bank), tournament registrations (with .ics attachment + admin notification)
     calendar.ts           # buildGoogleCalendarUrl + buildIcsContent (UTC, 2h duration)
     tournamentPoints.ts   # POINTS_BY_POSITION {1:10, 2:5, 3:3} + pointsFor()
   types/
@@ -167,6 +167,8 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 14. `create_referral_codes` — `referral_codes` table with `code`, `description`, `is_active`, `max_uses`, `used_count`; seeded with 3 launch codes
 15. `birth_date_replace_birth_year` — renames `birth_year` → `birth_date`, changes type to DATE; best-effort backfills existing rows as Jan 1 of that year
 16. `pass_orders_bank_transfer_support` — `tx_hash` made nullable; adds `payment_method` (default 'token'), `bank_account_id` FK to `bank_accounts`, `comprobante_url`, `rejection_reason`; adds `pending_bank` to `pass_order_status` enum
+17. `add_pass_status_to_user_profiles` — adds `pass_status_enum` (`never | active | expired`) + `pass_status` column to `user_profiles` (default `'never'`, indexed); trigger `trg_sync_pass_status` auto-syncs on every `pass_orders` INSERT/UPDATE; existing users backfilled
+18. `schedule_pass_status_nightly_expiry` — enables `pg_cron`; schedules `expire-1up-passes` job at `0 4 * * *` UTC to flip `active → expired` for lapsed passes
 
 ### 4. Start the dev server
 
@@ -262,7 +264,7 @@ npm run dev
 - **API protection**: every `/api/admin/*` calls `verifyToken` + `isAdmin` — no exceptions
 - **User APIs**: `/api/user/*` require Privy Bearer token (not admin)
 - **Client token**: `const token = await getAccessToken()` from `usePrivy()` → `Authorization: Bearer <token>`
-- **Privy note**: for cross-subdomain login, enable HttpOnly cookies in Privy Dashboard → set domain to `1upesports.org`
+- **Cross-subdomain auth (tournament registration)**: unauthenticated users on `1upesports.org` are redirected to `app.1upesports.org/login?redirect=<tournament-url>`. After login, `safeRedirectTarget()` returns them to the tournament page. Privy session is shared at the app-ID level via secure iframe — no separate cookie config needed. Privy Dashboard must have `1upesports.org` in both **Allowed Domains** and **Allowed OAuth Redirect URLs**.
 
 ---
 
@@ -279,7 +281,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired) |
 | `aliados` | Partner organizations — name, NIT, email, API URL/key |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |

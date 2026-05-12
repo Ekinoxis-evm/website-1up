@@ -5,11 +5,31 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.15.0] — 2026-05-12
+
+### Added
+
+- **1UP Pass calendar UI** (`src/components/perfil/PassCalendar.tsx`): new 12-month calendar (3 past + current + 8 ahead) on the pass page. Each day cell is colored by coverage — full `primary-container` for active/future days, muted for past history, empty for uncovered days. Today always has a visible ring indicator. Shows current month with an outline highlight.
+- **Redesigned pass status panel** (`src/components/perfil/PassPurchasePanel.tsx`): new status bar showing `ACTIVO / EXPIRADO / SIN PASS` badge, days remaining, and exact coverage-until date. CTA button text adapts — "RENOVAR", "REACTIVAR", or "ACTIVAR" depending on state. Order history now inline (no extra fetch) since all orders are fetched once and shared.
+- **`pass_status` column on `user_profiles`** (migration `add_pass_status_to_user_profiles`): DB-level enum `pass_status_enum ('never' | 'active' | 'expired')` stored on each user profile. Auto-maintained by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE. Existing users backfilled at migration time.
+- **Nightly expiry cron** (migration `schedule_pass_status_nightly_expiry`): `pg_cron` job runs at 04:00 UTC daily to flip `active → expired` for users whose last pass has lapsed. Covers the time-based transition that the trigger alone cannot catch.
+- **`PassStatusEnum` type export** (`src/types/database.types.ts`): `pass_status_enum` added to Enums, `user_profiles` Row/Insert/Update updated, `PassStatusEnum` alias exported.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.14.2] — 2026-05-11
+
+### Added
+
+- **Calendar file (.ics) in registration email** (`src/lib/email.ts`): tournament registration confirmation email now includes an `.ics` attachment — Gmail, Outlook, and Apple Mail surface a native "Add to Calendar" prompt. Built with `buildIcsContent()` from `calendar.ts` and attached via Resend `attachments` with `content-type: text/calendar; charset=utf-8; method=PUBLISH`.
+- **CalendarPromptModal after registration** (`src/components/torneos/RegisterButton.tsx`): after a successful (or already-registered 409) registration, a modal appears with a "AÑADIR A GOOGLE CALENDAR" button and a prompt to check email for the calendar file. Previously the modal only showed on fresh registration.
 
 ### Changed
 
-- **Tournament registration email** (`src/lib/email.ts`): enriched with full tournament data — game name, date + time, location label, prize podium (🥇🥈🥉 with amounts), description block, "VER TORNEO →" CTA linking to the detail page, and "AÑADIR A GOOGLE CALENDAR" button. Admin notification email added for every new registration (sends to `ADMIN_NOTIFICATION_EMAIL`).
+- **Tournament registration email** (`src/lib/email.ts`): enriched with full tournament data — game name, date + time, location label with full address for presencial events, prize podium (🥇🥈🥉 with token/COP amounts), description block, "VER TORNEO →" CTA linking to the detail page, and "AÑADIR A GOOGLE CALENDAR" button. Admin notification email added for every new registration (sends to `ADMIN_NOTIFICATION_EMAIL`).
 - **Tournament registration API** (`src/app/api/user/tournament-registrations/route.ts`): expands the post-registration tournament query to include `games(name)`, `tournament_prizes(*)`, `description`, and `max_participants` so the email function receives the full dataset.
 
 ### Delivered by

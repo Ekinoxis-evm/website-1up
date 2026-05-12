@@ -1260,6 +1260,7 @@ export type Database = {
           updated_at: string | null
           username: string | null
           verified_aliados: Json | null
+          pass_status: Database["public"]["Enums"]["pass_status_enum"]
         }
         Insert: {
           apellidos?: string | null
@@ -1282,6 +1283,7 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           verified_aliados?: Json | null
+          pass_status?: Database["public"]["Enums"]["pass_status_enum"]
         }
         Update: {
           apellidos?: string | null
@@ -1304,6 +1306,7 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           verified_aliados?: Json | null
+          pass_status?: Database["public"]["Enums"]["pass_status_enum"]
         }
         Relationships: []
       }
@@ -1324,6 +1327,7 @@ export type Database = {
     Enums: {
       discount_applies_to: "courses" | "pass" | "all"
       discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
+      pass_status_enum: "never" | "active" | "expired"
       pass_order_status:
         | "pending_tx"
         | "confirmed"
@@ -1463,6 +1467,7 @@ export const Constants = {
     Enums: {
       discount_applies_to: ["courses", "pass", "all"],
       discount_trigger: ["comfenalco", "promo_code", "manual", "auto"],
+      pass_status_enum: ["never", "active", "expired"],
       pass_order_status: [
         "pending_tx",
         "confirmed",
@@ -1501,6 +1506,7 @@ export type TokenPurchaseStatus = Database["public"]["Enums"]["token_purchase_st
 export type PassConfig       = Database["public"]["Tables"]["pass_config"]["Row"];
 export type PassOrder        = Database["public"]["Tables"]["pass_orders"]["Row"];
 export type PassOrderStatus  = Database["public"]["Enums"]["pass_order_status"];
+export type PassStatusEnum   = Database["public"]["Enums"]["pass_status_enum"];
 export type ReferralCode     = Database["public"]["Tables"]["referral_codes"]["Row"];
 export type BrandLogo        = Database["public"]["Tables"]["brand_logos"]["Row"];
 export type Tournament       = Database["public"]["Tables"]["tournaments"]["Row"];

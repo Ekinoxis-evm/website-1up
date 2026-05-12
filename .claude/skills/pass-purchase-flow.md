@@ -1,8 +1,8 @@
 ---
 name: pass-purchase-flow
-description: Full spec for the on-chain 1UP Pass purchase flow — BuyPassWizard, on-chain tx verification, pass_config admin, pass_orders management.
+description: Full spec for the on-chain 1UP Pass purchase flow — BuyPassWizard, PassCalendar, on-chain tx verification, pass_config admin, pass_orders management, pass_status sync.
 type: project
-filePattern: src/components/perfil/BuyPassWizard.tsx, src/components/perfil/MisPassOrders.tsx, src/components/perfil/PassPurchasePanel.tsx, src/lib/passVerifier.ts, src/app/api/user/pass-orders/**, src/app/api/user/pass-config/**, src/app/api/admin/pass-orders/**, src/app/api/admin/pass-config/**, src/app/admin/(protected)/pass-orders/**, src/app/app/(protected)/pass/**
+filePattern: src/components/perfil/BuyPassWizard.tsx, src/components/perfil/PassCalendar.tsx, src/components/perfil/MisPassOrders.tsx, src/components/perfil/PassPurchasePanel.tsx, src/lib/passVerifier.ts, src/app/api/user/pass-orders/**, src/app/api/user/pass-config/**, src/app/api/admin/pass-orders/**, src/app/api/admin/pass-config/**, src/app/admin/(protected)/pass-orders/**, src/app/app/(protected)/pass/**
 ---
 
 # 1UP Pass On-Chain Purchase Flow
@@ -177,22 +177,53 @@ isAdmin. Body: `{ id, adminNotes }`. Sets `admin_notes`, `reviewed_by`, `reviewe
 
 ### `PassPurchasePanel` (Client Component)
 Rendered by `/app/pass` Server Component page. Receives `config` + `benefits` as props.
-- Fetches user's orders client-side on mount; shows active pass with expiry or "No tienes pass"
-- Opens `BuyPassWizard` modal on button click
-- Calls `fetchActiveOrder()` + bumps `ordersKey` after successful purchase
-- Renders `MisPassOrders` for history
+- Fetches **all** user orders once on mount (`GET /api/user/pass-orders`); derives active order + max expiry from the array
+- Status bar: `ACTIVO / EXPIRADO / SIN PASS` badge, days remaining, exact coverage date
+- CTA text adapts: "RENOVAR CON $1UP" (active), "REACTIVAR CON $1UP" (expired history), "PAGAR CON $1UP" (never)
+- Renders `PassCalendar` with all orders
+- Inline order history list (no separate fetch — reuses same `orders` state)
+- Opens `BuyPassWizard` or `BuyPassBankWizard` modals
+
+### `PassCalendar` (Client Component)
+Visual 12-month coverage grid. Props: `{ orders: PassOrder[] }`.
+- 3 months past + current month + 8 months ahead
+- Derives covered day set from all `confirmed` orders using `paid_at` → `expires_at` ranges
+- Day colors: full `primary-container` = active/future coverage; muted `/25` = past history; ring = today
+- Current month has outline highlight
+- Legend: Activo/Pre-pagado · Historial · Hoy
 
 ### `BuyPassWizard`
 Modal component. Props: `{ priceToken, recipientAddress, durationDays, walletAddress, getAccessToken, onClose, onSuccess }`.
 
 ### `MisPassOrders`
-Fetches `GET /api/user/pass-orders` on mount. Shows status badge + active/expired chip + expiry date + BaseScan TX link.
+Standalone component (still exists). Not used by `PassPurchasePanel` — history is now inline. Can be reused elsewhere if needed.
 
 ### `AdminPassConfigCard`
 Inline-edit card embedded in `/admin/1pass`. Validates address with viem `isAddress`. PUT to `/api/admin/pass-config`.
 
 ### `AdminPassOrdersClient`
 Full pass order table at `/admin/pass-orders`. KPIs: total orders, confirmed count, active now count, failed count. Filter pills. Admin notes editor per row.
+
+---
+
+## Pass Status Sync (`user_profiles.pass_status`)
+
+`pass_status_enum`: `'never' | 'active' | 'expired'`
+
+Stored on `user_profiles` as a denormalized field for CRM/marketing queries. Never use it for real-time feature gating — always derive access from `pass_orders.expires_at`.
+
+**How it stays in sync:**
+- Trigger `trg_sync_pass_status` fires `AFTER INSERT OR UPDATE ON pass_orders` — recomputes status from all confirmed orders for that user immediately.
+- `pg_cron` job `expire-1up-passes` runs at `0 4 * * *` UTC (11pm Colombia) — flips `active → expired` for users whose last `expires_at` has passed. Handles the time-based transition the trigger alone cannot catch.
+
+**Useful CRM queries:**
+```sql
+-- Users whose pass just expired (last 7 days) → renewal campaign
+SELECT email FROM user_profiles WHERE pass_status = 'expired';
+
+-- Distribution snapshot
+SELECT pass_status, COUNT(*) FROM user_profiles GROUP BY pass_status;
+```
 
 ---
 
