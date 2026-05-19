@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
       duration_days:         config.duration_days,
       discount_pct_applied:  0,
       block_number:          Number(result.blockNumber),
+      started_at:            result.paidAt.toISOString(),
       paid_at:               result.paidAt.toISOString(),
       expires_at:            expiresAt.toISOString(),
       last_verified_at:      new Date().toISOString(),

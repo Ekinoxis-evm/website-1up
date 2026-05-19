@@ -12,6 +12,66 @@ async function checkAdmin(req: NextRequest) {
   return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
+export async function POST(req: NextRequest) {
+  const claims = await verifyToken(req.headers.get("authorization"));
+  if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const adminEmail = await resolveUserEmail(claims.userId);
+  if (!await isAdmin(adminEmail)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json() as {
+    userProfileId: number;
+    privyUserId: string;
+    walletAddress: string;
+    startedAt: string;
+    durationDays: number;
+    adminNotes?: string;
+  };
+
+  const { userProfileId, privyUserId, walletAddress, startedAt, durationDays, adminNotes } = body;
+  if (!userProfileId || !privyUserId || !walletAddress || !startedAt || !durationDays) {
+    return NextResponse.json({ error: "Faltan campos requeridos." }, { status: 400 });
+  }
+
+  const { data: config } = await supabaseAdmin
+    .from("pass_config")
+    .select("recipient_address, price_token")
+    .eq("id", 1)
+    .single();
+
+  const startDate = new Date(startedAt);
+  const expiresAt = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
+
+  const { data, error } = await supabaseAdmin
+    .from("pass_orders")
+    .insert({
+      user_profile_id:        userProfileId,
+      privy_user_id:          privyUserId,
+      wallet_address:         walletAddress,
+      recipient_address:      config?.recipient_address ?? "",
+      payment_method:         "admin_grant",
+      token_amount_paid:      0,
+      token_price_at_purchase: config?.price_token ?? 0,
+      duration_days:          durationDays,
+      status:                 "confirmed",
+      started_at:             startDate.toISOString(),
+      paid_at:                now.toISOString(),
+      expires_at:             expiresAt.toISOString(),
+      granted_by:             adminEmail,
+      reviewed_by:            adminEmail,
+      reviewed_at:            now.toISOString(),
+      admin_notes:            adminNotes?.trim() || null,
+    })
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  revalidatePath("/admin/pass-orders");
+  revalidatePath("/app/pass");
+  return NextResponse.json(data);
+}
+
 export async function GET(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -110,18 +170,21 @@ export async function PATCH(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    const baseDate = activeOrder?.expires_at ? new Date(activeOrder.expires_at) : new Date();
+    const now = new Date();
+    const startedAt = now;
+    const baseDate = activeOrder?.expires_at ? new Date(activeOrder.expires_at) : now;
     const expiresAt = new Date(baseDate.getTime() + order.duration_days * 24 * 60 * 60 * 1000);
 
     const { data, error } = await supabaseAdmin
       .from("pass_orders")
       .update({
         status:      "confirmed",
-        paid_at:     new Date().toISOString(),
+        paid_at:     now.toISOString(),
+        started_at:  startedAt.toISOString(),
         expires_at:  expiresAt.toISOString(),
         admin_notes: adminNotes ?? null,
         reviewed_by: email,
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: now.toISOString(),
       })
       .eq("id", id)
       .select()

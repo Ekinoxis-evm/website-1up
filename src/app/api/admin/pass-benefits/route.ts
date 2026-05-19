@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     description: body.description || null,
     sort_order:  body.sortOrder ?? 0,
   }).select().single();
-  revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
+  revalidatePath("/"); revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
   return NextResponse.json(data);
 }
 
@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest) {
     description: body.description || null,
     sort_order:  body.sortOrder ?? 0,
   }).eq("id", body.id).select().single();
-  revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
+  revalidatePath("/"); revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
   return NextResponse.json(data);
 }
 
@@ -38,6 +38,6 @@ export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
   await supabaseAdmin.from("pass_benefits").delete().eq("id", id);
-  revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
+  revalidatePath("/"); revalidatePath("/gaming-tower"); revalidatePath("/admin/pass-benefits");
   return NextResponse.json({ ok: true });
 }
