@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { AdminPassOrdersClient } from "@/components/admin/AdminPassOrdersClient";
+import { getComprobanteSignedUrl } from "@/lib/blob";
 
 export const metadata = { title: "Órdenes 1UP Pass — Admin" };
 
@@ -18,9 +19,17 @@ export default async function AdminPassOrdersPage() {
     supabaseAdmin.from("pass_config").select("duration_days").eq("id", 1).single(),
   ]);
 
+  const enriched = await Promise.all(
+    (orders ?? []).map(async (o) => {
+      if (!o.comprobante_url) return o;
+      const signed = await getComprobanteSignedUrl(o.comprobante_url);
+      return { ...o, comprobante_url: signed ?? o.comprobante_url } as typeof o;
+    })
+  );
+
   return (
     <AdminPassOrdersClient
-      orders={orders ?? []}
+      orders={enriched}
       profiles={profiles ?? []}
       defaultDuration={config?.duration_days ?? 30}
     />
