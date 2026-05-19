@@ -1,135 +1,115 @@
-# Review 8 May 2026
+# Review 8 May 2026 — Estado actualizado al 19 de mayo de 2026
 
-**Tareas concluiones**
+**Tareas / conclusiones**
 
-- [ ] Habilitar correos por  
-      - [ ] La compra de 1up tokens  
-      - [ ] La compras de 1up pass  
-      - [ ] Inscripción a torneos organizados por 1up  
+- [x] Habilitar correos por  
+      - [x] La compra de 1UP tokens (aprobado / rechazado)  
+      - [x] La compra de 1UP pass (banco: aprobado / rechazado)  
+      - [x] Inscripción a torneos organizados por 1UP (confirmación + .ics adjunto + notificación al admin)  
 - [ ] Habilitar forma de pago automática   
-      - [ ] Pendiente que 1up habilite el procesador de pagos  
-      - [x] Habilitar un método de pago sin 1up tokens por transferencia a cuenta bancaria.  
-- [x] Cambiar 1up pass position de la pagina de Tower a la pagina Home.  
+      - [ ] Pendiente que 1UP habilite el procesador de pagos MercadoPago Colombia ← **bloqueo externo**  
+      - [x] Pago sin tokens: transferencia bancaria + comprobante habilitado para tokens, pass y cursos  
+- [x] Cambiar 1UP pass position de la página de Tower a la página Home  
 - [x] Política de Privacidad   
-      - [x] Página de  [https://www.1upesports.org/privacidad](https://www.1upesports.org/privacidad)   
-      - [x] No hay autorización de uso de datos (habeas data) al crear cuenta. Incluir checkbox \+ política de tratamiento de datos.  
-- [x] Plan tecnico  
-      - [ ] Plan Tecnico 1up 
+      - [x] Página [https://www.1upesports.org/privacidad](https://www.1upesports.org/privacidad)   
+      - [x] Habeas data (checkbox + política) incluido en el wizard de onboarding  
+- [x] Plan técnico  
+      - [x] FICHA-TECNICA.md v2.4 — documentación completa de arquitectura, seguridad, endpoints, tablas e integraciones
 
-# 
+---
 
 # Review 8 May 2026
 
 ## **NAVBAR**
 
-- [ ] Ajustar posición de “Academia” → más cerca de la esquina izquierda, junto a “Home”.  
-- [ ] Reducir redundancia: eliminar duplicación entre logo 1UP \+ texto 1UP.  
-- [ ] Quitar o ajustar la transparencia del header (inconsistencia detectada).
+- [ ] Ajustar posición de "Academia" → más cerca de la esquina izquierda, junto a "Home" ← pendiente
+- [ ] Reducir redundancia: eliminar duplicación entre logo 1UP + texto 1UP ← pendiente
+- [ ] Quitar o ajustar la transparencia del header ← pendiente (glass-panel es el estándar de diseño actual; requiere decisión de diseño)
 
 ## **HOME**
 
-**Marcas aliada Layouts**
+**Marcas aliadas — Layouts**
 
-- [ ] Incluir banner animado para \- todas 3 en una sola  
-      - [ ] marcas del marketplaces.  
-      - [ ] patrocinadores  
-      - [ ] aliados, ref: [https://movistarkoi.gg/](https://movistarkoi.gg/)   
-- [ ] Background: Blanco   
-- [ ] “Cargar en formato .png or .svg” . Tamano 5MB  
-- [ ] Tamano 80 pxls
+- [x] Banner animado unificado (marcas, patrocinadores y aliados en una sola marquee) — desde admin: Aliados → toggle "Mostrar en banner"
+- [ ] Background: Blanco ← pendiente de decisión de diseño
+- [x] Carga de logos en formato .png o .svg — hasta 5 MB, soportado en el admin
+- [ ] Tamaño 80px (logos en la marquee) ← pendiente ajuste visual
 
-**1up pass layout**
+**1UP Pass layout**
 
-- [x] Pasar la section del 1up pass al home, problema de visibilidad: no se encuentra fácilmente el 1UP Pass.  
-- [x] Integrar mejor el acceso a funcionalidades clave (ej: 1UP Pass).  
-- [ ] Unificar la palabra \+ un poco mas grande el 1up pass.
+- [x] Sección del 1UP Pass en el home — beneficios visibles sin ir a Gaming Tower
+- [x] 1UP Pass también en Gaming Tower (doble presencia)
+- [ ] Unificar el texto + hacer el nombre más grande ← pendiente
 
-![][image1]
+**Talent Pipeline Layout**
 
-**Talent Pipeline Layout**   
-**![][image2]**
-
-- [ ] Error crítico: → La sección de torneos redirige a “Team”, debería tener página propia.  
-- [ ] Borremos los números  
-- [ ] Links de redireccion  
-      - [ ] Recreativo, recreativ  
-      - [ ] Academia, hacia academia  
-      - [ ] Training, eliminar  
-      - [ ] Torneos hacia Torneos
+- [x] Error crítico resuelto: torneos ya tienen página propia `/torneos` — no redirige a "Team"
+- [ ] Quitar los números de la sección "Sobre Nosotros" ← pendiente
+- [x] Links de redirección corregidos:
+      - [x] Recreativo → `/recreativo`
+      - [x] Academia → `/academia`
+      - [x] Torneos → `/torneos`
+      - [x] "Training" eliminado
 
 **Marketplace**
 
-- [ ] Crear Layout en el home para el marketplace.
+- [x] Layout del marketplace en el home — sección con features y CTA
 
-## **TORNEOS \[Pagina\]**
+## **TORNEOS \[Página\]**
 
-- [ ] Crear página dedicada de torneos.
+- [x] Página dedicada `/torneos` — implementada y funcional
 
-**![][image3]**  
-**Torneos 1up**
+**Torneos 1UP**
 
-- Aquí son los torneos que están organizando en 1up  
-- **BD para crear un ntorneo**  
-  - Pieza gráfica Tamaño 5 MB.   
-  - Fecha:  
-  - Hora:  
-  - Lugar: Gaming tower con link Google Maps.  
-  - Nombre:  
-  - Categoria: Fighting, Shotting, TCG, Dancing, Soccer.  
-  - Games: Based in the category.   
-  - Premios (optional)  
-    - Primer puesto   
-      - Tipo: 1up tokens o Pesos colombanos o los dos.  
-      - Cantidad  
-    - Segundo Puesto   
-    - Tercer puesto  
-  - Puntaje Hall of fame  
-    - Primer puesto: 10  
-    - Segundo: 5 puntos  
-    - Terceros:   
-- **Cards**  
-  - Imagen  
-  - Nombre, Use Typografia importante para el nombre, [tomorrow.zip](https://drive.google.com/file/d/1hVSEhE95IdrtvNd6gzzg-n2M98-tigKE/view)   
-  - Fecha  
-  - Ver más: abre a un popup con detalles del torneo.  
-  - CATs  
-    - Agregar Calendario  
-    - Inscribirse \- Envía un email. Luego que se inscriba, sugerir via popup agregar calendario.   
-- **Filtros**   
-  - Mes del año  
-  - Categoria
+- [x] BD para crear un torneo:
+  - [x] Pieza gráfica (imagen hasta 5 MB)
+  - [x] Fecha y hora
+  - [x] Lugar (presencial / online / mixto)
+  - [x] Nombre con URL tipo slug (ej: `/torneos/copa-valorant`)
+  - [x] Categoría y juego (basado en la categoría)
+  - [x] Premios por posición (1°/2°/3°) en $1UP tokens, COP o ambos
+  - [x] Puntaje Hall of Fame (1°: 10pts, 2°: 5pts, 3°: 3pts)
+  - [x] Sponsor (nombre, logo, website)
+- [x] Cards: imagen, nombre, fecha, estado (próximo/en vivo/finalizado), badges
+- [x] "Ver más" → página de detalle `/torneos/[slug]` con premios, descripción y REGISTRARME
+- [x] Agregar al calendario: Google Calendar link + .ics adjunto por email
+- [x] Inscribirse → confirmación por email + sugerencia de calendario en modal post-inscripción
+- [x] Filtros por mes y por juego/categoría
+- [x] Entrega de premios on-chain ($1UP) y COP desde el admin con registro en cadena
 
-**Torneos International**
+**Torneos Internacionales**
 
-- **BD para crear un ntorneo**  
-  - Nombre:  
-  - Organizador:  
-  - Fecha:  
-  - Hora:  
-  - Pais   
-  - Ciudad  
-  - Link de inscription: opcional.
+- [x] BD para crear torneo internacional:
+  - [x] Nombre
+  - [x] Organizador
+  - [x] Fecha
+  - [x] País y Ciudad
+  - [x] Link de inscripción (opcional)
 
-**Hall of fame 1UP**
+**Hall of Fame 1UP**
 
-- Torneros que se han participado y ganado
+- [x] Tabla de campeones con puntos por posición en torneos de 1UP
 
-**Hall of 1up tower**
+**Hall of Fame 1UP Tower**
 
-- A los jugadores con los puntos que se han obtenido en los torneos
+- [x] Jugadores con puntos acumulados (vista pública + admin con resultados por torneo)
 
 ## **MASTER & ACADEMIA:**
 
-- [ ] Existe separación/confusión entre Masters y Academia. Unificar Masters \+ Academia en una sola sección clara.
+- [x] Masters y Academia unificados en una sola sección clara — Masters en `/academia`, acceso de contenido en `/app/academia`
+- [x] Currículum por curso para usuarios inscritos (`/app/academia/[courseId]`): video intro, módulos, sesiones, documentos
+- [x] Videos protegidos por Cloudflare Stream (JWT RS256, solo para inscritos)
 
 ## **MARKETPLACE**
 
-- [ ] Agregar Marketplace en el header.  
-- [ ] Incluir en header (mencionado arriba).  
-- [x] Crear presencia en Home (slider ya mencionado).
+- [ ] Agregar Marketplace en el header / navbar ← pendiente
+- [x] Marketplace en el home (sección con features y CTA)
 
 ## **GENERALES**
 
-- [ ] Considerar un poup. Para que sugiera comprar el 1up pass.  Debe existir claramente en varias secciones.  
-- [ ] Tiene efecto tipo hold-on-click (incorrecto). Debe tener el color azul cuando el cursor esta sobre el botón.  
-- [ ] Cambiar a interacción estándar (click inmediato).
+- [ ] Popup que sugiera comprar el 1UP Pass — no implementado ← pendiente
+- [ ] Interacción hold-on-click: cambiar a click inmediato con hover azul ← pendiente verificación en producción
+- [x] Calendario de cobertura del 1UP Pass — visual por días en `/app/pass`
+- [x] Compra de cursos habilitada (token + banco) sin MercadoPago automático
+- [x] CommunitySection con invitaciones a Discord y WhatsApp en home y academia
+- [x] Pass admin grant — admin puede conceder el pass con fecha retroactiva

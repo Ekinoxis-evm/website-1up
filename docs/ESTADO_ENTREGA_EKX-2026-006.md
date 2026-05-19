@@ -1,8 +1,8 @@
 # ESTADO DE ENTREGA — EKX-2026-006
 ## 1UP Gaming Tower × Ekinoxis Labs
 
-**Fecha de corte:** 11 de mayo de 2026  
-**Versión en producción:** v2.14.0  
+**Fecha de corte:** 19 de mayo de 2026  
+**Versión en producción:** v2.25.0  
 **Referencia contractual:** EKX-2026-005
 
 ---
@@ -12,10 +12,11 @@
 | | |
 |--|--|
 | **Scope original entregado** | 100% — todas las páginas y módulos del contrato EKX-2026-005 están funcionando en producción |
-| **Funcionalidades adicionales** | ~196 horas de desarrollo fuera del scope original, implementadas y en producción |
-| **Estado del proyecto** | Activo — dos integraciones pendientes por credenciales externas (MercadoPago automático, Cloudflare Stream) |
-| **Total facturado adiciones** | $29.400.000 COP (~196h × $150.000/h) |
-| **Total proyecto** | **$49.400.000 COP** |
+| **Funcionalidades adicionales** | ~334h de desarrollo fuera del scope original, implementadas y en producción |
+| **Estado del proyecto** | Activo — una integración pendiente por gestión externa (MercadoPago automático) |
+| **Cloudflare Stream** | ✅ Activo — videos de academia protegidos por JWT, cargados desde el admin, reproducción gated por inscripción |
+| **Total facturado adiciones** | $50.100.000 COP (~334h × $150.000/h) |
+| **Total proyecto** | **$70.100.000 COP** |
 
 ---
 
@@ -23,34 +24,31 @@
 
 ### 1.1 Páginas públicas — Estado actual
 
-| Página | Contenido actual | Notas de versión |
-|--------|-----------------|-----------------|
-| `/` — Inicio | Hero · Banner de marcas animado · 1UP Pass (beneficios) · **Sección Academia** · **Sección Torneos** · Marketplace (coming soon) · "Sobre Nosotros" (3 pilares del ecosistema) · Formulario de reclutamiento | v2.14.0: GamesGallery retirada; reemplazada por AcademiaSection y TorneosSection. TalentPipeline renombrado a "Nuestro Ecosistema" |
-| `/gaming-tower` | Hero · **1UP Pass (beneficios)** · Equipamiento · 6 plantas · **Juegos por categoría** (imagen de categoría + grid de juegos) · Mapa | v2.14.0: PassSection añadida debajo del hero; JuegosDisplay integrado al final (mismo layout que /juegos tenía). Juegos movidos aquí desde home |
-| `/torneos` | Hall of Fame leaderboard · Torneos nacionales (filtros por mes y juego) · Torneos internacionales · Formulario de reclutamiento | v2.14.0: RecruitmentForm añadido al final |
-| `/torneos/[id]` | Página de detalle por torneo — imagen, badges de estado/juego/ubicación, podio de premios, botón REGISTRARME | v2.14.0: bug de login cross-subdominio resuelto; botón ya no queda en estado cargando |
-| `/torneos/[id]/checkin` | Check-in por QR — login inline (sin redirect), valida inscripción, marca asistencia | — |
-| `/academia` | Catálogo de cursos · Perfiles de masters · Checkout MercadoPago | — |
-| `/recreativo` | Jornadas corporativas y recreativas | — |
-| `/marketplace` | Página coming soon — features, paga con $1UP · **Links de redes sociales dinámicos desde admin** | v2.14.0: redes sociales reales desde BD (antes era texto estático) |
-| `/privacidad` | Política de Privacidad y Tratamiento de Datos — Ley 1581 | — |
-| `/team` | ~~Roster profesional~~ → **Redirige a `/`** | v2.14.0: página retirada. Masters en `/academia`; reclutamiento en `/torneos`. URL antigua sigue funcionando sin error 404 |
-| `/juegos` | ~~Catálogo standalone~~ → **Redirige a `/gaming-tower`** | v2.14.0: página retirada. Juegos integrados en la Tower con el mismo layout por categorías. URL antigua sigue funcionando sin error 404 |
-| `/perfil` | → Redirige a `app.1upesports.org` | Ruta legacy preservada |
-
-> **Rutas eliminadas como páginas independientes pero no rotas:** `/team` y `/juegos` ahora redirigen a contenido equivalente. Ningún enlace externo queda en 404.
+| Página | Contenido actual | Estado |
+|--------|-----------------|--------|
+| `/` — Inicio | Hero · Banner de marcas animado · 1UP Pass (beneficios) · Sección Academia · Sección Torneos · CommunitySection (Discord/WhatsApp) · Marketplace (coming soon) · "Sobre Nosotros" · Formulario de reclutamiento | ✅ |
+| `/gaming-tower` | Hero · 1UP Pass (beneficios) · Equipamiento · 6 plantas · Juegos por categoría · Mapa | ✅ |
+| `/torneos` | Hall of Fame leaderboard · Torneos nacionales (filtros por mes y juego) · Torneos internacionales · Formulario de reclutamiento | ✅ |
+| `/torneos/[slug]` | Detalle de torneo: imagen, badges, podio de premios, strip de sponsor, REGISTRARME. Slug en URL; ID numérico como fallback para QR históricos | ✅ |
+| `/torneos/[slug]/checkin` | Check-in por QR — login inline, valida inscripción, marca asistencia | ✅ |
+| `/academia` | Catálogo de cursos · Perfiles de masters · CommunitySection · Checkout por token o banco | ✅ |
+| `/recreativo` | Jornadas corporativas y recreativas | ✅ |
+| `/privacidad` | Política de Privacidad — Ley 1581 | ✅ |
+| `/team` | Redirige a `/` | ✅ |
+| `/juegos` | Redirige a `/gaming-tower` | ✅ |
+| `/perfil` | Redirige a `app.1upesports.org` | ✅ |
 
 ### 1.2 Características transversales
 
 | Característica | Estado |
 |---------------|--------|
-| SEO completo — título, descripción, Open Graph, Twitter Card, canonical en todas las páginas | ✅ Entregado |
-| Datos estructurados JSON-LD (Google rich results) para el sitio y los torneos | ✅ Entregado |
-| Sitemap automático (`/sitemap.xml`) y robots.txt (`/robots.txt`) | ✅ Entregado — `/team` y `/juegos` removidos del sitemap |
-| App instalable en celular (PWA) — icono en pantalla de inicio, modo offline | ✅ Entregado |
-| Navegación móvil (MobileBottomNav) — 5 tabs fijos: Home · Torneos · Academia · Store · **Perfil** | v2.14.0: tab PERFIL siempre visible; autenticado → app subdomain, no autenticado → login |
-| TopAppBar — nav principal en desktop | v2.14.0: ícono de admin removido; solo acceso desde `admin.1upesports.org` |
-| Footer — links de redes sociales dinámicos + Privacidad | v2.14.0: link de Admin removido del footer público |
+| SEO completo — título, descripción, OG, Twitter Card, canonical | ✅ |
+| Datos estructurados JSON-LD (Google rich results) | ✅ |
+| Sitemap (`/sitemap.xml`) y robots.txt | ✅ |
+| PWA — instalable en celular, ícono, modo offline | ✅ |
+| Navegación móvil (MobileBottomNav) — 5 tabs | ✅ |
+| TopAppBar glass-panel — nav principal en desktop | ✅ |
+| Footer con redes sociales dinámicas desde admin | ✅ |
 
 ---
 
@@ -60,38 +58,37 @@
 
 | Módulo | Función | Estado |
 |--------|---------|--------|
-| Dashboard | KPIs y accesos rápidos | ✅ Entregado |
-| Juegos y Categorías | CRUD con carga de imágenes | ✅ Entregado |
-| Gaming Tower | Edición de las 6 plantas + imágenes | ✅ Entregado |
-| Equipo (Players) | Roster + fotos + redes sociales | ✅ Entregado |
-| Competencias | Historial de torneos ganados por el equipo | ✅ Entregado |
-| Masters | Perfiles completos, categorías, redes, cursos asignados | ✅ Entregado |
-| Cursos | CRUD de cursos + gestión de contenido (videos / docs / quiz) | ✅ Entregado |
-| 1UP Pass — Config | Precio, wallet destino, duración, toggle activo/inactivo | ✅ Entregado |
-| 1UP Pass — Beneficios | CRUD de beneficios del pass | ✅ Entregado |
-| Descuentos | Reglas de descuento por afiliación o promo | ✅ Entregado |
-| Enrollments | Registro de pagos de academia (solo lectura) | ✅ Entregado |
-| Perfiles de usuario | Vista de perfiles registrados en la app | ✅ Entregado |
-| Redes sociales (footer) | URLs por plataforma para el footer | ✅ Entregado |
-| Aliados | CRUD de organizaciones aliadas | ✅ Entregado |
-| Submissions | Formularios de reclutamiento recibidos | ✅ Entregado |
-| Usuarios admin | Gestión de accesos al panel | ✅ Entregado |
+| Dashboard | KPIs y accesos rápidos | ✅ |
+| Juegos y Categorías | CRUD con imágenes | ✅ |
+| Gaming Tower | 6 plantas + imágenes | ✅ |
+| Equipo (Players) | Roster + fotos + redes sociales | ✅ |
+| Competencias | Historial de torneos ganados | ✅ |
+| Masters | Perfiles, categorías, redes, cursos asignados | ✅ |
+| Cursos | CRUD de cursos + jerarquía Módulos/Sesiones + video CF Stream | ✅ |
+| 1UP Pass — Config | Precio, wallet destino, duración, toggle activo/inactivo | ✅ |
+| 1UP Pass — Beneficios | CRUD de beneficios del pass | ✅ |
+| Descuentos | Reglas de descuento por afiliación o promo | ✅ |
+| Enrollments | Registro de pagos de academia con filtros y revisión | ✅ |
+| Perfiles de usuario | Vista de perfiles registrados con estados | ✅ |
+| Redes sociales (footer) | URLs por plataforma | ✅ |
+| Aliados | CRUD de partners + banner del home | ✅ |
+| Submissions | Formularios de reclutamiento (lectura) | ✅ |
+| Usuarios admin | Gestión de accesos al panel | ✅ |
 
 ### 2.2 Módulos adicionales (fuera del scope original)
 
 | Módulo | Función | Estado |
 |--------|---------|--------|
-| Órdenes de tokens ($1UP) | Lista, aprobación y rechazo de compras OTC con envío on-chain | ✅ Entregado |
-| Cuentas bancarias | CRUD de cuentas destino para transferencias | ✅ Entregado |
-| Órdenes de Pass (banco) | Aprobación / rechazo de pagos por transferencia | ✅ Entregado |
-| Códigos de referido | Crear y gestionar códigos con límite de uso | ✅ Entregado |
-| Logos de marcas | Marquee animado en home — CRUD con orden y enlace | ✅ Entregado |
-| Torneos nacionales | CRUD completo: imagen, juego, fecha, premios (1°/2°/3°), capacidad, estado | ✅ Entregado |
-| Torneos internacionales | CRUD: organizador, país, ciudad, enlace de inscripción externo | ✅ Entregado |
-| Inscripciones a torneos | Lista de inscritos por torneo, marcar asistencia / no asistió | ✅ Entregado |
-| Resultados (Hall of Fame) | Asignar 1°/2°/3° por torneo → genera la tabla de campeones pública | ✅ Entregado |
-| Imágenes del sitio | Sección de equipamiento (Gaming Tower) y ruta de aprendizaje (Academia) | ✅ Entregado |
-| **Logout en panel admin** | Botón "Cerrar Sesión" en el sidebar — cierra sesión Privy y redirige a `/admin/login` | ✅ v2.14.0 |
+| Órdenes de tokens ($1UP) | Lista, aprobación, rechazo, envío on-chain con gas sponsorship | ✅ |
+| Cuentas bancarias | CRUD de cuentas destino + wallet del tesoro | ✅ |
+| Órdenes de Pass | Tabs token / banco / admin-grant · aprobación / rechazo · grant con fecha retroactiva | ✅ |
+| Códigos de referido | CRUD con límite de usos | ✅ |
+| Torneos nacionales | CRUD completo: imagen, juego, fecha, premios (1°/2°/3°), capacidad, estado, sponsor, slug | ✅ |
+| Torneos internacionales | Organizador, país, ciudad, enlace externo | ✅ |
+| Inscripciones a torneos | Lista de inscritos, marcar asistencia / no asistió | ✅ |
+| Resultados + Entrega de premios | Asignar podio → genera Hall of Fame; entregar $1UP on-chain o COP con comprobante | ✅ |
+| Imágenes del sitio | Equipamiento y ruta de aprendizaje | ✅ |
+| Editor de cursos (jerarquía) | `/admin/courses/[id]/edit` — módulos, sesiones, DnD, video CF Stream, documentos privados | ✅ |
 
 ---
 
@@ -99,14 +96,14 @@
 
 | Módulo | Función | Estado |
 |--------|---------|--------|
-| Login | Acceso con email o Google (Privy) — redirige de vuelta al torneo u otra página tras autenticarse | ✅ Entregado |
-| Onboarding | Wizard obligatorio al crear cuenta: datos personales, documento, juegos, código referido, habeas data Ley 1581 | ✅ Entregado |
-| Wallet | Balance $1UP, enviar (QR), recibir (QR), historial de transacciones, órdenes de compra | ✅ Entregado |
-| Mis Torneos | Listado de inscripciones del usuario con estado (inscrito / asistió / cancelado / no asistió) | ✅ Entregado |
-| Beneficios | Verificación de afiliación a aliados (Comfenalco, Comfandi, universidades) para descuentos | ✅ Entregado |
-| 1UP Pass | Estado del pass activo + compra: tokens on-chain o transferencia bancaria | ✅ Entregado |
-| Academia | Mis cursos inscritos + acceso al contenido | ✅ Entregado |
-| Ajustes | Dos pestañas: Identidad (edición de perfil, documento) + Seguridad (cuentas vinculadas) | ✅ Entregado |
+| Login | Email o Google (Privy); redirige al torneo u otra página post-auth | ✅ |
+| Onboarding | Wizard: datos personales, documento, juegos, código referido, habeas data Ley 1581 | ✅ |
+| Wallet | Balance $1UP, enviar (QR), recibir (QR), historial paginado, órdenes de compra | ✅ |
+| Mis Torneos | Inscripciones del usuario con estado y acceso al detalle | ✅ |
+| Beneficios | Verificación de afiliación a aliados para descuentos | ✅ |
+| 1UP Pass | Estado (activo/expirado/sin pass) · calendario de cobertura · compra por token o banco | ✅ |
+| Academia | Mis cursos inscritos + currículum por curso: video intro, módulos, sesiones, documentos | ✅ |
+| Ajustes | Identidad (edición de perfil) + Seguridad (cuentas vinculadas) | ✅ |
 
 ---
 
@@ -115,117 +112,222 @@
 Todas las funcionalidades listadas a continuación fueron implementadas **fuera del scope del contrato EKX-2026-005** a tarifa de $150.000 COP/hora.
 
 ### 4.1 Compra de tokens $1UP (flujo OTC)
-Sistema que permite al usuario comprar $1UP mediante transferencia bancaria. Selecciona el monto, elige la cuenta bancaria destino, sube el comprobante de pago y el administrador aprueba o rechaza la orden. Al aprobar, los tokens son enviados on-chain automáticamente desde la wallet del admin. El usuario y el admin reciben notificaciones por email en cada etapa.
+Sistema que permite al usuario comprar $1UP mediante transferencia bancaria. El administrador aprueba o rechaza la orden y al aprobar los tokens se envían on-chain automáticamente con gas sponsorship. Usuario y admin reciben emails en cada etapa.
 
-**20 horas → $3.000.000 COP**
+**20h → $3.000.000 COP**
 
 ---
 
 ### 4.2 Compra del 1UP Pass por transferencia bancaria
-Camino alternativo para adquirir el 1UP Pass sin necesitar tokens. El usuario elige pago bancario, sube el comprobante y espera aprobación del administrador. Al aprobar, el pass se activa en la base de datos con fecha de vencimiento calculada automáticamente (con acumulación si ya tenía un pass activo).
+Camino alternativo sin tokens. El usuario sube el comprobante, el admin aprueba y el pass se activa con fecha de vencimiento calculada y apilamiento automático sobre passes activos.
 
-**16 horas → $2.400.000 COP**
+**16h → $2.400.000 COP**
 
 ---
 
 ### 4.3 Onboarding + Sistema de Referidos
-Flujo obligatorio de primera vez que asegura la recolección de datos del usuario desde el primer inicio de sesión. Incluye: nombre completo, @username, documento de identidad (obligatorio), barrio, fecha de nacimiento (con validación de edad mínima 14 años), juegos favoritos, código de referido (opcional), y aceptación explícita del habeas data conforme a la Ley 1581. Los códigos de referido son gestionados por el administrador con control de usos máximos.
+Wizard obligatorio de primera vez: nombre completo, @username, documento (obligatorio), barrio, fecha de nacimiento (≥14 años), juegos favoritos, código de referido y aceptación habeas data Ley 1581. Gestión de códigos desde admin con límite de usos.
 
-**18 horas → $2.700.000 COP**
+**18h → $2.700.000 COP**
 
 ---
 
-### 4.4 Gas Sponsorship (envíos sin costo de gas para el usuario)
-Los usuarios pueden enviar tokens $1UP desde su wallet embebida sin pagar comisiones de red (gas). Privy patrocina automáticamente el costo de cada transacción en Base mainnet. Esto aplica al envío de tokens, compra del pass y aprobación de órdenes OTC desde el admin.
+### 4.4 Gas Sponsorship
+Los usuarios envían tokens $1UP desde su wallet embebida sin pagar comisiones. Privy patrocina el gas en Base mainnet para envíos, compra de pass y aprobación OTC desde admin.
 
-**6 horas → $900.000 COP**
+**6h → $900.000 COP**
 
 ---
 
 ### 4.5 Verificación de afiliación a aliados
-Sistema que permite al usuario verificar su afiliación a organizaciones aliadas (Comfenalco, Comfandi, universidades) para desbloquear descuentos automáticos en la academia. La integración técnica con cada aliado está preparada y activa cuando se proveen las credenciales de API.
+Sistema de verificación de afiliación a organizaciones aliadas (Comfenalco, Comfandi, universidades) para descuentos automáticos en academia. Integración técnica activa al proveer credenciales de API.
 
-**8 horas → $1.200.000 COP**
+**8h → $1.200.000 COP**
 
 ---
 
 ### 4.6 Sistema completo de torneos (v2.6.0 – v2.13.0)
-Módulo de torneos construido desde cero, no contemplado en el contrato original.
+Módulo de torneos construido desde cero.
 
 | Funcionalidad | Detalle |
 |---------------|---------|
-| Página pública `/torneos` | Cards con imagen, fecha, juego, premios, estado (próximo / en vivo / finalizado) |
-| Torneos nacionales — admin CRUD | Crear torneos con premios por posición (tokens o COP), capacidad, tipo de lugar |
-| Torneos internacionales | Sección separada para torneos externos con enlace de inscripción |
-| Inscripción de jugadores | Botón de inscripción con confirmación por email + sugerencia de calendario (Google / .ics) |
-| Filtros | Por mes y por juego |
-| Página de detalle por torneo | Ruta dedicada `/torneos/[id]` con imagen, premios, descripción y CTA de inscripción |
-| Hall of Fame — Tabla de Campeones | Ranking automático por puntos (10/5/3) según posición en cada torneo |
-| Torneos ganados por el 1UP Team | Historial de competencias externas del equipo, visible en `/torneos` |
-| Check-in por código QR | El admin genera un QR por torneo; los participantes lo escanean, confirman asistencia sin salir del sitio |
+| Página `/torneos` | Cards con imagen, fecha, juego, premios, estado |
+| Admin CRUD nacional | Premios por posición (tokens o COP), capacidad, tipo de lugar |
+| Torneos internacionales | Sección separada con enlace externo |
+| Inscripción | Confirmación por email + sugerencia de calendario |
+| Filtros | Por mes y juego |
+| Detalle `/torneos/[id]` | Imagen, premios, descripción, CTA |
+| Hall of Fame | Ranking automático por puntos (10/5/3) |
+| Historial del equipo | Competencias externas del 1UP Team |
+| Check-in por QR | Confirmación de asistencia sin salir del sitio |
 
-**78 horas → $11.700.000 COP**
-
----
-
-### 4.7 Auditoría de seguridad
-Revisión completa de todos los endpoints y flujos de pago antes del primer despliegue a producción. Se corrigieron tres vulnerabilidades: protección contra acceso cruzado a comprobantes de otros usuarios, autenticación faltante en un endpoint administrativo, y validación de tipos de archivo en uploads.
-
-**4 horas → $600.000 COP**
+**78h → $11.700.000 COP**
 
 ---
 
-### 4.8 Mejoras post-entrega (v2.10.1 – v2.12.0)
-Iteración adicional tras el review de mayo 2026.
+### 4.7 Auditoría de seguridad (v2.x)
+Revisión completa de endpoints y flujos de pago. Se corrigieron tres vulnerabilidades antes del primer despliegue a producción.
+
+**4h → $600.000 COP**
+
+---
+
+### 4.8 Mejoras post-entrega — PWA + SEO + navegación (v2.10.1 – v2.12.0)
 
 | Entregable | Descripción |
 |-----------|-------------|
-| Torneos en navegación | Sección Torneos visible en el menú principal y menú móvil |
-| Página Marketplace (coming soon) | Página de presentación con features y CTA a Instagram |
-| App instalable (PWA) | La web puede instalarse como app en cualquier celular, con ícono, pantalla de carga y modo offline |
-| Admin usable en móvil | Panel de administración con menú deslizable optimizado para teléfonos |
-| SEO completo | Metadata, Open Graph, Twitter Card y datos estructurados en todas las páginas públicas; sitemap y robots para motores de búsqueda |
+| Torneos en navegación | Sección visible en menú principal y móvil |
+| Marketplace (coming soon) | Presentación con features y CTA |
+| PWA | Instalable como app, con ícono y modo offline |
+| Admin móvil | Menú deslizable optimizado para teléfonos |
+| SEO completo | Metadata, OG, JSON-LD, sitemap y robots |
 
-**20 horas → $3.000.000 COP**
+**20h → $3.000.000 COP**
 
 ---
 
-### 4.9 Mejoras de la app de usuario (v2.13.0)
-Iteración de experiencia en `app.1upesports.org`.
+### 4.9 Mejoras de la app (v2.13.0)
 
 | Entregable | Descripción |
 |-----------|-------------|
-| Mis Torneos | Nueva sección en la app donde el usuario ve todas sus inscripciones, estado de asistencia y accede al detalle del torneo |
-| Ajustes unificados | Identidad y Seguridad fusionados en una sola página con pestañas, simplificando la navegación |
+| Mis Torneos | Inscripciones del usuario con estado y detalle |
+| Ajustes unificados | Identidad y Seguridad en una sola página con pestañas |
 
-**6 horas → $900.000 COP**
+**6h → $900.000 COP**
 
 ---
 
 ### 4.10 Restructura de navegación y UX (v2.14.0)
-Simplificación de la arquitectura de información del sitio público y corrección de bugs de flujo de inscripción.
 
 | Entregable | Descripción |
 |-----------|-------------|
-| Home enriquecido | Nuevas secciones AcademiaSection y TorneosSection — cada una con propuesta de valor, íconos y CTA directo a su sección. GamesGallery retirada del home (games viven en Tower) |
-| "Sobre Nosotros" en home | Sección TalentPipeline reenmarcada como "Nuestro Ecosistema" — explica los tres pilares (Recreativo · Academia · Torneos) en lugar de hablar de un funnel de talento |
-| Juegos integrados en Tower | Página `/juegos` retirada como standalone; los juegos ahora se muestran en `/gaming-tower` con el mismo layout por categorías (imagen de categoría + grid de títulos). `/juegos` redirige sin romper URLs externas |
-| Reclutamiento en Torneos | Formulario de reclutamiento añadido al final de `/torneos` — punto de conversión natural donde los competidores ya están |
-| Página `/team` consolidada | Roster retirado como sección dedicada — los Masters viven en `/academia`, reclutamiento en `/torneos`. `/team` redirige sin romper URLs externas |
-| 1UP Pass en Tower | PassSection (beneficios) añadida a `/gaming-tower` para comunicar el valor del pass en contexto |
-| Fix inscripción a torneos | Botón REGISTRARME funcionaba solo si el usuario ya tenía sesión en `app.1upesports.org`. Resuelto con login modal inline (mismo dominio), auto-registro tras autenticación, y corrección de estado colgado por falta de manejo de errores |
-| Redes sociales en Marketplace | Íconos de redes sociales dinámicos en `/marketplace`, leídos desde la BD (antes era texto estático con sugerencia de Instagram) |
-| Tab PERFIL siempre visible | Menú móvil inferior muestra siempre el tab PERFIL como 5to elemento, independiente del estado de autenticación |
-| Logout en admin sidebar | Botón de cierre de sesión añadido al panel de administración |
+| Home enriquecido | AcademiaSection y TorneosSection con propuesta de valor y CTA |
+| "Sobre Nosotros" | TalentPipeline → "Nuestro Ecosistema" (Recreativo · Academia · Torneos) |
+| Juegos en Tower | `/juegos` → `/gaming-tower`; URL antigua redirige sin 404 |
+| Reclutamiento en Torneos | Formulario al final de `/torneos` |
+| Consolidación `/team` | Masters en `/academia`, reclutamiento en `/torneos`; redirige sin 404 |
+| 1UP Pass en Tower | PassSection añadida a `/gaming-tower` |
+| Fix inscripción torneos | Login modal inline, auto-registro, manejo de errores |
+| Redes sociales en Marketplace | Íconos dinámicos desde BD |
+| Tab PERFIL siempre visible | 5° tab del menú móvil independiente de autenticación |
+| Logout admin sidebar | Botón de cierre de sesión en el panel |
 
-**18 horas → $2.700.000 COP**
+**18h → $2.700.000 COP**
 
 ---
 
 ### 4.11 Infraestructura y seguridad base
-Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de autenticación de administradores, invalidación automática de caché, política de privacidad Ley 1581, y configuración del dominio canónico.
+Arquitectura multi-subdominio, sistema de autenticación de administradores, invalidación automática de caché, política de privacidad Ley 1581, configuración de dominio canónico.
 
-**8 horas → $1.200.000 COP**
+**8h → $1.200.000 COP**
+
+---
+
+### 4.12 Inscripciones con calendario (.ics + modal) — v2.14.2
+Email de confirmación de torneo enriquecido con adjunto `.ics` nativo (Gmail, Outlook, Apple Mail). Modal post-inscripción con CTA "AÑADIR A GOOGLE CALENDAR".
+
+**4h → $600.000 COP**
+
+---
+
+### 4.13 1UP Pass — calendar UI, estado DB y cron nocturno — v2.15.0
+Rediseño completo del panel de pass del usuario: calendario de 12 meses con cobertura coloreada por día, barra de estado (ACTIVO / EXPIRADO / SIN PASS) con días restantes y fecha exacta, CTA adaptativo (RENOVAR / REACTIVAR / ACTIVAR). Columna `pass_status` en `user_profiles` con trigger automático en cada INSERT/UPDATE de `pass_orders`. Cron job nocturno (04:00 UTC) que cambia `active → expired` para passes vencidos.
+
+**12h → $1.800.000 COP**
+
+---
+
+### 4.14 Entrega de premios de torneos + cancelación + confirmación de eliminación — v2.16.0
+Panel de entrega de premios por torneo: para cada podio el admin ve el premio configurado (tokens/COP/ambos), wallet del ganador, estado de entrega y botones de acción. Envío $1UP on-chain directo desde el admin (useSendTransaction + gas sponsorship) con espera de confirmación de bloque. Comprobante para premios en COP. Flujo de cancelación de torneo con bulk-update de inscripciones a `cancelled`. Modal de confirmación antes de eliminar con conteo de inscritos activos.
+
+**16h → $2.400.000 COP**
+
+---
+
+### 4.15 CommunitySection Discord / WhatsApp — v2.17.0
+Nueva sección "Únete a nuestra comunidad" en home y academia. Renders dinámico desde `social_links` filtrando `discord` y `whatsapp`. Gestionado desde el panel Admin → Redes Sociales existente. Filtrado automático del footer (no duplica en barra de íconos).
+
+**4h → $600.000 COP**
+
+---
+
+### 4.16 Admin sidebar colapsible + consolidación aliados / banner — v2.19.0
+Sidebar con 5 grupos colapsibles (Sitio Web, Competiciones, Academia, 1UP Pass & Tokens, Sistema). Scroll vertical completo. Consolidación de `brand_logos` en `aliados` (migración de datos, tabla eliminada): columnas `show_in_banner`, `website_url`, `sort_order`. Tab Banner y tab API en AdminAliadosClient. BrandsBanner ahora lee desde aliados.
+
+**8h → $1.200.000 COP**
+
+---
+
+### 4.17 Ocho plantillas de email transaccional — v2.20.0
+Diseño e implementación de 8 funciones de email en `src/lib/email.ts`:
+- `sendTokenOrderApprovedEmail` / `sendTokenOrderRejectedEmail`
+- `sendPassBankApprovedEmail` / `sendPassBankRejectedEmail`
+- `sendCourseOrderPlacedEmail` / `sendCourseOrderConfirmedEmail`
+- `sendCourseOrderApprovedEmail` / `sendCourseOrderRejectedEmail`
+
+Conectadas a los endpoints de admin (token orders, pass orders, enrollments PATCH).
+
+**12h → $1.800.000 COP**
+
+---
+
+### 4.18 Checkout de cursos (token + banco) — v2.20.0
+`CourseCheckoutWizard`: modal de 3 métodos para inscripción a cursos (token on-chain · banco con comprobante). Lifecycle completo: método → send/upload → confirmar → success/error. API `POST /api/user/course-orders` con lógica de descuentos. Admin `PATCH /api/admin/enrollments` para revisión de pendientes token/banco.
+
+**12h → $1.800.000 COP**
+
+---
+
+### 4.19 Slugs de torneos, sponsors y wallet del tesoro — v2.21.0
+URLs descriptivas `/torneos/copa-valorant` con fallback por ID para QR históricos. UNIQUE constraint con dedup automático. Campos `sponsor_name`, `sponsor_website_url`, `sponsor_logo_url` por torneo. Strip de sponsor en cards y detalle. Wallet del tesoro (`pass_config.recipient_address`) centralizada en `/admin/bank-accounts` con copy y BaseScan.
+
+**8h → $1.200.000 COP**
+
+---
+
+### 4.20 Suite de pruebas automatizadas Vitest — v2.22.0
+52 tests en 7 archivos cubriendo: `formatCop`, `cn`, puntos por posición, selección de mejor descuento, guards `isEnvAdmin`/`isAdmin`, verificación HMAC-SHA256 de webhooks MercadoPago, errores de configuración de Comfenalco, y `verifyToken` de Privy (null, sin Bearer, válido, expirado). Extracción de `selectBestDiscount` para testabilidad independiente.
+
+**12h → $1.800.000 COP**
+
+---
+
+### 4.21 Auditoría de seguridad completa RLS + bucket privado — v2.22.1 / v2.22.2
+Habilitación de Row Level Security en las 27 tablas del schema público (16 estaban sin RLS). Cierre de escalación de privilegios en `admin_users`. Bloqueo de `user_profiles` contra lectura/escritura cruzada entre usuarios. Protección de `api_key` en `aliados`. RPC `register_for_tournament` y `sync_user_pass_status` revocados de PUBLIC. `search_path` hardened contra inyección. Bucket `comprobantes` convertido a privado con signed URLs de 1h generados en el servidor. `hall_of_fame` view cambiada de SECURITY DEFINER a SECURITY INVOKER con política estrecha.
+
+**20h → $3.000.000 COP**
+
+---
+
+### 4.22 Reconstrucción de tablas admin — v2.22.2
+`AdminEnrollmentsClient`, `AdminPrivyUsersClient` y `AdminUserProfilesClient` convertidas de cards con etiquetas por fila a tablas `<table>` con encabezados de columna, filtros independientes y paneles de acción inline.
+
+**6h → $900.000 COP**
+
+---
+
+### 4.23 Cloudflare Stream + jerarquía de cursos (Módulos/Sesiones) — v2.23.0 / v2.24.0
+Integración completa de Cloudflare Stream y arquitectura de contenido educativo avanzada:
+
+| Funcionalidad | Detalle |
+|---------------|---------|
+| CF Stream básico (v2.23.0) | `stream_uid` en `academia_content`; signed JWT RS256 por inscripción; direct-upload desde admin |
+| Jerarquía 3 niveles (v2.24.0) | Tablas `course_modules`, `course_sessions`, `course_session_links`, `course_session_documents` |
+| Admin editor `/admin/courses/[id]/edit` | Tabs Información + Contenido; DnD reorder módulos/sesiones con `@dnd-kit` |
+| Panel de sesión | Upload video CF Stream, descripción, duración, toggle publicado, links de soporte, documentos (bucket privado `course-docs` con ruta pending→final) |
+| `/admin/courses/new` | Quick-create con redirección al editor |
+| APIs admin | CRUD + reorder: módulos, sesiones, links, documentos; direct-upload URL de CF; multipart upload a `course-docs` |
+| APIs usuario | `course-intro-token` (preview), `stream-token-v2` (sesión gated), `course-session` (datos + links + docs), `course-document` (signed URL 1h) |
+| `/app/academia/[courseId]` | Página de currículum para usuarios inscritos: video intro, tabs por módulo, acordeón por sesión, reproductor CF Stream lazy, descarga de docs con signed URL |
+
+**52h → $7.800.000 COP**
+
+---
+
+### 4.24 Pass admin grant, started_at, tabla de órdenes — v2.25.0
+`started_at` en `pass_orders` (cuándo comienza el periodo del pass — soporta retroactividad). `granted_by` para admin grants. Backfill de registros históricos. Admin puede conceder el pass a cualquier usuario con fecha de inicio personalizada (incluso pasada, para membresías pre-plataforma), duración configurable, buscador inline de usuarios inscritos. Pestaña "Admin Grant" en órdenes. `AdminPassOrdersClient` convertido a tabla profesional con columnas Inicio y Vence. Fix de sincronización de beneficios con home page (`revalidatePath("/")`).
+
+**8h → $1.200.000 COP**
 
 ---
 
@@ -234,20 +336,33 @@ Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de a
 | Concepto | Horas | Valor |
 |----------|-------|-------|
 | EKX-2026-005 — Scope original | — | $20.000.000 COP |
-| Compra de tokens $1UP (OTC) | 20h | $3.000.000 COP |
-| Compra del 1UP Pass (banco) | 16h | $2.400.000 COP |
-| Onboarding + Sistema de Referidos | 18h | $2.700.000 COP |
-| Gas Sponsorship (sin costo para el usuario) | 6h | $900.000 COP |
-| Verificación de aliados + descuentos | 8h | $1.200.000 COP |
-| Sistema de Torneos completo (incl. QR check-in) | 78h | $11.700.000 COP |
-| Auditoría de seguridad | 4h | $600.000 COP |
-| Mejoras post-entrega (PWA + SEO + nav) | 20h | $3.000.000 COP |
-| Mejoras de la app de usuario (v2.13.0) | 6h | $900.000 COP |
-| Restructura de navegación y UX (v2.14.0) | 18h | $2.700.000 COP |
-| Infraestructura y seguridad base | 8h | $1.200.000 COP |
-| **Total adiciones fuera del scope** | **~196h** | **$29.400.000 COP** |
+| 4.1 Compra de tokens $1UP (OTC) | 20h | $3.000.000 COP |
+| 4.2 Compra del 1UP Pass (banco) | 16h | $2.400.000 COP |
+| 4.3 Onboarding + Sistema de Referidos | 18h | $2.700.000 COP |
+| 4.4 Gas Sponsorship | 6h | $900.000 COP |
+| 4.5 Verificación de aliados + descuentos | 8h | $1.200.000 COP |
+| 4.6 Sistema de Torneos completo (incl. QR check-in) | 78h | $11.700.000 COP |
+| 4.7 Auditoría de seguridad inicial | 4h | $600.000 COP |
+| 4.8 Mejoras post-entrega (PWA + SEO + nav) | 20h | $3.000.000 COP |
+| 4.9 Mejoras de la app (v2.13.0) | 6h | $900.000 COP |
+| 4.10 Restructura de navegación y UX (v2.14.0) | 18h | $2.700.000 COP |
+| 4.11 Infraestructura y seguridad base | 8h | $1.200.000 COP |
+| 4.12 Inscripciones con calendario (.ics + modal) | 4h | $600.000 COP |
+| 4.13 Pass calendar UI + estado DB + cron nocturno | 12h | $1.800.000 COP |
+| 4.14 Entrega de premios + cancelación + confirmación de eliminación | 16h | $2.400.000 COP |
+| 4.15 CommunitySection Discord / WhatsApp | 4h | $600.000 COP |
+| 4.16 Admin sidebar colapsible + aliados banner | 8h | $1.200.000 COP |
+| 4.17 Ocho plantillas de email transaccional | 12h | $1.800.000 COP |
+| 4.18 Checkout de cursos (token + banco) | 12h | $1.800.000 COP |
+| 4.19 Slugs, sponsors de torneos, wallet del tesoro | 8h | $1.200.000 COP |
+| 4.20 Suite de pruebas Vitest (52 tests) | 12h | $1.800.000 COP |
+| 4.21 Auditoría RLS completa + bucket privado + hall_of_fame | 20h | $3.000.000 COP |
+| 4.22 Reconstrucción de tablas admin (3 componentes) | 6h | $900.000 COP |
+| 4.23 Cloudflare Stream + jerarquía de cursos (módulos/sesiones) | 52h | $7.800.000 COP |
+| 4.24 Pass admin grant, started_at, tabla de órdenes | 8h | $1.200.000 COP |
+| **Total adiciones fuera del scope** | **~334h** | **$50.100.000 COP** |
 | | | |
-| **TOTAL PROYECTO** | | **$49.400.000 COP** |
+| **TOTAL PROYECTO** | | **$70.100.000 COP** |
 
 > Tarifa adiciones: $150.000 COP/hora (según EKX-2026-005, Parte 4).
 
@@ -257,10 +372,11 @@ Arquitectura multi-subdominio (`1upesports.org`, `app.`, `admin.`), sistema de a
 
 | Ítem | Razón del bloqueo | Acción requerida |
 |------|------------------|-----------------|
-| MercadoPago automático (cobro de academia sin intervención manual) | MercadoPago Colombia requiere que 1UP Gaming Tower habilite el procesador de pagos directamente en su cuenta | 1UP debe completar el proceso de habilitación con MercadoPago Colombia |
-| Cloudflare Stream (videos de academia protegidos) | Pendiente de credenciales de Cloudflare | Compartir credenciales de cuenta Cloudflare con Ekinoxis para activar la integración |
+| MercadoPago automático (cobro de academia sin intervención manual) | MercadoPago Colombia requiere que 1UP habilite el procesador directamente en su cuenta | 1UP debe completar el proceso de habilitación con MercadoPago Colombia |
+
+> **Cloudflare Stream** — ✅ integración completa activa desde v2.23.0. Videos protegidos por JWT RS256, reproducción gated por inscripción aprobada, carga directa desde el panel admin.
 
 ---
 
-*Preparado por Ekinoxis Labs — 11 de mayo de 2026*  
+*Preparado por Ekinoxis Labs — 19 de mayo de 2026*  
 *Referencia contractual: EKX-2026-005*
