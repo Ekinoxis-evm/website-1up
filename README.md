@@ -19,7 +19,8 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Styling | Tailwind CSS v3 — Neo-Brutalist design system |
 | Auth | Privy (`@privy-io/react-auth` + `@privy-io/server-auth`) |
 | Database | Supabase (`@supabase/supabase-js`) |
-| File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private, signed URLs) |
+| File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private) + `course-docs` bucket (private, 25MB, session documents) |
+| Video Streaming | Cloudflare Stream — gated playback via signed RS256 JWTs (1h), direct upload from admin browser |
 | Payments | MercadoPago (`mercadopago` SDK v2) |
 | QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
 | Runtime | Node.js 24 |
@@ -77,6 +78,9 @@ src/
     viem.ts           # Public client + ERC-20 ABIs ($1UP token)
     passVerifier.ts       # On-chain pass tx verification — getTransactionReceipt + decodeEventLog
     socialIcons.ts        # Platform → /public/socialmedia/ icon path mapping
+    stream.ts            # Cloudflare Stream — signStreamToken() (RS256 JWT via jose), createUploadUrl() (direct upload)
+    courseDocs.ts        # course-docs private bucket — validate/upload/move/delete/signedUrl helpers
+    courseAccess.ts      # assertEnrollment(), courseIdFromSession(), CourseAccessError (401/403/404)
     comfenalco.ts         # Comfenalco API client (stub — awaiting credentials)
     mercadopago.ts        # MP preference creation + webhook signature
     email.ts              # Resend emails — token orders, pass purchases (token+bank), tournament registrations (with .ics attachment + admin notification)
@@ -134,12 +138,12 @@ ADMIN_NOTIFICATION_EMAIL=         # Receives purchase/pass notifications
 # COMFENALCO_API_URL=
 # COMFENALCO_API_KEY=
 
-# Cloudflare Stream (planned — activate when integrating Academia video)
-# CF_STREAM_ACCOUNT_ID=
-# CF_STREAM_API_TOKEN=
-# CF_STREAM_KEY_ID=
-# CF_STREAM_PEM=
-# CF_STREAM_CUSTOMER_CODE=
+# Cloudflare Stream (active — required for academia video)
+CF_STREAM_ACCOUNT_ID=
+CF_STREAM_API_TOKEN=                   # "Read and write to Cloudflare Stream and Images" token
+CF_STREAM_KEY_ID=                      # From POST /accounts/{id}/stream/keys (one-time — never regenerate)
+CF_STREAM_PEM=                         # Base64-encoded RSA private key from same signing key response
+NEXT_PUBLIC_CF_CUSTOMER_CODE=          # From CF Stream playback URL: customer-{CODE}.cloudflarestream.com
 
 # Optional — Base L2 RPC
 # NEXT_PUBLIC_BASE_RPC_URL=
@@ -220,7 +224,8 @@ npm run dev
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
 | `/app/pass` | 1UP Pass status + purchase — two payment methods: $1UP tokens (on-chain, instant) or bank transfer (manual admin approval, max 24h) |
-| `/app/academia` | My enrolled courses + content access |
+| `/app/academia` | My enrolled courses — course cards with "Ver curriculum" link |
+| `/app/academia/[courseId]` | Per-course curriculum — intro video, module tabs, session accordion (lazy video player + signed doc downloads) — enrollment required |
 | `/app/ajustes` | Settings — two tabs: IDENTIDAD (profile data, nombre/apellidos/@username/phone/games/document) + SEGURIDAD (linked accounts). `/app/identidad` and `/app/settings` redirect here. |
 
 ---
@@ -235,7 +240,9 @@ npm run dev
 | `/admin/players` | Team roster CRUD (photo upload, social links) |
 | `/admin/competitions` | Hall of Fame CRUD |
 | `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
-| `/admin/courses` | Academia course CRUD (image, master assignment, category) + inline content management (video/doc/quiz per course, published toggle) — content sub-modal at z-60 inside course edit modal |
+| `/admin/courses` | Academia course list — CRUD (image, master, category, prices) + "Curriculum" link per row → full editor |
+| `/admin/courses/new` | Quick-create course (name + category) → redirects to full editor |
+| `/admin/courses/[id]/edit` | Full course editor — **Información** tab (all fields + CF Stream intro video + cover image) + **Contenido** tab (drag-reorder modules, expandable session list per module, slide-in session editor with video upload/docs/links) |
 | `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
 | `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
 | `/admin/pass-bank-orders` | Bank-transfer pass orders — approve (calculates expiry + stacking) or reject (with rejection reason). Pending orders require admin review within 24h. |
@@ -277,7 +284,11 @@ npm run dev
 | `games` | Individual games per category |
 | `players` | Pro roster (social links, photo) |
 | `competitions` | Hall of Fame entries |
-| `courses` | Academia catalog — `price_cop`, `price_token` (nullable — enables $1UP checkout), master_id FK, is_active |
+| `courses` | Academia catalog — `price_cop`, `price_token`, `duration_hours`, `session_duration_min`, `intro_video_uid` (CF Stream), `intro_description`, master_id FK, is_active |
+| `course_modules` | Modules per course — title, description, sort_order, is_published (CASCADE) |
+| `course_sessions` | Sessions per module — title, description, `video_uid` (CF Stream UID), duration_minutes, sort_order, is_published (CASCADE) |
+| `course_session_links` | Support links per session — label, url, sort_order (CASCADE) |
+| `course_session_documents` | Downloadable files — label, `storage_path` (bucket `course-docs`, private), mime_type, size_bytes, sort_order (CASCADE) |
 | `masters` | Coaches — photo, specialty, categories[], topics[], all 8 social links (instagram/tiktok/youtube/x/kick/twitch/github/linkedin) |
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |

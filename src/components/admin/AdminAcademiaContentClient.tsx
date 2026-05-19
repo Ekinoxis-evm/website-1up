@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { AcademiaContent, Course } from "@/types/database.types";
@@ -9,12 +9,12 @@ interface Props { content: AcademiaContent[]; courses: Course[] }
 
 type FormState = {
   courseId: string; contentType: string; title: string;
-  description: string; url: string; sortOrder: string; isPublished: boolean;
+  description: string; url: string; streamUid: string; sortOrder: string; isPublished: boolean;
 };
 
 const EMPTY: FormState = {
   courseId: "", contentType: "video", title: "",
-  description: "", url: "", sortOrder: "0", isPublished: false,
+  description: "", url: "", streamUid: "", sortOrder: "0", isPublished: false,
 };
 
 const CONTENT_TYPES = ["video", "document", "quiz"];
@@ -28,6 +28,8 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [filterCourse, setFilterCourse] = useState<string>("all");
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -39,10 +41,31 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
     setForm({
       courseId: String(c.course_id), contentType: c.content_type,
       title: c.title, description: c.description ?? "",
-      url: c.url ?? "", sortOrder: String(c.sort_order ?? 0),
+      url: c.url ?? "", streamUid: c.stream_uid ?? "",
+      sortOrder: String(c.sort_order ?? 0),
       isPublished: c.is_published ?? false,
     });
+    setUploadProgress(null);
     setOpen(true);
+  }
+
+  async function handleVideoUpload(file: File) {
+    setUploadProgress("Obteniendo URL de subida...");
+    const headers = await authHeaders();
+    const res = await fetch("/api/admin/stream-upload-url", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ filename: file.name }),
+    });
+    if (!res.ok) { setUploadProgress("Error al obtener URL de subida."); return; }
+    const { uid, uploadURL } = await res.json();
+
+    setUploadProgress("Subiendo video a Cloudflare Stream...");
+    const upload = await fetch(uploadURL, { method: "PUT", body: file });
+    if (!upload.ok) { setUploadProgress("Error al subir el video."); return; }
+
+    setForm((f) => ({ ...f, streamUid: uid, url: "" }));
+    setUploadProgress(`✓ Video subido — UID: ${uid}`);
   }
 
   async function handleSave() {
@@ -52,6 +75,7 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
       ...form,
       courseId: Number(form.courseId),
       sortOrder: Number(form.sortOrder),
+      streamUid: form.streamUid || null,
       ...(editing ? { id: editing.id } : {}),
     };
     const res = await fetch("/api/admin/academia-content", { method, headers: await authHeaders(), body: JSON.stringify(body) });
@@ -120,7 +144,12 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
               </div>
               <div>
                 <p className="text-[10px] font-headline uppercase text-outline mb-1">Tipo</p>
-                <span className="bg-primary-container/20 text-primary font-headline text-[10px] px-2 py-0.5 uppercase">{item.content_type}</span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="bg-primary-container/20 text-primary font-headline text-[10px] px-2 py-0.5 uppercase">{item.content_type}</span>
+                  {item.content_type === "video" && item.stream_uid && (
+                    <span className="bg-tertiary/20 text-tertiary font-headline text-[10px] px-2 py-0.5 uppercase">CF Stream</span>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-[10px] font-headline uppercase text-outline mb-1">Estado</p>
@@ -168,7 +197,40 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
               </select>
 
               <input value={form.title} onChange={F("title")} placeholder="Título *" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
-              <input value={form.url} onChange={F("url")} placeholder="URL (video, doc, etc.)" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
+
+              {form.contentType === "video" ? (
+                <div className="space-y-2">
+                  {form.streamUid ? (
+                    <div className="bg-tertiary/10 border-l-4 border-tertiary p-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-headline font-bold text-xs uppercase text-tertiary">Video en Cloudflare Stream</p>
+                        <p className="font-body text-xs text-on-surface/60 mt-0.5 break-all">{form.streamUid}</p>
+                      </div>
+                      <button type="button" onClick={() => { setForm((f) => ({ ...f, streamUid: "" })); setUploadProgress(null); }} className="text-error text-xs font-headline font-bold uppercase ml-4 shrink-0">Quitar</button>
+                    </div>
+                  ) : (
+                    <>
+                      <input value={form.url} onChange={F("url")} placeholder="URL externa (YouTube, etc.) — opcional" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold text-sm" />
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => fileRef.current?.click()} className="bg-primary-container/20 text-primary font-headline font-bold text-xs uppercase px-4 py-2 hover:bg-primary-container/30 transition-colors">
+                          Subir a Cloudflare Stream
+                        </button>
+                        {uploadProgress && <p className="font-body text-xs text-on-surface/60">{uploadProgress}</p>}
+                      </div>
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(f); }}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : (
+                <input value={form.url} onChange={F("url")} placeholder="URL (doc, quiz, etc.)" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
+              )}
+
               <input value={form.sortOrder} onChange={F("sortOrder")} placeholder="Orden" type="number" className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold" />
               <textarea value={form.description} onChange={F("description")} placeholder="Descripción" rows={3} className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-body" />
             </div>

@@ -6,9 +6,9 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.3 |
+| **Versión** | 2.4 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | Mayo de 2026 |
+| **Última actualización** | Mayo 2026 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -51,7 +51,7 @@ Presentación institucional del hub: programas académicos, equipos profesionale
 Espacio personal para miembros registrados: gestión de identidad digital, wallet de tokens $1UP, inscripción y seguimiento de torneos, adquisición del **1UP Pass** (membresía), historial de compras y ajustes de cuenta. Requiere autenticación mediante Privy.
 
 ### 2.3 Panel administrativo (`admin.1upesports.org`)
-Consola de gestión interna para el equipo operativo de 1UP: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido y logos de marca. Requiere autenticación Privy + rol de administrador verificado.
+Consola de gestión interna para el equipo operativo de 1UP: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido y logos de marca. Incluye el **editor de cursos por módulos y sesiones** — wizard de dos pestañas (Información + Contenido) para construir la jerarquía completa de cada curso: módulos ordenables por drag-and-drop, sesiones con video en Cloudflare Stream, documentos descargables y links de apoyo. Requiere autenticación Privy + rol de administrador verificado.
 
 ### 2.4 Capa blockchain (`gaming-tower-scs` — construida, pendiente de integración)
 Conjunto de contratos inteligentes en Solidity desplegados en Base (L2 sobre Ethereum) que habilitarán: identidad on-chain renovable, retos competitivos con escrow tokenizado y certificación de cursos como NFT. La integración con el sitio web es parte de la **hoja de ruta técnica** — la capa está construida y testeada, su activación depende de decisión de negocio.
@@ -115,7 +115,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | 4 | ¿Dónde está hosteada? | Aplicación: **Vercel** (serverless, producción + preview deploys automáticos). Base de datos y archivos: **Supabase** (cloud managed). |
 | 5 | ¿CMS o custom code? | **100% custom code.** Sin WordPress, Drupal ni ningún CMS. El panel de administración es una consola propia construida en Next.js. |
 | 6 | ¿Qué lenguaje backend usa? | **TypeScript + Node.js 24 LTS** (runtime gestionado por Vercel). Sin servidor backend independiente. |
-| 7 | ¿Tiene API propia o integra APIs de terceros? | **Ambas.** API REST interna vía Next.js API Routes. Integraciones activas: Privy, Supabase, MercadoPago, Resend, Blockscout API v2, Base L2 RPC. |
+| 7 | ¿Tiene API propia o integra APIs de terceros? | **Ambas.** API REST interna vía Next.js API Routes. Integraciones activas: Privy, Supabase, MercadoPago, Resend, Blockscout API v2, Base L2 RPC, **Cloudflare Stream** (video streaming gated). |
 | 8 | ¿Usa autenticación? ¿Cómo? | **Sí — Privy como IdP.** JWT Bearer Token verificado server-side. Proveedores: email, Google OAuth, Discord OAuth. Tres niveles de acceso: público, usuario registrado, administrador. |
 | 9 | ¿Es responsive? ¿Con qué CSS? | **Sí — mobile-first.** Tailwind CSS v3 con breakpoints estándar. Bottom nav en móvil; top bar o sidebar en desktop. |
 | 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 52 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos). Smart contracts: **suite completa con Foundry (Forge)** — tests unitarios, coverage y gas report activos. |
@@ -148,6 +148,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | Autenticación server-side | Privy Server Auth | latest |
 | Pagos | MercadoPago SDK | v2.12.x |
 | Email transaccional | Resend SDK | v6.12.x |
+| Video educativo | Cloudflare Stream | REST API + JWT RS256 (`jose`) — tokens firmados, `requireSignedURLs: true` |
 | Subdomain routing | `src/proxy.ts` | Proxy nativo Next.js 16 (reemplaza middleware.ts) |
 
 > El backend no es un servidor independiente. Toda la lógica de negocio reside en rutas de API y Server Components ejecutados como funciones serverless en la infraestructura de Vercel.
@@ -160,7 +161,8 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | Row-Level Security (RLS) | Supabase | Habilitado en las 27 tablas del esquema público — primera línea de seguridad |
 | Almacenamiento — imágenes | **Supabase Storage** (`images`) | Bucket público — fotos, portadas, logos. Máx. 5 MB por archivo |
 | Almacenamiento — comprobantes | **Supabase Storage** (`comprobantes`) | Bucket **privado** — comprobantes de pago (token, pass, cursos). Sin URL permanente; acceso exclusivo vía URLs firmadas de 1 hora generadas server-side |
-| Tipos de archivos | Imágenes / documentos | JPG, PNG, WEBP, GIF, AVIF (imágenes) · JPG, PNG, WEBP, PDF (comprobantes) |
+| Almacenamiento — documentos de cursos | **Supabase Storage** (`course-docs`) | Bucket **privado** — documentos descargables de sesiones de academia (PDF, ZIP, DOCX, PPTX, XLSX, imágenes). Máx. 25 MB por archivo. URLs firmadas de 1 hora, solo tras verificar inscripción activa |
+| Tipos de archivos | Imágenes / documentos | JPG, PNG, WEBP, GIF, AVIF (imágenes) · JPG, PNG, WEBP, PDF (comprobantes) · PDF, ZIP, DOCX, PPTX, XLSX, PNG, JPEG, TXT, MD (documentos de cursos) |
 | ORM / cliente | Supabase JS v2 | Sin Drizzle/Prisma — cliente nativo |
 
 ### 5.4 Smart Contracts (capa blockchain — construida, pendiente de integración)
@@ -184,13 +186,13 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 |---------|---------|-----|--------|
 | Alojamiento de aplicación web | **Vercel** | Producción y preview deploys | Activo |
 | Base de datos | **Supabase** | Cloud managed PostgreSQL | Activo |
-| Almacenamiento de archivos | **Supabase Storage** | Bucket `images` (público) + bucket `comprobantes` (privado, URLs firmadas) | Activo |
+| Almacenamiento de archivos | **Supabase Storage** | Bucket `images` (público) + `comprobantes` + `course-docs` (privados, URLs firmadas) | Activo |
 | Correo transaccional | **Resend** | Notificaciones y confirmaciones | Activo |
 | Autenticación y wallets | **Privy** | IdP + infraestructura de wallets embebidas (TEE) | Activo |
 | Pagos con tarjeta | **MercadoPago** | Pasarela de pagos (Colombia) | Activo |
 | Indexación blockchain | **Blockscout API v2** | Historial de transacciones on-chain | Activo |
+| Video educativo | **Cloudflare Stream** | Streaming gated de sesiones de academia — tokens RS256 firmados server-side, subida directa desde admin (direct upload), reproducción vía iframe firmado | **Activo** |
 | Verificación afiliación | **Comfenalco API** | Validación afiliados para descuentos | Pendiente (credenciales por recibir) |
-| Video academia | **Cloudflare Stream** | Streaming de contenido educativo | Pendiente (credenciales por recibir) |
 
 ### 6.2 Dominios de producción
 
@@ -278,12 +280,25 @@ La plataforma expone una API REST interna (consumida por sus propios frontends) 
 | `/api/user/pass-orders` | GET, POST | Órdenes de pass propias / crear tras tx confirmada |
 | `/api/user/tournament-registrations` | GET, POST, DELETE | Inscripciones a torneos propias |
 | `/api/user/tournament-checkin` | POST | Check-in QR en torneo live |
+| `/api/user/stream-token` | POST | Token CF Stream firmado (RS256, 1h) para contenido legacy de `academia_content.stream_uid` — requiere inscripción activa |
+| `/api/user/course-intro-token` | POST | Token CF Stream firmado para video intro del curso (`courses.intro_video_uid`) — no requiere inscripción |
+| `/api/user/stream-token-v2` | POST | Token CF Stream firmado para sesión de módulo (`course_sessions.video_uid`) — requiere inscripción activa + sesión publicada |
+| `/api/user/course-session` | GET | Datos de sesión (links + metadatos de documentos) para usuario inscrito (`?sessionId=N`) |
+| `/api/user/course-document` | GET | URL firmada de 1h para descarga de documento de sesión (`?id=N`) — requiere inscripción activa |
 
 ### 8.3 Endpoints de administración (requieren JWT + isAdmin)
 
 | Endpoint | Métodos | Propósito |
 |----------|---------|-----------|
-| `/api/admin/courses` | POST, PUT, DELETE | CRUD de cursos |
+| `/api/admin/courses` | POST, PUT, DELETE | CRUD de cursos (incluye `introVideoUid`, `introDescription`, `sessionDurationMin`) |
+| `/api/admin/course-modules` | POST, PUT, DELETE | CRUD de módulos — título, descripción, is_published, sort_order |
+| `/api/admin/course-modules/reorder` | POST | Actualización masiva de sort_order para módulos de un curso |
+| `/api/admin/course-sessions` | POST, PUT, DELETE | CRUD de sesiones — acepta `pendingDocs[]` (mueve de pending a final), `links[]`, `removedDocIds[]`; DELETE limpia Storage |
+| `/api/admin/course-sessions/reorder` | POST | Actualización masiva de sort_order para sesiones de un módulo |
+| `/api/admin/course-session-links` | POST, PUT, DELETE | CRUD de links de apoyo por sesión |
+| `/api/admin/course-doc-upload` | POST | Subida multipart de documento a bucket `course-docs` (ruta pending). Devuelve `{ path, mimeType, sizeBytes, label }` |
+| `/api/admin/course-session-documents` | POST, DELETE | Insertar registro DB para doc ya subido / eliminar doc (Storage + fila) |
+| `/api/admin/stream-upload-url` | POST | URL de subida directa CF Stream + video UID para PUT desde el navegador admin |
 | `/api/admin/masters` | POST, PUT, DELETE | CRUD de instructores |
 | `/api/admin/discounts` | POST, PUT, DELETE | CRUD de reglas de descuento |
 | `/api/admin/aliados` | POST, PUT, DELETE | CRUD de aliados |
@@ -318,7 +333,11 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | Tabla | Propósito |
 |-------|-----------|
 | `user_profiles` | Perfil completo del usuario: nombre, documento, teléfono, juegos, barrio, fecha de nacimiento, onboarding, referido |
-| `courses` | Catálogo de cursos: nombre, categoría, precio, duración, instructor, estado |
+| `courses` | Catálogo: nombre, categoría, precio (COP + $1UP), duración total, duración por sesión, instructor, cover, intro video (CF Stream UID), intro_description, is_active |
+| `course_modules` | Módulos por curso — título, descripción, sort_order, is_published (CASCADE con courses) |
+| `course_sessions` | Sesiones por módulo — título, descripción, video_uid (CF Stream), duration_minutes, sort_order, is_published (CASCADE con course_modules) |
+| `course_session_links` | Links de apoyo por sesión — label, url, sort_order (CASCADE con course_sessions) |
+| `course_session_documents` | Documentos descargables — label, storage_path (bucket `course-docs`), mime_type, size_bytes, sort_order (CASCADE) |
 | `masters` | Instructores: nombre, especialidad, bio, redes sociales, categorías, temas |
 | `enrollments` | Inscripciones a cursos: usuario, curso, precio final, estado de pago, ID MercadoPago |
 | `tournaments` | Torneos: nombre, juego, fecha, premios, capacidad, estado, tipo de ubicación |
@@ -352,8 +371,8 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | Correo transaccional | Resend | Notificaciones de compra, confirmación de torneo + adjunto .ics | Activo |
 | Historial blockchain | Blockscout API v2 | Consulta de transferencias del token $1UP | Activo |
 | Nodo blockchain | Base RPC | Envío de transacciones y consulta de contratos | Activo |
+| Video educativo | Cloudflare Stream | Videos de sesiones de academia — subida directa desde admin, reproducción gated con tokens RS256 de 1h | **Activo** |
 | Verificación afiliación | Comfenalco API | Validación de afiliados para descuentos | Pendiente (credenciales por recibir) |
-| Video educativo | Cloudflare Stream | Contenido en video de la academia | Pendiente (credenciales por recibir) |
 
 ---
 

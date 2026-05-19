@@ -1,6 +1,54 @@
+import { cookies } from "next/headers";
+import { verifyCookieToken } from "@/lib/privy";
+import { supabaseAdmin } from "@/lib/supabase";
+import { AppAcademiaClient } from "@/components/app/AppAcademiaClient";
+
 export const metadata = { title: "Mis Cursos — 1UP App" };
 
-export default function AppAcademiaPage() {
+export default async function AppAcademiaPage() {
+  const cookieStore = await cookies();
+  const claims = await verifyCookieToken(cookieStore.get("privy-token")?.value);
+
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
+
+  if (!claims) {
+    return <AppAcademiaClient enrolledCourses={[]} baseUrl={BASE_URL} />;
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from("user_profiles")
+    .select("id")
+    .eq("privy_user_id", claims.userId)
+    .single();
+
+  if (!profile) return <AppAcademiaClient enrolledCourses={[]} baseUrl={BASE_URL} />;
+
+  const { data: enrollments } = await supabaseAdmin
+    .from("enrollments")
+    .select("course_id")
+    .eq("user_profile_id", profile.id)
+    .eq("payment_status", "approved");
+
+  if (!enrollments?.length) return <AppAcademiaClient enrolledCourses={[]} baseUrl={BASE_URL} />;
+
+  const courseIds = enrollments.map((e) => e.course_id).filter((id): id is number => id !== null);
+
+  const [{ data: courses }, { data: content }] = await Promise.all([
+    supabaseAdmin.from("courses").select("id, name").in("id", courseIds),
+    supabaseAdmin
+      .from("academia_content")
+      .select("id, title, content_type, url, stream_uid, is_published, sort_order, course_id")
+      .in("course_id", courseIds)
+      .eq("is_published", true)
+      .order("sort_order"),
+  ]);
+
+  const enrolledCourses = (courses ?? []).map((c) => ({
+    course_id: c.id,
+    course_name: c.name,
+    content: (content ?? []).filter((item) => item.course_id === c.id),
+  }));
+
   return (
     <div className="space-y-8">
       <div>
@@ -9,30 +57,7 @@ export default function AppAcademiaPage() {
         </h1>
         <div className="h-1 w-16 bg-secondary-container mt-3" />
       </div>
-
-      <div className="bg-surface-container-low p-12 flex flex-col items-center justify-center gap-6 text-center">
-        <span
-          className="material-symbols-outlined text-on-surface/15 text-6xl"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          school
-        </span>
-        <div>
-          <h2 className="font-headline font-black text-3xl text-on-surface uppercase tracking-tighter mb-2">
-            Sin cursos inscritos
-          </h2>
-          <p className="font-body text-on-surface/50 max-w-md">
-            Aquí verás los cursos en los que estés inscrito, el acceso al
-            contenido y tus certificados en blockchain.
-          </p>
-        </div>
-        <a
-          href={`${process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org"}/academia`}
-          className="bg-secondary-container text-white px-10 py-4 font-headline font-black text-lg uppercase tracking-tighter skew-fix hover:neo-shadow-pink transition-all active:scale-95"
-        >
-          <span className="block skew-content">VER CURSOS</span>
-        </a>
-      </div>
+      <AppAcademiaClient enrolledCourses={enrolledCourses} baseUrl={BASE_URL} />
     </div>
   );
 }

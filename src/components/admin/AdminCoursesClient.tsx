@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import type { AcademiaContent, Course, Master } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
@@ -148,12 +149,17 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
           </h1>
           <div className="h-1 w-16 bg-tertiary mt-2" />
         </div>
-        <button
-          onClick={() => { setEditing(null); setForm(EMPTY_COURSE); setCourseError(null); setCourseOpen(true); }}
-          className="bg-tertiary text-background font-headline font-black text-sm px-6 py-3 skew-fix"
-        >
-          <span className="block skew-content">+ AGREGAR CURSO</span>
-        </button>
+        <div className="flex gap-3">
+          <Link href="/admin/courses/new" className="bg-primary-container text-on-primary-container font-headline font-black text-sm px-6 py-3 skew-fix">
+            <span className="block skew-content">+ NUEVO EDITOR</span>
+          </Link>
+          <button
+            onClick={() => { setEditing(null); setForm(EMPTY_COURSE); setCourseError(null); setCourseOpen(true); }}
+            className="bg-tertiary text-background font-headline font-black text-sm px-6 py-3 skew-fix"
+          >
+            <span className="block skew-content">+ AGREGAR</span>
+          </button>
+        </div>
       </div>
 
       <table className="w-full text-sm">
@@ -195,7 +201,8 @@ export function AdminCoursesClient({ courses, masters, content }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 items-center">
+                    <Link href={`/admin/courses/${c.id}/edit`} className="text-tertiary font-headline font-bold text-xs uppercase">Curriculum</Link>
                     <button onClick={() => openEditCourse(c)} className="text-secondary font-headline font-bold text-xs uppercase">Editar</button>
                     <button onClick={() => handleDeleteCourse(c.id)} className="text-error font-headline font-bold text-xs uppercase">Eliminar</button>
                   </div>

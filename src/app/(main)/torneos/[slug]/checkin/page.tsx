@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { TournamentCheckinClient } from "@/components/torneos/TournamentCheckinClient";
 import type { Tournament } from "@/types/database.types";
 
-type TRow = { id: number; name: string; status: Tournament["status"]; date: string | null; is_active: boolean };
+type TRow = { id: number; name: string; status: string; date: string | null; is_active: boolean };
 
 export default async function TournamentCheckinPage(
   { params }: { params: Promise<{ slug: string }> },
@@ -39,7 +39,7 @@ export default async function TournamentCheckinPage(
 
   return (
     <TournamentCheckinClient
-      tournament={{ id: t.id, name: t.name, status: t.status, date: t.date }}
+      tournament={{ id: t.id, name: t.name, status: t.status as "upcoming" | "live" | "completed", date: t.date }}
     />
   );
 }

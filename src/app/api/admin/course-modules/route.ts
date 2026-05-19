@@ -10,44 +10,45 @@ async function checkAdmin(req: NextRequest) {
   return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
+function revalidate(courseId: number) {
+  revalidatePath(`/app/academia/${courseId}`);
+  revalidatePath(`/admin/courses/${courseId}/edit`);
+}
+
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data } = await supabaseAdmin.from("academia_content").insert({
+  const { data, error } = await supabaseAdmin.from("course_modules").insert({
     course_id:    body.courseId,
-    content_type: body.contentType,
     title:        body.title,
-    description:  body.description || null,
-    url:          body.url || null,
-    stream_uid:   body.streamUid || null,
+    description:  body.description ?? null,
     sort_order:   body.sortOrder ?? 0,
     is_published: body.isPublished ?? false,
   }).select().single();
-  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidate(body.courseId);
   return NextResponse.json(data);
 }
 
 export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { data } = await supabaseAdmin.from("academia_content").update({
-    course_id:    body.courseId,
-    content_type: body.contentType,
+  const { data, error } = await supabaseAdmin.from("course_modules").update({
     title:        body.title,
-    description:  body.description || null,
-    url:          body.url || null,
-    stream_uid:   body.streamUid || null,
+    description:  body.description ?? null,
     sort_order:   body.sortOrder ?? 0,
     is_published: body.isPublished ?? false,
-  }).eq("id", body.id).select().single();
-  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
+  }).eq("id", body.id).select("*, course_id").single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidate(data.course_id);
   return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await req.json();
-  await supabaseAdmin.from("academia_content").delete().eq("id", id);
-  revalidatePath("/academia"); revalidatePath("/admin/academia-content");
+  const { data: mod } = await supabaseAdmin.from("course_modules").select("course_id").eq("id", id).single();
+  await supabaseAdmin.from("course_modules").delete().eq("id", id);
+  if (mod) revalidate(mod.course_id);
   return NextResponse.json({ ok: true });
 }

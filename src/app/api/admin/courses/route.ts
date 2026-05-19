@@ -14,16 +14,19 @@ export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { data } = await supabaseAdmin.from("courses").insert({
-    name:           body.name,
-    category:       body.category,
-    description:    body.description || null,
-    price_cop:      body.priceCop || null,
-    price_token:    body.priceToken || null,
-    duration_hours: body.durationHours || null,
-    image_url:      body.imageUrl || null,
-    master_id:      body.masterId || null,
-    sort_order:     body.sortOrder ?? 0,
-    is_active:      body.isActive ?? true,
+    name:                 body.name,
+    category:             body.category,
+    description:          body.description || null,
+    price_cop:            body.priceCop || null,
+    price_token:          body.priceToken || null,
+    duration_hours:       body.durationHours || null,
+    image_url:            body.imageUrl || null,
+    master_id:            body.masterId || null,
+    sort_order:           body.sortOrder ?? 0,
+    is_active:            body.isActive ?? true,
+    intro_video_uid:      body.introVideoUid || null,
+    intro_description:    body.introDescription || null,
+    session_duration_min: body.sessionDurationMin || null,
   }).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
   return NextResponse.json(data);
@@ -33,16 +36,19 @@ export async function PUT(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { data } = await supabaseAdmin.from("courses").update({
-    name:           body.name,
-    category:       body.category,
-    description:    body.description || null,
-    price_cop:      body.priceCop || null,
-    price_token:    body.priceToken || null,
-    duration_hours: body.durationHours || null,
-    image_url:      body.imageUrl || null,
-    master_id:      body.masterId || null,
-    sort_order:     body.sortOrder ?? 0,
-    is_active:      body.isActive ?? true,
+    name:                 body.name,
+    category:             body.category,
+    description:          body.description || null,
+    price_cop:            body.priceCop || null,
+    price_token:          body.priceToken || null,
+    duration_hours:       body.durationHours || null,
+    image_url:            body.imageUrl || null,
+    master_id:            body.masterId || null,
+    sort_order:           body.sortOrder ?? 0,
+    is_active:            body.isActive ?? true,
+    intro_video_uid:      body.introVideoUid || null,
+    intro_description:    body.introDescription || null,
+    session_duration_min: body.sessionDurationMin || null,
   }).eq("id", body.id).select().single();
   revalidatePath("/academia"); revalidatePath("/admin/courses");
   return NextResponse.json(data);

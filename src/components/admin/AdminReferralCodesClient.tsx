@@ -110,7 +110,7 @@ export function AdminReferralCodesClient({ codes }: Props) {
         <div className="space-y-2">
           {codes.map((c) => {
             const pct = c.max_uses ? Math.round((c.used_count / c.max_uses) * 100) : null;
-            const age = CURRENT_YEAR - new Date(c.created_at).getFullYear();
+            const age = c.created_at ? CURRENT_YEAR - new Date(c.created_at).getFullYear() : 0;
             return (
               <div
                 key={c.id}
@@ -132,7 +132,7 @@ export function AdminReferralCodesClient({ codes }: Props) {
                       {pct !== null && ` (${pct}%)`}
                     </span>
                     <span className="font-headline text-xs text-on-surface/30">
-                      {new Date(c.created_at).toLocaleDateString("es-CO")}
+                      {c.created_at ? new Date(c.created_at).toLocaleDateString("es-CO") : "—"}
                     </span>
                     {age === 0 && <span className="text-[10px] font-headline uppercase text-tertiary">NUEVO</span>}
                   </div>

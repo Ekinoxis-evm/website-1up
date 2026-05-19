@@ -52,7 +52,7 @@ function toColombiaInput(utcIso: string): string {
 function prizeToFormRow(p: TournamentPrize): PrizeFormRow {
   return {
     position:     p.position as 1 | 2 | 3,
-    prizeType:    p.prize_type,
+    prizeType:    p.prize_type as "cop" | "tokens" | "both",
     amountTokens: p.amount_tokens ? String(p.amount_tokens) : "",
     amountCop:    p.amount_cop    ? String(p.amount_cop)    : "",
   };
@@ -99,8 +99,8 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
       gameId:             t.game_id ? String(t.game_id) : "",
       date:               t.date ? toColombiaInput(t.date) : "",
       maxParticipants:    t.max_participants ? String(t.max_participants) : "",
-      status:             t.status,
-      locationType:       t.location_type,
+      status:             t.status as "upcoming" | "live" | "completed",
+      locationType:       t.location_type as "presencial" | "online" | "mixto",
       imageUrl:           t.image_url ?? "",
       description:        t.description ?? "",
       isActive:           t.is_active,
@@ -252,11 +252,11 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                   {firstPrizeSummary(t.tournament_prizes ?? [])}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`font-headline font-bold text-xs uppercase ${STATUS_COLORS[t.status]}`}>
-                    {STATUS_LABELS[t.status]}
+                  <span className={`font-headline font-bold text-xs uppercase ${STATUS_COLORS[t.status as keyof typeof STATUS_COLORS]}`}>
+                    {STATUS_LABELS[t.status as keyof typeof STATUS_LABELS]}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-body text-on-surface/70">{LOC_LABELS[t.location_type]}</td>
+                <td className="px-4 py-3 font-body text-on-surface/70">{LOC_LABELS[t.location_type as keyof typeof LOC_LABELS]}</td>
                 <td className="px-4 py-3">
                   <span className={`font-headline font-bold text-xs uppercase ${t.is_registration_open ? "text-secondary" : "text-outline/40"}`}>
                     {t.is_registration_open ? "Abierto" : "Cerrado"}

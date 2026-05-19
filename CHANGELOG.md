@@ -5,6 +5,68 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.25.0] — 2026-05-19
+
+### Added
+
+- **1UP Pass admin grant** — admin can now grant a pass to any user with a custom start date (including past dates, for backdating pre-platform memberships). Uses `payment_method = 'admin_grant'`, `POST /api/admin/pass-orders`. The grant modal in `AdminPassOrdersClient` includes user search (client-side filter from onboarded profiles), date picker, duration, and notes fields. `granted_by` records the admin email.
+- **`started_at` column on `pass_orders`** — migration adds `started_at TIMESTAMPTZ` (when the pass period actually begins) and `granted_by TEXT` (admin email for grant orders). Existing confirmed orders backfilled from `paid_at`. Token purchases set `started_at` = `paid_at` on insert; bank approvals set `started_at` = approval time.
+- **Admin pass orders table** — `AdminPassOrdersClient` converted from card-grid layout with inline micro-labels to a proper `<table>` with column headers: #, Usuario, Método, $1UP, Días, Inicio, Vence, Estado, TX/Comprobante, Acciones. Added "Admin Grant" tab for `admin_grant` orders.
+
+### Fixed
+
+- **Pass benefits not syncing to home page** — `POST|PUT|DELETE /api/admin/pass-benefits` now calls `revalidatePath("/")` in addition to `/gaming-tower`, so home page `AcademiaSection` and `TorneosSection` benefit cards update immediately after admin changes.
+
+---
+
+## [2.24.0] — 2026-05-19
+
+### Added
+
+- **Course 3-level hierarchy** — Course → Modules → Sessions architecture fully implemented. Tables: `course_modules`, `course_sessions`, `course_session_links`, `course_session_documents`.
+- **Admin course editor** (`/admin/courses/[id]/edit`) — multi-tab UI (Información + Contenido). Info tab handles all course fields including intro video upload to CF Stream and cover image. Curriculum tab: drag-to-reorder modules and sessions within each module using `@dnd-kit`.
+- **Session editor panel** — slide-in panel per session: CF Stream video upload, description, duration, publish toggle, support links (add/remove inline), downloadable documents (upload to `course-docs` private bucket with pending→final path move on save).
+- **`/admin/courses/new`** — quick-create page; after name + category submission, redirects to the full editor.
+- **Admin API routes** — `course-modules` (POST/PUT/DELETE + reorder), `course-sessions` (POST/PUT/DELETE + reorder with pending-doc path resolution and storage cleanup), `course-session-links` (POST/PUT/DELETE), `course-session-documents` (POST/DELETE with storage cleanup), `course-doc-upload` (multipart file upload to `course-docs` private bucket).
+- **User API routes** — `POST /api/user/course-intro-token` (CF token for intro video, no enrollment required), `POST /api/user/stream-token-v2` (CF token for session video, enrollment required), `GET /api/user/course-session` (gated session data + links + doc metadata), `GET /api/user/course-document` (1-hour signed Supabase Storage URL for enrolled user).
+- **`/app/academia/[courseId]`** — per-course curriculum page for enrolled users. Shows intro video, module tabs (single module collapses to list), session accordion with lazy video player (`stream-token-v2`), support links, and doc download (signed URL from `course-document`).
+- **`AppAcademiaClient`** — added "Ver curriculum" link to each enrolled course card pointing to new per-course page.
+- **`src/lib/courseAccess.ts`** — `resolveProfileId`, `assertEnrollment`, `isEnrolled`, `courseIdFromSession` helpers with `CourseAccessError` typed errors (status codes 401/403/404/410).
+- **`src/lib/courseDocs.ts`** — MIME validation, path helpers (`pendingDocPath`, `finalDocPath`), upload/move/delete/signed-URL helpers for `course-docs` private bucket.
+- **Courses API** — `POST /api/admin/courses` and `PUT` now accept `introVideoUid`, `introDescription`, `sessionDurationMin` fields.
+- **`/admin/courses` page** — now uses `supabaseAdmin` (was anon); added "Curriculum" link per course row; added "Nuevo editor" button.
+
+### Fixed
+
+- **`/admin/courses/page.tsx`** — was using anon `supabase` client; switched to `supabaseAdmin`.
+
+### Delivered by
+- Ekinoxis
+
+---
+
+## [2.23.0] — 2026-05-19
+
+### Added
+
+- **Cloudflare Stream integration** — gated video hosting for Academia courses. Enrolled users (payment_status = `approved`) can watch course videos; non-enrolled users receive HTTP 403.
+- **`stream_uid` column on `academia_content`** — stores the Cloudflare Stream video UID. `url` remains for external links (YouTube, docs, quizzes); `stream_uid` is set when the video is hosted on CF Stream.
+- **`POST /api/user/stream-token`** — Privy-auth endpoint. Verifies enrollment → issues a signed RS256 JWT (1 h expiry) that unlocks the CF Stream iframe for that specific video. No token = no playback.
+- **`POST /api/admin/stream-upload-url`** — admin-only endpoint. Returns a one-time CF direct-upload URL + video UID. Admin browser PUTs the file directly to CF (never exposes the API token client-side).
+- **`src/lib/stream.ts`** — `signStreamToken()` (RS256 JWT via `jose`) + `createUploadUrl()` (CF direct upload). `requireSignedURLs: true` enforced on every upload.
+- **`AdminAcademiaContentClient`** — video content items now show a "Subir a Cloudflare Stream" file button. On upload: calls stream-upload-url, PUTs file, saves UID. Existing stream_uid shows as a green badge with a "Quitar" option.
+- **`/app/academia` page** — rebuilt from placeholder to a real enrolled-courses view. Lists approved enrollments with expandable course sections. Videos with `stream_uid` render a lazy `StreamPlayer` (fetches token on play click); external URLs render as links.
+- **CF signing key** — one-time RS256 key pair created. Key ID: `689460cfbb9e51bf62538ae1c78fa7e5`.
+
+### Fixed
+
+- **`/admin/academia-content` page** — was using anon `supabase` client instead of `supabaseAdmin`. Now uses service-role client so all content is visible regardless of RLS.
+
+### Delivered by
+- Ekinoxis
+
+---
+
 ## [2.22.2] — 2026-05-12
 
 ### Security
