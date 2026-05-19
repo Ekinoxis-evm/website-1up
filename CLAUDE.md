@@ -42,6 +42,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `app/(protected)/ajustes` | `app/` | Two-tab settings: IDENTIDAD (profile data) + SEGURIDAD (linked accounts). Replaces `/app/identidad` and `/app/settings` (both redirect here). |
 | `admin/login` | `admin/` | Public login page for admin subdomain |
 | `admin/(protected)/*` | `admin/` | Auth-gated admin panel (requires isAdmin) |
+| `admin/(protected)/courses` | `admin/` | Course list — `+ NUEVO CURSO` (→ new), per-row `Editar` (→ editor) + `Eliminar`. Fetches courses only — no legacy academia_content fetch |
 | `admin/(protected)/courses/new` | `admin/` | Quick-create a course (name + category) then redirect to editor |
 | `admin/(protected)/courses/[id]/edit` | `admin/` | Full course editor: Info tab (all fields + CF Stream intro video) + Contenido tab (drag-reorder modules/sessions, session panel with video/docs/links) |
 | `app/(protected)/academia/[courseId]` | `app/` | Per-course curriculum page for enrolled users — intro video, module tabs, session accordion with lazy video player + doc downloads |

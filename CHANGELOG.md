@@ -5,6 +5,15 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.25.1] — 2026-05-19
+
+### Changed
+
+- **`AdminCoursesClient` cleanup** — removed the legacy inline modal (which duplicated the full course editor's Info tab), the old `academia_content` content panel inside that modal, and the duplicate action buttons. The courses list now has a single `+ NUEVO CURSO` button (→ `/admin/courses/new`) and a single `Editar` link per row (→ `/admin/courses/[id]/edit`). No functionality lost — the full editor covers everything the modal did.
+- **`/admin/courses` page** — removed unused `masters` and `academia_content` data fetches; now fetches courses only.
+
+---
+
 ## [2.25.0] — 2026-05-19
 
 ### Added

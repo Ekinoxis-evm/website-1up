@@ -240,7 +240,7 @@ npm run dev
 | `/admin/players` | Team roster CRUD (photo upload, social links) |
 | `/admin/competitions` | Hall of Fame CRUD |
 | `/admin/masters` | Masters CRUD (photo, categories checkboxes, all 8 social links, topics, assigned courses shown) |
-| `/admin/courses` | Academia course list — CRUD (image, master, category, prices) + "Curriculum" link per row → full editor |
+| `/admin/courses` | Academia course list — `+ NUEVO CURSO` (→ `/courses/new`) + per-row `Editar` (→ full editor) + `Eliminar` |
 | `/admin/courses/new` | Quick-create course (name + category) → redirects to full editor |
 | `/admin/courses/[id]/edit` | Full course editor — **Información** tab (all fields + CF Stream intro video + cover image) + **Contenido** tab (drag-reorder modules, expandable session list per module, slide-in session editor with video upload/docs/links) |
 | `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
