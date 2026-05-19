@@ -2,7 +2,7 @@
 ## 1UP Gaming Tower × Ekinoxis Labs
 
 **Fecha de corte:** 19 de mayo de 2026  
-**Versión en producción:** v2.25.0  
+**Versión en producción:** v2.26.0  
 **Referencia contractual:** EKX-2026-005
 
 ---
@@ -12,11 +12,11 @@
 | | |
 |--|--|
 | **Scope original entregado** | 100% — todas las páginas y módulos del contrato EKX-2026-005 están funcionando en producción |
-| **Funcionalidades adicionales** | ~334h de desarrollo fuera del scope original, implementadas y en producción |
+| **Funcionalidades adicionales** | ~350h de desarrollo fuera del scope original, implementadas y en producción |
 | **Estado del proyecto** | Activo — una integración pendiente por gestión externa (MercadoPago automático) |
 | **Cloudflare Stream** | ✅ Activo — videos de academia protegidos por JWT, cargados desde el admin, reproducción gated por inscripción |
-| **Total facturado adiciones** | $50.100.000 COP (~334h × $150.000/h) |
-| **Total proyecto** | **$70.100.000 COP** |
+| **Total facturado adiciones** | $52.500.000 COP (~350h × $150.000/h) |
+| **Total proyecto** | **$72.500.000 COP** |
 
 ---
 
@@ -89,6 +89,7 @@
 | Resultados + Entrega de premios | Asignar podio → genera Hall of Fame; entregar $1UP on-chain o COP con comprobante | ✅ |
 | Imágenes del sitio | Equipamiento y ruta de aprendizaje | ✅ |
 | Editor de cursos (jerarquía) | `/admin/courses/[id]/edit` — módulos, sesiones, DnD, video CF Stream, documentos privados | ✅ |
+| Sistema de brackets | Generación automática del bracket desde inscritos, registro de resultados match a match, eliminación simple y doble, visualización pública en `/torneos/[slug]` | ✅ |
 
 ---
 
@@ -331,6 +332,25 @@ Integración completa de Cloudflare Stream y arquitectura de contenido educativo
 
 ---
 
+### 4.25 Sistema de brackets de torneos — v2.26.0
+Motor completo de gestión de brackets para torneos, con soporte para eliminación simple y doble.
+
+| Funcionalidad | Detalle |
+|---------------|---------|
+| Generación automática | Toma los inscritos con estado `registered`/`attended` y genera el bracket completo con distribución de BYEs a las mejores semillas |
+| Algoritmo double elimination | Winners bracket + Losers bracket (dropout y pure rounds alternados) + Grand Final — con cross-pairing correcto de perdedores de WR1 en LR1 |
+| Inserción 2-fases | Fase 1: insertar todos los matches para obtener IDs seriales. Fase 2: batch-UPDATE de todos los punteros `next_match_id` / `next_loser_match_id` |
+| Avance automático de BYEs | Los matches con BYE se resuelven automáticamente y el ganador avanza al siguiente match |
+| Registro de resultados | Admin ingresa score por match; el sistema determina ganador, avanza ganador/perdedor, marca eliminados en losers/grand_final |
+| Seguimiento de estado | draft → published → in_progress → completed (actualizado automáticamente al registrar resultados) |
+| Visualización pública | Bracket visual en `/torneos/[slug]` — renderizado con `@g-loot/react-tournament-brackets`, solo aparece si el bracket existe y está publicado |
+| Panel admin `/admin/tournament-brackets` | Selector de torneo, formulario de seed, tabla de matches agrupada por side/round, formulario de score inline |
+| Reset | DELETE elimina bracket completo (CASCADE sobre participants y matches) |
+
+**16h → $2.400.000 COP**
+
+---
+
 ## 5. RESUMEN FINANCIERO
 
 | Concepto | Horas | Valor |
@@ -360,9 +380,10 @@ Integración completa de Cloudflare Stream y arquitectura de contenido educativo
 | 4.22 Reconstrucción de tablas admin (3 componentes) | 6h | $900.000 COP |
 | 4.23 Cloudflare Stream + jerarquía de cursos (módulos/sesiones) | 52h | $7.800.000 COP |
 | 4.24 Pass admin grant, started_at, tabla de órdenes | 8h | $1.200.000 COP |
-| **Total adiciones fuera del scope** | **~334h** | **$50.100.000 COP** |
+| 4.25 Sistema de brackets de torneos (double/single elimination) | 16h | $2.400.000 COP |
+| **Total adiciones fuera del scope** | **~350h** | **$52.500.000 COP** |
 | | | |
-| **TOTAL PROYECTO** | | **$70.100.000 COP** |
+| **TOTAL PROYECTO** | | **$72.500.000 COP** |
 
 > Tarifa adiciones: $150.000 COP/hora (según EKX-2026-005, Parte 4).
 

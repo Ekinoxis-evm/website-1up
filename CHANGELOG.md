@@ -5,6 +5,22 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.26.0] — 2026-05-19
+
+### Added
+
+- **Tournament bracket system** — full double-elimination (and single-elimination) bracket feature using `@g-loot/react-tournament-brackets` for rendering.
+  - New admin page at `/admin/tournament-brackets`: select tournament → seed bracket from registered participants → enter match scores round by round.
+  - Admin API `GET|POST|PATCH|DELETE /api/admin/brackets` — fetch, seed, record results, and delete brackets.
+  - Public API `GET /api/tournaments/[slug]/bracket` — returns bracket data without auth.
+  - Bracket section added to public tournament detail page (`/torneos/[slug]`) — shown when a bracket exists.
+  - New "Brackets" entry in admin sidebar under Competiciones.
+  - Bracket seeding library at `src/lib/bracket/seed.ts` — supports 2–64 participants, distributes byes to top seeds, cross-pairs WR1 losers into LR1.
+  - `src/lib/bracket/losers-mapping.ts` — routing table for losers bracket structure across sizes 4–64.
+  - Type shim `src/types/g-loot-brackets.d.ts` — fixes missing type declarations for the library.
+
+---
+
 ## [2.25.1] — 2026-05-19
 
 ### Changed

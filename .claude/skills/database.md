@@ -48,6 +48,9 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 | `international_tournaments` | `id`, `name`, `organizer`, `date` (timestamptz nullable), `country`, `city`, `game_id` → games (SET NULL), `registration_link`, `image_url`, `description`, `is_active`, `sort_order`, `created_at` |
 | `tournament_results` | `id`, `tournament_id` → tournaments (CASCADE), `user_profile_id` → user_profiles (CASCADE), `position` (1–3), `points`, `awarded_by`. UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | **PostgreSQL VIEW** — aggregates gold/silver/bronze counts + total_points per player. ORDER BY points DESC, gold_count DESC |
+| `brackets` | `id` (bigint), `tournament_id` → tournaments (UNIQUE CASCADE), `format` (single_elimination\|double_elimination), `status` (draft\|published\|in_progress\|completed), `participant_count`, `rounds_winners`, `rounds_losers`, `created_at`, `updated_at` |
+| `bracket_participants` | `id` (bigint), `bracket_id` → brackets (CASCADE), `seed` (1-based), `display_name`, `user_profile_id` → user_profiles (nullable), `eliminated` (bool, default false), `created_at` |
+| `bracket_matches` | `id` (bigint), `bracket_id` → brackets (CASCADE), `bracket_side` (winners\|losers\|grand_final), `round`, `match_number`, `p1_id`/`p2_id` → bracket_participants (nullable), `p1_score`/`p2_score`, `winner_id`/`loser_id` → bracket_participants, `state` (pending\|ready\|in_progress\|completed\|bye), `p1_source`/`p2_source` (seed\|winner_of\|loser_of\|bye), `p1_source_match_id`/`p2_source_match_id` self-ref, `next_match_id` self-ref (where winner goes), `next_match_slot` (1\|2), `next_loser_match_id` self-ref (where loser goes in DE), `next_loser_slot`, `created_at`, `updated_at` |
 
 ## Type system
 

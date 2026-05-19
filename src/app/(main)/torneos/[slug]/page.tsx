@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { PrizePodium } from "@/components/torneos/PrizeBadge";
 import { RegisterButton } from "@/components/torneos/RegisterButton";
-import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
+import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
+import type { Tournament, TournamentPrize, Game, Bracket, BracketParticipant, BracketMatch } from "@/types/database.types";
 
 type TournamentFull = Tournament & {
   games:             Pick<Game, "id" | "name"> | null;
@@ -72,6 +73,27 @@ export async function generateMetadata(
   };
 }
 
+async function fetchBracket(tournamentId: number): Promise<{
+  bracket: Bracket;
+  participants: BracketParticipant[];
+  matches: BracketMatch[];
+} | null> {
+  const { data: bracket } = await supabase
+    .from("brackets")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .maybeSingle();
+  if (!bracket) return null;
+
+  const [{ data: participants }, { data: matches }] = await Promise.all([
+    supabase.from("bracket_participants").select("*").eq("bracket_id", bracket.id).order("seed"),
+    supabase.from("bracket_matches").select("*").eq("bracket_id", bracket.id)
+      .order("bracket_side").order("round").order("match_number"),
+  ]);
+
+  return { bracket, participants: participants ?? [], matches: matches ?? [] };
+}
+
 export default async function TournamentDetailPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
@@ -80,6 +102,7 @@ export default async function TournamentDetailPage(
   if (!t) notFound();
 
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
+  const bracketData = await fetchBracket(t.id);
 
   return (
     <section className="py-12 px-8 md:px-16 bg-background min-h-screen">
@@ -210,6 +233,16 @@ export default async function TournamentDetailPage(
           </div>
         </div>
       </div>
+
+      {/* Bracket */}
+      {bracketData && (
+        <div className="mt-12">
+          <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">Bracket</p>
+          <div className="bg-surface-container p-4 md:p-6">
+            <TournamentBracketView data={bracketData} />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

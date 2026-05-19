@@ -99,6 +99,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/user/stream-token-v2` | Privy user | Signed CF JWT for `course_sessions.video_uid` — enrollment required |
 | `GET /api/user/course-session` | Privy user | Session data + links + doc metadata for enrolled user (`?sessionId=N`) |
 | `GET /api/user/course-document` | Privy user | 1-hour signed Supabase Storage URL for a session document (`?id=N`) — enrollment required |
+| `GET /api/tournaments/[slug]/bracket` | Public | Returns bracket + participants + matches by tournament slug (null if no bracket exists) |
+| `GET\|POST\|PATCH\|DELETE /api/admin/brackets` | isAdmin | GET fetch bracket+participants+matches; POST seed from registrations (2-phase: insert rows then wire next_match_id pointers, auto-advance byes); PATCH record scores + advance winner/loser; DELETE reset bracket (CASCADE) |
 
 ---
 
@@ -138,6 +140,9 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `international_tournaments` | name, organizer, date, country, city, game_id FK (nullable → games), registration_link, image_url, description, is_active, sort_order — no prizes/registrations/capacity lifecycle |
 | `tournament_results` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), position (1–3), points, awarded_by, prize_status (prize_delivery_status: no_prize/pending/sent — auto-set on INSERT from tournament_prizes), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url — UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW: user_profile_id, username, nombre, apellidos, gold_count, silver_count, bronze_count, total_points — ordered by points DESC then gold_count DESC |
+| `brackets` | id (bigint PK), tournament_id FK → tournaments (UNIQUE CASCADE), format (bracket_format enum: single_elimination/double_elimination), status (bracket_status enum: draft/published/in_progress/completed), participant_count, rounds_winners, rounds_losers, created_at, updated_at |
+| `bracket_participants` | id (bigint PK), bracket_id FK → brackets (CASCADE), seed (1-based), display_name, user_profile_id FK → user_profiles (nullable), eliminated (bool default false), created_at |
+| `bracket_matches` | id (bigint PK), bracket_id FK → brackets (CASCADE), bracket_side (text: winners/losers/grand_final), round, match_number, p1_id/p2_id FK → bracket_participants (nullable), p1_score/p2_score, winner_id/loser_id FK → bracket_participants, state (match_state enum: pending/ready/in_progress/completed/bye), p1_source/p2_source (slot_source enum: seed/winner_of/loser_of/bye), p1_source_match_id/p2_source_match_id self-ref, next_match_id self-ref (where winner advances), next_match_slot (1 or 2), next_loser_match_id self-ref (DE — where loser drops), next_loser_slot, created_at, updated_at |
 
 **Schema source of truth:** `src/types/database.types.ts` — keep this in sync with the live Supabase schema after any migration.
 

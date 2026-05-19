@@ -98,6 +98,7 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | User onboarding | `/app`, `/admin/referral-codes` |
 | Brand logos | `/`, `/admin/brand-logos` |
 | Tournaments | `/torneos`, `/admin/torneos` |
+| Brackets | `/torneos`, `/admin/tournament-brackets` |
 
 ## All admin routes
 
@@ -126,6 +127,7 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/users` | `AdminUsersClient` | `/api/admin/users` | GET/POST/DELETE |
 | `/admin/brand-logos` | `AdminBrandLogosClient` | `/api/admin/brand-logos` | GET/POST/PUT/DELETE |
 | `/admin/torneos` | `AdminTorneosClient` | `/api/admin/tournaments` | GET/POST/PUT/DELETE |
+| `/admin/tournament-brackets` | `AdminTournamentBracketsClient` | `/api/admin/brackets` | GET/POST/PATCH/DELETE |
 
 **Special endpoints:**
 - `/api/admin/upload` — POST multipart/form-data → Supabase Storage `images` bucket → returns `{ url }`
@@ -134,14 +136,15 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 
 ## Admin sidebar groups (AdminSidebar.tsx)
 
-Sidebar is organized into 4 labeled groups:
+Sidebar is organized into 5 labeled groups:
 
 | Group | Items |
 |-------|-------|
-| **Sitio Web** | Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters, Imágenes del Sitio, Logos Banner, Torneos |
-| **Academia & App** | Cursos (includes inline content management), 1UP Pass, Descuentos, Inscripciones |
-| **OTC / Tokens** | Órdenes $1UP, Cuentas Bancarias |
-| **Sistema** | Usuarios Privy, Referidos, Aliados, Solicitudes, Admins |
+| **Sitio Web** | Juegos, Gaming Tower, Aliados, Imágenes Sitio, Redes |
+| **Competiciones** | Torneos, Inscripciones, Brackets, Hall of Fame, Intl. Torneos, Jugadores, Competiciones |
+| **Academia** | Masters, Cursos, Inscripciones, Descuentos |
+| **1UP Pass & Tokens** | 1UP Pass, Órdenes Pass, Órdenes $1UP, Cuentas Banco |
+| **Sistema** | Usuarios Privy, Perfiles App, Referidos, Solicitudes, Admins |
 
 > `Pass Benefits` was removed as a standalone page — benefits are now managed inline inside `/admin/1pass`.
 

@@ -61,6 +61,171 @@ export type Database = {
           },
         ]
       }
+      bracket_matches: {
+        Row: {
+          bracket_id:          number
+          bracket_side:        string
+          created_at:          string
+          id:                  number
+          loser_id:            number | null
+          match_number:        number
+          next_loser_match_id: number | null
+          next_loser_slot:     number | null
+          next_match_id:       number | null
+          next_match_slot:     number | null
+          p1_id:               number | null
+          p1_score:            number | null
+          p1_source:           Database["public"]["Enums"]["slot_source"] | null
+          p1_source_match_id:  number | null
+          p2_id:               number | null
+          p2_score:            number | null
+          p2_source:           Database["public"]["Enums"]["slot_source"] | null
+          p2_source_match_id:  number | null
+          round:               number
+          state:               Database["public"]["Enums"]["match_state"]
+          updated_at:          string
+          winner_id:           number | null
+        }
+        Insert: {
+          bracket_id:          number
+          bracket_side?:       string
+          created_at?:         string
+          id?:                 number
+          loser_id?:           number | null
+          match_number:        number
+          next_loser_match_id?: number | null
+          next_loser_slot?:    number | null
+          next_match_id?:      number | null
+          next_match_slot?:    number | null
+          p1_id?:              number | null
+          p1_score?:           number | null
+          p1_source?:          Database["public"]["Enums"]["slot_source"] | null
+          p1_source_match_id?: number | null
+          p2_id?:              number | null
+          p2_score?:           number | null
+          p2_source?:          Database["public"]["Enums"]["slot_source"] | null
+          p2_source_match_id?: number | null
+          round:               number
+          state?:              Database["public"]["Enums"]["match_state"]
+          updated_at?:         string
+          winner_id?:          number | null
+        }
+        Update: {
+          bracket_id?:         number
+          bracket_side?:       string
+          created_at?:         string
+          id?:                 number
+          loser_id?:           number | null
+          match_number?:       number
+          next_loser_match_id?: number | null
+          next_loser_slot?:    number | null
+          next_match_id?:      number | null
+          next_match_slot?:    number | null
+          p1_id?:              number | null
+          p1_score?:           number | null
+          p1_source?:          Database["public"]["Enums"]["slot_source"] | null
+          p1_source_match_id?: number | null
+          p2_id?:              number | null
+          p2_score?:           number | null
+          p2_source?:          Database["public"]["Enums"]["slot_source"] | null
+          p2_source_match_id?: number | null
+          round?:              number
+          state?:              Database["public"]["Enums"]["match_state"]
+          updated_at?:         string
+          winner_id?:          number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_matches_bracket_id_fkey"
+            columns: ["bracket_id"]
+            isOneToOne: false
+            referencedRelation: "brackets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bracket_participants: {
+        Row: {
+          bracket_id:      number
+          created_at:      string
+          display_name:    string
+          eliminated:      boolean
+          id:              number
+          seed:            number
+          user_profile_id: number | null
+        }
+        Insert: {
+          bracket_id:       number
+          created_at?:      string
+          display_name:     string
+          eliminated?:      boolean
+          id?:              number
+          seed:             number
+          user_profile_id?: number | null
+        }
+        Update: {
+          bracket_id?:      number
+          created_at?:      string
+          display_name?:    string
+          eliminated?:      boolean
+          id?:              number
+          seed?:            number
+          user_profile_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_participants_bracket_id_fkey"
+            columns: ["bracket_id"]
+            isOneToOne: false
+            referencedRelation: "brackets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brackets: {
+        Row: {
+          created_at:        string
+          format:            Database["public"]["Enums"]["bracket_format"]
+          id:                number
+          participant_count: number
+          rounds_losers:     number
+          rounds_winners:    number
+          status:            Database["public"]["Enums"]["bracket_status"]
+          tournament_id:     number
+          updated_at:        string
+        }
+        Insert: {
+          created_at?:        string
+          format?:            Database["public"]["Enums"]["bracket_format"]
+          id?:                number
+          participant_count?: number
+          rounds_losers?:     number
+          rounds_winners?:    number
+          status?:            Database["public"]["Enums"]["bracket_status"]
+          tournament_id:      number
+          updated_at?:        string
+        }
+        Update: {
+          created_at?:        string
+          format?:            Database["public"]["Enums"]["bracket_format"]
+          id?:                number
+          participant_count?: number
+          rounds_losers?:     number
+          rounds_winners?:    number
+          status?:            Database["public"]["Enums"]["bracket_status"]
+          tournament_id?:     number
+          updated_at?:        string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brackets_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_users: {
         Row: {
           added_by: string | null
@@ -1591,10 +1756,18 @@ export type Database = {
         Args: { privy_uid: string; tour_id: number; user_pid: number }
         Returns: Json
       }
+      report_match_result: {
+        Args: { p_match_id: number; p_p1_score: number; p_p2_score: number }
+        Returns: Json
+      }
     }
     Enums: {
+      bracket_format: "single_elimination" | "double_elimination"
+      bracket_status: "draft" | "published" | "in_progress" | "completed"
       discount_applies_to: "courses" | "pass" | "all"
       discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
+      match_state: "pending" | "ready" | "in_progress" | "completed" | "bye"
+      slot_source: "seed" | "winner_of" | "loser_of" | "bye"
       pass_order_status:
         | "pending_tx"
         | "confirmed"
@@ -1734,7 +1907,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      bracket_format: ["single_elimination", "double_elimination"],
+      bracket_status: ["draft", "published", "in_progress", "completed"],
       discount_applies_to: ["courses", "pass", "all"],
+      match_state: ["pending", "ready", "in_progress", "completed", "bye"],
+      slot_source: ["seed", "winner_of", "loser_of", "bye"],
       discount_trigger: ["comfenalco", "promo_code", "manual", "auto"],
       pass_order_status: [
         "pending_tx",
@@ -1784,6 +1961,15 @@ export type TournamentRegistration   = Database["public"]["Tables"]["tournament_
 export type InternationalTournament  = Database["public"]["Tables"]["international_tournaments"]["Row"];
 export type TournamentResult         = Database["public"]["Tables"]["tournament_results"]["Row"];
 export type PrizeDeliveryStatus      = Database["public"]["Enums"]["prize_delivery_status"];
+
+// Bracket aliases
+export type Bracket             = Database["public"]["Tables"]["brackets"]["Row"];
+export type BracketParticipant  = Database["public"]["Tables"]["bracket_participants"]["Row"];
+export type BracketMatch        = Database["public"]["Tables"]["bracket_matches"]["Row"];
+export type BracketFormat       = Database["public"]["Enums"]["bracket_format"];
+export type BracketStatus       = Database["public"]["Enums"]["bracket_status"];
+export type MatchState          = Database["public"]["Enums"]["match_state"];
+export type SlotSource          = Database["public"]["Enums"]["slot_source"];
 
 // New course hierarchy aliases
 export type CourseModule          = Database["public"]["Tables"]["course_modules"]["Row"];

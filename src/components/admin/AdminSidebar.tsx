@@ -28,6 +28,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/torneos",                  icon: "emoji_events",  label: "Torneos"          },
       { href: "/admin/tournament-registrations", icon: "how_to_reg",    label: "Inscripciones"    },
+      { href: "/admin/tournament-brackets",      icon: "account_tree",  label: "Brackets"         },
       { href: "/admin/tournament-results",       icon: "leaderboard",   label: "Hall of Fame"     },
       { href: "/admin/torneos-internacionales",  icon: "public",        label: "Intl. Torneos"    },
       { href: "/admin/players",                  icon: "groups",        label: "Jugadores"        },

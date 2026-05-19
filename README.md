@@ -173,6 +173,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 16. `pass_orders_bank_transfer_support` — `tx_hash` made nullable; adds `payment_method` (default 'token'), `bank_account_id` FK to `bank_accounts`, `comprobante_url`, `rejection_reason`; adds `pending_bank` to `pass_order_status` enum
 17. `add_pass_status_to_user_profiles` — adds `pass_status_enum` (`never | active | expired`) + `pass_status` column to `user_profiles` (default `'never'`, indexed); trigger `trg_sync_pass_status` auto-syncs on every `pass_orders` INSERT/UPDATE; existing users backfilled
 18. `schedule_pass_status_nightly_expiry` — enables `pg_cron`; schedules `expire-1up-passes` job at `0 4 * * *` UTC to flip `active → expired` for lapsed passes
+19. `create_tournament_brackets` — `brackets` (one per tournament, unique), `bracket_matches` (with self-referential next_match_id / next_loser_match_id), `bracket_participants` tables; enums `bracket_format`, `bracket_status`, `match_state`, `slot_source`
 
 ### 4. Start the dev server
 
@@ -255,6 +256,7 @@ npm run dev
 | `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
+| `/admin/tournament-brackets` | Bracket management — select tournament → seed bracket from registered participants → enter match scores round by round. Supports double and single elimination. |
 | `/admin/tournament-results` | Podium results — select tournament → assign 1°/2°/3° from registered players → save points (10/5/3 default, custom override) |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |

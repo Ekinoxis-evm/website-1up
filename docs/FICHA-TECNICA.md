@@ -6,7 +6,7 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.4 |
+| **Versión** | 2.5 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | Mayo 2026 |
 | **Clasificación** | Público / Para presentación institucional |
@@ -45,13 +45,13 @@ Adicionalmente, la plataforma cuenta con una **capa blockchain construida y list
 1UP Gaming Tower es una plataforma tecnológica integral que soporta la operación del primer hub profesional de esports en Colombia. El sistema ofrece cuatro capas funcionales:
 
 ### 2.1 Portal público (`1upesports.org`)
-Presentación institucional del hub: programas académicos, equipos profesionales, torneos, oferta recreativa y catálogo de juegos por piso. Incluye flujo completo de registro a torneos con confirmación por email y archivo `.ics` de calendario.
+Presentación institucional del hub: programas académicos, equipos profesionales, torneos, oferta recreativa y catálogo de juegos por piso. Incluye flujo completo de registro a torneos con confirmación por email y archivo `.ics` de calendario. Las páginas de detalle de torneo muestran el **bracket visual** (eliminación simple o doble) cuando existe uno publicado, renderizado en tiempo real con el estado actual de los matches.
 
 ### 2.2 Panel de usuario (`app.1upesports.org`)
 Espacio personal para miembros registrados: gestión de identidad digital, wallet de tokens $1UP, inscripción y seguimiento de torneos, adquisición del **1UP Pass** (membresía), historial de compras y ajustes de cuenta. Requiere autenticación mediante Privy.
 
 ### 2.3 Panel administrativo (`admin.1upesports.org`)
-Consola de gestión interna para el equipo operativo de 1UP: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido y logos de marca. Incluye el **editor de cursos por módulos y sesiones** — wizard de dos pestañas (Información + Contenido) para construir la jerarquía completa de cada curso: módulos ordenables por drag-and-drop, sesiones con video en Cloudflare Stream, documentos descargables y links de apoyo. Requiere autenticación Privy + rol de administrador verificado.
+Consola de gestión interna para el equipo operativo de 1UP: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido y logos de marca. Incluye el **editor de cursos por módulos y sesiones** — wizard de dos pestañas (Información + Contenido) para construir la jerarquía completa de cada curso: módulos ordenables por drag-and-drop, sesiones con video en Cloudflare Stream, documentos descargables y links de apoyo. Incluye el módulo de **gestión de brackets** — selección de torneo, generación automática del bracket desde los participantes registrados (con distribución de BYEs a las mejores semillas), registro de resultados match a match con avance automático de ganadores y perdedores, soporte para eliminación doble y simple. Requiere autenticación Privy + rol de administrador verificado.
 
 ### 2.4 Capa blockchain (`gaming-tower-scs` — construida, pendiente de integración)
 Conjunto de contratos inteligentes en Solidity desplegados en Base (L2 sobre Ethereum) que habilitarán: identidad on-chain renovable, retos competitivos con escrow tokenizado y certificación de cursos como NFT. La integración con el sitio web es parte de la **hoja de ruta técnica** — la capa está construida y testeada, su activación depende de decisión de negocio.
@@ -136,6 +136,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | Interacción blockchain | viem | 2.47.x |
 | Generación de QR | qrcode.react | latest |
 | Lectura de QR | html5-qrcode | latest |
+| Visualización de brackets | @g-loot/react-tournament-brackets | 1.0.31-rc |
 
 ### 5.2 Backend / Capa de API
 
@@ -158,7 +159,7 @@ Respuestas directas a las preguntas estándar de due diligence tecnológico.
 | Componente | Proveedor | Detalles |
 |-----------|---------|---------|
 | Base de datos relacional | **Supabase (PostgreSQL)** | Managed cloud — Región: us-east-1 |
-| Row-Level Security (RLS) | Supabase | Habilitado en las 27 tablas del esquema público — primera línea de seguridad |
+| Row-Level Security (RLS) | Supabase | Habilitado en las 30 tablas del esquema público — primera línea de seguridad |
 | Almacenamiento — imágenes | **Supabase Storage** (`images`) | Bucket público — fotos, portadas, logos. Máx. 5 MB por archivo |
 | Almacenamiento — comprobantes | **Supabase Storage** (`comprobantes`) | Bucket **privado** — comprobantes de pago (token, pass, cursos). Sin URL permanente; acceso exclusivo vía URLs firmadas de 1 hora generadas server-side |
 | Almacenamiento — documentos de cursos | **Supabase Storage** (`course-docs`) | Bucket **privado** — documentos descargables de sesiones de academia (PDF, ZIP, DOCX, PPTX, XLSX, imágenes). Máx. 25 MB por archivo. URLs firmadas de 1 hora, solo tras verificar inscripción activa |
@@ -316,6 +317,7 @@ La plataforma expone una API REST interna (consumida por sus propios frontends) 
 | `/api/admin/tournaments` | GET, POST, PUT, DELETE | CRUD de torneos |
 | `/api/admin/tournament-registrations` | GET, PATCH | Listado de inscripciones / actualizar estado |
 | `/api/admin/tournament-results` | GET, POST, PATCH, DELETE | Gestión de podio (posiciones 1–3) + entrega de premios (prize_status, tx_hash, comprobante) |
+| `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets: GET fetch bracket+participantes+matches; POST genera bracket desde inscripciones (2-fase: insertar matches → cablear next_match_id); PATCH registra resultado + avanza ganador/perdedor; DELETE resetea bracket (CASCADE) |
 | `/api/admin/international-tournaments` | GET, POST, PUT, DELETE | CRUD de torneos internacionales |
 
 ### 8.4 Webhooks entrantes
@@ -344,6 +346,9 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `tournament_prizes` | Premios por posición (1–3): tipo (tokens/COP/ambos), montos |
 | `tournament_registrations` | Inscripciones a torneos: usuario, torneo, estado (registered/cancelled/attended/no_show) |
 | `tournament_results` | Resultados de podio: usuario, torneo, posición, puntos |
+| `brackets` | Bracket por torneo (UNIQUE): formato (single/double), estado (draft/published/in_progress/completed), conteo de participantes, rondas ganadores/perdedores |
+| `bracket_participants` | Participantes del bracket: seed, display_name, user_profile_id (nullable para BYEs), eliminado |
+| `bracket_matches` | Matches del bracket: lado (winners/losers/grand_final), ronda, número, p1/p2/winner/loser IDs, scores, estado, next_match_id (donde va el ganador), next_loser_match_id (donde va el perdedor en DE) |
 | `hall_of_fame` | Vista PostgreSQL (SECURITY INVOKER): ranking por puntos totales — oro, plata, bronce. Solo expone perfiles con resultado de podio — demás perfiles permanecen privados |
 | `pass_config` | Configuración del 1UP Pass: precio, wallet receptora, duración |
 | `pass_orders` | Órdenes de pass: usuario, método de pago, tx_hash, fechas, estado |
@@ -529,7 +534,7 @@ La plataforma implementa un sistema de diseño neo-brutalista personalizado, con
 |------|-----------|-------------|
 | **Autenticación** | Privy JWT | Token firmado, verificado server-side en cada request protegido |
 | **Autorización** | isAdmin() | Email verificado contra env var + tabla DB antes de toda operación admin |
-| **Base de datos** | Supabase RLS | Row-Level Security habilitado en las 27 tablas — primera línea de defensa contra acceso directo vía PostgREST con la clave anon pública |
+| **Base de datos** | Supabase RLS | Row-Level Security habilitado en las 30 tablas — primera línea de defensa contra acceso directo vía PostgREST con la clave anon pública |
 | **Rutas de API** | Service role isolation | Admin API Routes usan `supabaseAdmin` (service role) — nunca el cliente anon |
 | **Pagos** | HMAC-SHA256 | Webhooks de MercadoPago verificados por firma antes de modificar cualquier registro |
 | **Precios** | Server-side only | Los precios y descuentos se calculan exclusivamente en servidor — nunca se confían valores del frontend |
