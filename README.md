@@ -210,7 +210,8 @@ npm run dev
 | `/gaming-tower` | 6-floor breakdown, 1UP Pass benefits, per-category games showcase (category image + game cards), Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Redirects to `/` — roster removed; Masters live on `/academia` |
-| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + token/$1UP and bank transfer checkout (MercadoPago not yet active) |
+| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + token/$1UP and bank transfer checkout (MercadoPago not yet active). Each course card links to its public preview. |
+| `/academia/[courseId]` | Public course preview — hero card (image, master, stats, price), playable intro video (Cloudflare Stream, no login required), full module + session list with lock icons, `INSCRIBIRSE` CTA. Dynamic OG metadata per course. |
 | `/juegos` | Redirects to `/gaming-tower` — games integrated into Tower page |
 | `/recreativo` | Casual gaming section |
 | `/marketplace` | Coming soon — merchandise + periféricos, paga con $1UP tokens. Dynamic social links from DB. |
@@ -376,9 +377,9 @@ To activate: set `COMFENALCO_API_URL` + `COMFENALCO_API_KEY` and implement respo
 
 ---
 
-## Planned Integration — Cloudflare Stream (Academia Video)
+## Cloudflare Stream (Academia Video)
 
-Status: **planned** — architecture documented in `.claude/skills/cloudflare-stream.md`.
+Status: **active** — architecture documented in `.claude/skills/cloudflare-stream.md`. Required env vars are configured on Vercel (Production).
 
 ### Why Cloudflare Stream
 Course videos need to be gated — only enrolled users can watch, and URLs must not be shareable. Cloudflare Stream provides:
@@ -393,8 +394,9 @@ Course videos need to be gated — only enrolled users can watch, and URLs must 
 ADMIN UPLOAD
   Admin clicks "Subir Video" → POST /api/admin/stream-upload-url
     → Cloudflare API returns { uid, uploadURL }
-    → Browser PUT file directly to uploadURL (never exposes API token)
-    → Store uid in academia_content.stream_uid
+    → Browser POSTs file as multipart/form-data to uploadURL (never exposes API token)
+      NOTE: CF's direct_upload URL only accepts POST multipart — PUT silently fails
+    → Store uid in course_sessions.video_uid (or courses.intro_video_uid)
 
 USER PLAYBACK
   Enrolled user opens /app/academia/[courseId]

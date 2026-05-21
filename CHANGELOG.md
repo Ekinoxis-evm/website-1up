@@ -5,6 +5,16 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.27.1] — 2026-05-21
+
+### Fixed
+
+- **Cloudflare Stream uploads were failing in production with a 500.** The five `CF_STREAM_*` environment variables existed only in local `.env.local` and were never set on Vercel — so `process.env.CF_STREAM_API_TOKEN` was `undefined` in production and every `direct_upload` request was rejected. Added `CF_STREAM_ACCOUNT_ID`, `CF_STREAM_API_TOKEN`, `CF_STREAM_KEY_ID`, `CF_STREAM_PEM`, `NEXT_PUBLIC_CF_CUSTOMER_CODE` to Vercel Production and redeployed.
+- **Vercel build was failing for v2.26.0 and v2.27.0.** `@g-loot/react-tournament-brackets` declares a React 18 peer dependency while the project runs React 19; Vercel's plain `npm install` refused to resolve it. Added `.npmrc` with `legacy-peer-deps=true` and pinned `react-svg-pan-zoom` (the bracket library's runtime dependency) in `package.json`. This unblocked both the bracket system (v2.26.0) and the course preview (v2.27.0) deployments.
+- **`createUploadUrl` now surfaces the real Cloudflare error.** It previously threw with only the HTTP status; the CF response body (which explains *why* — bad token, account mismatch, missing permissions) was discarded. The error body is now logged and returned, and `/api/admin/stream-upload-url` returns `502` with the message instead of an opaque `500`.
+
+---
+
 ## [2.27.0] — 2026-05-21
 
 ### Added
