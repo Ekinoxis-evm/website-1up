@@ -12,6 +12,10 @@ async function checkAdmin(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { filename } = await req.json();
-  const result = await createUploadUrl(filename ?? "video");
-  return NextResponse.json(result);
+  try {
+    const result = await createUploadUrl(filename ?? "video");
+    return NextResponse.json(result);
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 502 });
+  }
 }

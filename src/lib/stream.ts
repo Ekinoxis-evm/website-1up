@@ -37,7 +37,11 @@ export async function createUploadUrl(filename: string): Promise<{ uid: string; 
       }),
     }
   );
-  if (!res.ok) throw new Error(`CF Stream upload URL error: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`CF Stream direct_upload failed: ${res.status}`, body);
+    throw new Error(`CF Stream upload URL error: ${res.status} — ${body}`);
+  }
   const json = await res.json();
   return { uid: json.result.uid, uploadURL: json.result.uploadURL };
 }
