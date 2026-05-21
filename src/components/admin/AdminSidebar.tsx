@@ -59,8 +59,7 @@ const GROUPS: NavGroup[] = [
     label: "Sistema",
     icon: "settings",
     items: [
-      { href: "/admin/privy-users",   icon: "manage_accounts",      label: "Usuarios"     },
-      { href: "/admin/user-profiles", icon: "people",               label: "Perfiles App" },
+      { href: "/admin/user-profiles", icon: "people",               label: "Usuarios"     },
       { href: "/admin/referral-codes",icon: "confirmation_number",  label: "Referidos"    },
       { href: "/admin/submissions",   icon: "inbox",                label: "Solicitudes"  },
       { href: "/admin/users",         icon: "admin_panel_settings", label: "Admins"       },

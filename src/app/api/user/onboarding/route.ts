@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
+import { syncPrivyProfile } from "@/lib/privySync";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@/types/database.types";
 
@@ -123,6 +124,9 @@ export async function POST(req: NextRequest) {
       .update({ used_count: codeRow.used_count + 1, updated_at: new Date().toISOString() })
       .eq("id", codeRow.id);
   }
+
+  // Capture Privy identity (wallet, linked accounts, provider) onto the profile.
+  await syncPrivyProfile(claims.userId);
 
   revalidatePath("/app");
   revalidatePath("/admin/referral-codes");

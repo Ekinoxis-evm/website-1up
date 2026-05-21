@@ -6,7 +6,7 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.6 |
+| **Versión** | 2.7 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | 21 de mayo de 2026 |
 | **Clasificación** | Público / Para presentación institucional |

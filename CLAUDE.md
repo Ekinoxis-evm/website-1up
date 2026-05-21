@@ -88,6 +88,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `PUT /api/admin/social-links` | isAdmin | Footer social links update |
 | `GET /api/admin/enrollments` | isAdmin | Enrollment list |
 | `GET\|POST\|DELETE /api/admin/users` | isAdmin | Admin user management |
+| `GET /api/admin/user-detail` | isAdmin | Full activity for one user profile (`?id=N`) — registrations, enrollments, pass orders, token orders, podium results. Powers the player-detail popup on `/admin/user-profiles`. |
 | `POST /api/admin/upload` | isAdmin | Image upload → Supabase Storage |
 | `GET\|PATCH /api/admin/token-orders` | isAdmin | List token purchase orders / approve or reject |
 | `POST\|PUT\|DELETE /api/admin/bank-accounts` | isAdmin | Bank account CRUD |
@@ -141,7 +142,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color, image_url |
 | `recruitment_submissions` | name, email, phone, source |
-| `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, barrio, birth_date (DATE), onboarding_completed_at, referred_by_code, comfenalco_afiliado, verified_aliados[], pass_status (pass_status_enum: never/active/expired — auto-synced by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE; nightly pg_cron job flips active→expired at 04:00 UTC) |
+| `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, barrio, birth_date (DATE), onboarding_completed_at, referred_by_code, comfenalco_afiliado, verified_aliados[], pass_status (pass_status_enum: never/active/expired — auto-synced by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE; nightly pg_cron job flips active→expired at 04:00 UTC), **wallet_address** (Privy embedded wallet), **auth_provider** (email/google/…), **linked_accounts** (jsonb snapshot of Privy linked accounts), **privy_created_at**, **last_synced_at** — the last 5 captured from Privy by `src/lib/privySync.ts` on onboarding + throttled on profile GET |
 | `referral_codes` | code (unique), description, is_active, max_uses, used_count — optional at onboarding (addable later on /app/identidad), admin-managed |
 | `aliados` | name, nit, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active — API integration partners AND visual banner sponsors. `show_in_banner = true` → appears in home marquee. `brand_logos` table was merged here. |
 | `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |

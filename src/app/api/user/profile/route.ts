@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
+import { maybeSyncPrivyProfile } from "@/lib/privySync";
 import type { TipoDocumento } from "@/lib/comfenalco";
 
 const TIPOS_DOCUMENTO: TipoDocumento[] = ["CC", "CE", "TI", "PP", "NIT"];
@@ -29,27 +30,30 @@ export async function GET(req: NextRequest) {
   const user = await getPrivyUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Upsert on first access — ensures profile exists
-  const { data, error } = await supabaseAdmin
+  // Ensure the profile row exists
+  await supabaseAdmin
     .from("user_profiles")
     .upsert(
       { privy_user_id: user.userId, email: user.email ?? null },
       { onConflict: "privy_user_id", ignoreDuplicates: true },
-    )
-    .select()
+    );
+
+  // Fetch it, then refresh Privy identity data if stale (throttled)
+  const { data: current } = await supabaseAdmin
+    .from("user_profiles")
+    .select("last_synced_at")
+    .eq("privy_user_id", user.userId)
     .single();
 
-  if (error) {
-    // Row already exists — fetch it
-    const { data: existing } = await supabaseAdmin
-      .from("user_profiles")
-      .select("*")
-      .eq("privy_user_id", user.userId)
-      .single();
-    return NextResponse.json(existing);
-  }
+  await maybeSyncPrivyProfile(user.userId, current?.last_synced_at);
 
-  return NextResponse.json(data);
+  const { data: profile } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .eq("privy_user_id", user.userId)
+    .single();
+
+  return NextResponse.json(profile);
 }
 
 // ── PUT /api/user/profile ────────────────────────────────────────

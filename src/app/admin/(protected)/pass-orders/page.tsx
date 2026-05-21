@@ -13,7 +13,7 @@ export default async function AdminPassOrdersPage() {
       .limit(400),
     supabaseAdmin
       .from("user_profiles")
-      .select("id, nombre, apellidos, email, privy_user_id")
+      .select("id, nombre, apellidos, email, privy_user_id, wallet_address")
       .not("onboarding_completed_at", "is", null)
       .order("nombre"),
     supabaseAdmin.from("pass_config").select("duration_days").eq("id", 1).single(),

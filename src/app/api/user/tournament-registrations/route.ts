@@ -35,10 +35,16 @@ export async function POST(req: NextRequest) {
   // Resolve user_profile_id
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("id, nombre, apellidos")
+    .select("id, nombre, apellidos, onboarding_completed_at")
     .eq("privy_user_id", privyUserId)
     .single();
   if (!profile) return NextResponse.json({ error: "Perfil no encontrado. Completa el onboarding primero." }, { status: 404 });
+  if (!profile.onboarding_completed_at) {
+    return NextResponse.json(
+      { error: "Completa tu registro antes de inscribirte en un torneo.", reason: "onboarding_incomplete" },
+      { status: 403 },
+    );
+  }
 
   // Atomic registration via RPC (checks capacity + uniqueness)
   const { data: result, error: rpcError } = await supabaseAdmin.rpc("register_for_tournament", {

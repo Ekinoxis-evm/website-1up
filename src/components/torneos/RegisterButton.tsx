@@ -23,6 +23,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [registered, setRegistered] = useState(isRegistered);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [calendarModal, setCalendarModal] = useState<{ googleUrl: string } | null>(null);
 
   // Sync prop (parent refreshes after fetching registeredIds)
@@ -70,8 +71,8 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
           setLoading(false);
           return;
         }
-        if (res.status === 404) {
-          setError("Completa tu perfil en la app para inscribirte.");
+        if (res.status === 404 || data.reason === "onboarding_incomplete") {
+          setNeedsOnboarding(true);
         } else {
           setError(data.error ?? "Error al inscribirse.");
         }
@@ -87,6 +88,23 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
       setError("Error de conexión. Intenta de nuevo.");
       setLoading(false);
     }
+  }
+
+  // Onboarding incomplete — send them to finish it
+  if (needsOnboarding) {
+    return (
+      <div className="flex flex-col gap-1">
+        <a
+          href={`${APP_URL}/onboarding`}
+          className={`inline-block bg-primary-container text-white font-headline font-black skew-fix hover:neo-shadow-pink transition-all ${compact ? "text-xs px-4 py-2" : "text-sm px-6 py-2.5"}`}
+        >
+          <span className="block skew-content">COMPLETAR REGISTRO</span>
+        </a>
+        <p className="font-body text-xs text-on-surface-variant">
+          Termina tu registro para inscribirte en torneos.
+        </p>
+      </div>
+    );
   }
 
   // Already registered

@@ -33,6 +33,7 @@ type UserProfile = {
   apellidos: string | null;
   email: string | null;
   privy_user_id: string;
+  wallet_address: string | null;
 };
 
 interface Props {
@@ -188,7 +189,7 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
       body: JSON.stringify({
         userProfileId: grantUser.id,
         privyUserId:   grantUser.privy_user_id,
-        walletAddress: "",
+        walletAddress: grantUser.wallet_address ?? "",
         startedAt:     new Date(grantStart + "T00:00:00").toISOString(),
         durationDays:  days,
         adminNotes:    grantNotes || undefined,
@@ -527,6 +528,16 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
                         {[grantUser.nombre, grantUser.apellidos].filter(Boolean).join(" ") || grantUser.email}
                       </p>
                       <p className="font-body text-[10px] text-outline">{grantUser.email} · ID #{grantUser.id}</p>
+                      <p className="font-body text-[10px] text-outline mt-0.5">
+                        Wallet:{" "}
+                        {grantUser.wallet_address ? (
+                          <span className="font-mono text-on-surface-variant">
+                            {grantUser.wallet_address.slice(0, 6)}…{grantUser.wallet_address.slice(-4)}
+                          </span>
+                        ) : (
+                          <span className="text-outline/60">sin wallet registrada</span>
+                        )}
+                      </p>
                     </div>
                     <button
                       onClick={() => { setGrantUser(null); setGrantSearch(""); }}

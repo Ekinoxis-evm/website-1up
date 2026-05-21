@@ -5,6 +5,20 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.28.0] — 2026-05-21
+
+### Added
+
+- **Privy identity captured into the database.** `user_profiles` gains five columns — `wallet_address`, `auth_provider`, `linked_accounts` (jsonb), `privy_created_at`, `last_synced_at`. A new helper `src/lib/privySync.ts` (`syncPrivyProfile` / `maybeSyncPrivyProfile`) pulls each user's wallet, linked accounts and login method from the Privy server SDK and persists them. Wired into onboarding completion (always) and `GET /api/user/profile` (throttled to once per hour). Existing users backfilled via `scripts/backfill-privy-profiles.mjs`.
+- **Unified admin "Usuarios" view with full player cards.** `/admin/user-profiles` is now the single user view: searchable table (name, email, wallet, login method, pass, onboarding) with clickable rows opening a detail popup. The card shows identity (wallet, provider, Privy since), profile data, status, and full activity — tournament registrations, course enrollments, pass orders, token orders, podium results — fetched via the new `GET /api/admin/user-detail`. The redundant `/admin/privy-users` page now redirects here.
+
+### Fixed
+
+- **Tournament registration no longer allowed before onboarding is complete.** `POST /api/user/tournament-registrations` only checked that a profile row existed, so half-onboarded users could register. It now requires `onboarding_completed_at`; `RegisterButton` shows a "Completar registro" CTA linking to onboarding.
+- **Admin "Conceder 1UP Pass" no longer errors.** The grant modal sent an empty `walletAddress` and the API hard-rejected it. The wallet is now auto-filled from the user's `user_profiles.wallet_address`, shown in the modal, and the API treats it as optional for admin grants (no on-chain transaction occurs).
+
+---
+
 ## [2.27.1] — 2026-05-21
 
 ### Fixed

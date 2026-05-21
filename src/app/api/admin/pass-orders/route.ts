@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
   };
 
   const { userProfileId, privyUserId, walletAddress, startedAt, durationDays, adminNotes } = body;
-  if (!userProfileId || !privyUserId || !walletAddress || !startedAt || !durationDays) {
+  // walletAddress is optional for admin grants — no on-chain transaction happens.
+  // It is auto-filled from the user's prior orders when available, else left blank.
+  if (!userProfileId || !privyUserId || !startedAt || !durationDays) {
     return NextResponse.json({ error: "Faltan campos requeridos." }, { status: 400 });
   }
 
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_profile_id:        userProfileId,
       privy_user_id:          privyUserId,
-      wallet_address:         walletAddress,
+      wallet_address:         walletAddress || "",
       recipient_address:      config?.recipient_address ?? "",
       payment_method:         "admin_grant",
       token_amount_paid:      0,
