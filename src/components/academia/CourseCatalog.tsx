@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
@@ -220,7 +221,7 @@ export function CourseCatalog({ courses, masters }: Props) {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between mt-4">
+                <div className="flex items-end justify-between gap-3 mt-4">
                   {/* Price */}
                   <div>
                     <div className="font-headline font-black text-primary text-lg">
@@ -236,19 +237,28 @@ export function CourseCatalog({ courses, masters }: Props) {
                     )}
                   </div>
 
-                  {/* Enroll button */}
-                  {course.price_cop ? (
-                    <button
-                      onClick={() => handleEnroll(course)}
-                      className="font-headline font-black text-xs px-5 py-2 skew-fix transition-all bg-primary-container text-white hover:neo-shadow-pink"
+                  {/* Actions */}
+                  <div className="flex flex-col items-end gap-2">
+                    <Link
+                      href={`/academia/${course.id}`}
+                      className="font-headline font-bold text-[11px] uppercase tracking-widest text-on-surface-variant hover:text-primary-container flex items-center gap-1"
                     >
-                      <span className="block skew-content">
-                        {authenticated ? "INSCRIBIRSE" : "LOGIN"}
-                      </span>
-                    </button>
-                  ) : (
-                    <span className="font-headline text-xs text-outline uppercase tracking-widest">Pronto</span>
-                  )}
+                      Ver curso
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                    {course.price_cop ? (
+                      <button
+                        onClick={() => handleEnroll(course)}
+                        className="font-headline font-black text-xs px-5 py-2 skew-fix transition-all bg-primary-container text-white hover:neo-shadow-pink"
+                      >
+                        <span className="block skew-content">
+                          {authenticated ? "INSCRIBIRSE" : "LOGIN"}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="font-headline text-xs text-outline uppercase tracking-widest">Pronto</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

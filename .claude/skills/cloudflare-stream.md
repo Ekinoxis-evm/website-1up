@@ -32,7 +32,7 @@ Admin opens a course in /admin/courses → opens a content item in the inline co
   → POST /api/admin/stream-upload-url         (isAdmin)
     → calls CF API: POST /accounts/{id}/stream/direct_upload
     → returns { uploadURL, uid }
-  → browser PUT file directly to uploadURL    (never exposes API token)
+  → browser POST file directly to uploadURL as multipart/form-data (never exposes API token)
   → store uid in academia_content.stream_uid
 
 USER PLAYBACK
@@ -229,7 +229,7 @@ In `AdminAcademiaContentClient`:
    - **Subir a Stream** — file input button
 2. On file select:
    - Call `POST /api/admin/stream-upload-url { filename }` → get `{ uid, uploadURL }`
-   - `PUT` the file directly to `uploadURL` (show progress bar)
+   - `POST` the file directly to `uploadURL` as `multipart/form-data` with a `file` field (show progress bar) — `PUT` is NOT supported by Cloudflare's `direct_upload` endpoint and silently fails
    - On success: set `streamUid = uid`, show "✓ Video subido" badge
 3. On save: persist `stream_uid` to DB via `POST/PUT /api/admin/academia-content`
 

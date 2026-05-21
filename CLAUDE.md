@@ -33,6 +33,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/torneos/[slug]` | `(main)` | Tournament detail — cover, badges, prizes podium, sponsor strip, RegisterButton CTA. `generateMetadata` with per-tournament OG. Numeric ID fallback for old QR codes/bookmarks. |
 | `/torneos/[slug]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin. Numeric ID fallback for old QR codes. |
 | `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + token/bank checkout (MercadoPago not yet active) |
+| `/academia/[courseId]` | `(main)` | Public course preview — hero card (image, master, stats, price), playable intro video (CF Stream signed token via `/api/public/course-intro-token`), full module + session list with lock icons, INSCRIBIRSE CTA. `generateMetadata` with per-course OG. |
 | `/recreativo` | `(main)` | Casual gaming |
 | `/perfil` | `(main)` | Legacy — redirects to app subdomain |
 | `app/login` | `app/` | Public login page — `safeRedirectTarget()` allowlist, redirects back to `?redirect=` URL after auth |
@@ -95,7 +96,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST\|PUT\|DELETE /api/admin/course-session-links` | isAdmin | Session support link CRUD |
 | `POST /api/admin/course-doc-upload` | isAdmin | Multipart upload of a session document to `course-docs` private bucket (pending path). Returns `{ path, mimeType, sizeBytes, label }` |
 | `POST\|DELETE /api/admin/course-session-documents` | isAdmin | Insert DB row for uploaded doc / delete doc (removes storage object + row) |
-| `POST /api/user/course-intro-token` | Privy user | Signed CF JWT for `courses.intro_video_uid` — no enrollment required (preview) |
+| `POST /api/user/course-intro-token` | Privy user | Signed CF JWT for `courses.intro_video_uid` — no enrollment required (used inside the protected app shell) |
+| `POST /api/public/course-intro-token` | Public | Signed CF JWT for `courses.intro_video_uid` — no auth, used by the public `/academia/[courseId]` preview page. Safe because tokens are 1h-scoped to a single video UID and the video has `requireSignedURLs: true`. |
 | `POST /api/user/stream-token-v2` | Privy user | Signed CF JWT for `course_sessions.video_uid` — enrollment required |
 | `GET /api/user/course-session` | Privy user | Session data + links + doc metadata for enrolled user (`?sessionId=N`) |
 | `GET /api/user/course-document` | Privy user | 1-hour signed Supabase Storage URL for a session document (`?id=N`) — enrollment required |
