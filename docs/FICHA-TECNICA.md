@@ -6,9 +6,9 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.5 |
+| **Versión** | 2.6 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | Mayo 2026 |
+| **Última actualización** | 21 de mayo de 2026 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -45,7 +45,7 @@ Adicionalmente, la plataforma cuenta con una **capa blockchain construida y list
 1UP Gaming Tower es una plataforma tecnológica integral que soporta la operación del primer hub profesional de esports en Colombia. El sistema ofrece cuatro capas funcionales:
 
 ### 2.1 Portal público (`1upesports.org`)
-Presentación institucional del hub: programas académicos, equipos profesionales, torneos, oferta recreativa y catálogo de juegos por piso. Incluye flujo completo de registro a torneos con confirmación por email y archivo `.ics` de calendario. Las páginas de detalle de torneo muestran el **bracket visual** (eliminación simple o doble) cuando existe uno publicado, renderizado en tiempo real con el estado actual de los matches.
+Presentación institucional del hub: programas académicos, equipos profesionales, torneos, oferta recreativa y catálogo de juegos por piso. Incluye flujo completo de registro a torneos con confirmación por email y archivo `.ics` de calendario. Las páginas de detalle de torneo muestran el **bracket visual** (eliminación simple o doble) cuando existe uno publicado, renderizado en tiempo real con el estado actual de los matches. Cada curso de la Academia cuenta con una **página pública de preview** (`/academia/[courseId]`) que muestra video de presentación reproducible (Cloudflare Stream con token firmado), información del master, precio, y el temario completo (módulos y sesiones con candado) — diseñada para indexación SEO y compartición por redes.
 
 ### 2.2 Panel de usuario (`app.1upesports.org`)
 Espacio personal para miembros registrados: gestión de identidad digital, wallet de tokens $1UP, inscripción y seguimiento de torneos, adquisición del **1UP Pass** (membresía), historial de compras y ajustes de cuenta. Requiere autenticación mediante Privy.

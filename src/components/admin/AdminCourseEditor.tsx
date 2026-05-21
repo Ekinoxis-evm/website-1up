@@ -123,7 +123,10 @@ export function AdminCourseEditor({ course, masters, initialModules, initialSess
       });
       if (!r1.ok) throw new Error("No se pudo obtener la URL de subida");
       const { uid, uploadURL } = await r1.json();
-      await fetch(uploadURL, { method: "PUT", body: file });
+      const form = new FormData();
+      form.append("file", file);
+      const up = await fetch(uploadURL, { method: "POST", body: form });
+      if (!up.ok) throw new Error(`Cloudflare rechazó el video (${up.status})`);
       setInfo(prev => ({ ...prev, introVideoUid: uid }));
     } catch (e) {
       setInfoError((e as Error).message);
@@ -875,7 +878,10 @@ function SessionPanel({
       });
       if (!r1.ok) throw new Error("Error al obtener URL de subida");
       const { uid, uploadURL } = await r1.json();
-      await fetch(uploadURL, { method: "PUT", body: file });
+      const form = new FormData();
+      form.append("file", file);
+      const up = await fetch(uploadURL, { method: "POST", body: form });
+      if (!up.ok) throw new Error(`Cloudflare rechazó el video (${up.status})`);
       setVideoUid(uid);
     } catch (e) {
       setSaveError((e as Error).message);

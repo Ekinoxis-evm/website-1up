@@ -5,6 +5,26 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.27.0] — 2026-05-21
+
+### Added
+
+- **Public course preview pages** — every active course now has a dedicated SEO-indexed preview page at `/academia/[courseId]`.
+  - Per-course `generateMetadata` with OG/Twitter cards, canonical URL, and unique title/description.
+  - Hero card with image, master, stats (duration, sessions, per-session length), description, price (COP + $1UP if available) and an inline `INSCRIBIRSE` CTA that opens the existing `CourseCheckoutWizard`.
+  - Playable **intro video** preview using Cloudflare Stream — no login required. New public API `POST /api/public/course-intro-token` issues a signed 1h JWT scoped only to `courses.intro_video_uid`.
+  - Full curriculum displayed as a module accordion with per-session titles + duration and a `lock` icon indicating the content unlocks after enrollment.
+  - Sitemap (`/sitemap.xml`) now emits one entry per active course at weekly cadence.
+  - `CourseCatalog` cards now show a secondary `VER CURSO →` link alongside the existing `INSCRIBIRSE` button.
+
+### Fixed
+
+- **Cloudflare Stream video uploads were silently failing in the admin course editor.** The browser was sending `PUT` requests to CF Stream's direct-upload URL, which only accepts `POST` with `multipart/form-data`. The upload returned a non-2xx but the code didn't check `up.ok`, so the UID was saved to the DB and the admin saw a "successful" upload with no video actually stored. The video section then appeared empty alongside the "Links de apoyo" URL inputs, which is why uploading a video looked like the editor was asking for a link.
+  - Fixed in `AdminCourseEditor.tsx` (intro video + session video), and in the legacy `AdminAcademiaContentClient.tsx`.
+  - Updated `.claude/skills/cloudflare-stream.md` so future code doesn't reintroduce the bug.
+
+---
+
 ## [2.26.0] — 2026-05-19
 
 ### Added

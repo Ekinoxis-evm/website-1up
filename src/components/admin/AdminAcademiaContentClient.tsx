@@ -61,8 +61,10 @@ export function AdminAcademiaContentClient({ content, courses }: Props) {
     const { uid, uploadURL } = await res.json();
 
     setUploadProgress("Subiendo video a Cloudflare Stream...");
-    const upload = await fetch(uploadURL, { method: "PUT", body: file });
-    if (!upload.ok) { setUploadProgress("Error al subir el video."); return; }
+    const form = new FormData();
+    form.append("file", file);
+    const upload = await fetch(uploadURL, { method: "POST", body: form });
+    if (!upload.ok) { setUploadProgress(`Error al subir el video (${upload.status}).`); return; }
 
     setForm((f) => ({ ...f, streamUid: uid, url: "" }));
     setUploadProgress(`✓ Video subido — UID: ${uid}`);
