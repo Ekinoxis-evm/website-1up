@@ -23,6 +23,21 @@ const STATE_LABEL: Record<string, string> = {
   completed: "Finalizado", bye: "BYE",
 };
 
+const FORMATS = [
+  {
+    value: "single_elimination" as const,
+    icon:  "bolt",
+    label: "Eliminación Simple",
+    desc:  "Una sola derrota elimina al jugador. Más rápido — ideal para muchos participantes.",
+  },
+  {
+    value: "double_elimination" as const,
+    icon:  "replay",
+    label: "Doble Eliminación",
+    desc:  "Segunda oportunidad en el cuadro de perdedores; el jugador queda fuera tras dos derrotas.",
+  },
+];
+
 interface Props {
   tournaments: Tournament[];
 }
@@ -313,14 +328,34 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
             <div className="bg-surface-container p-5 space-y-4">
               <div>
                 <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Formato</label>
-                <select
-                  value={format}
-                  onChange={e => setFormat(e.target.value as typeof format)}
-                  className="w-full bg-surface-container-high text-on-surface font-body text-sm px-3 py-2 border-0 outline-none focus:ring-2 focus:ring-primary-container"
-                >
-                  <option value="single_elimination">Eliminación Simple</option>
-                  <option value="double_elimination">Doble Eliminación</option>
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {FORMATS.map(f => {
+                    const active = format === f.value;
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => setFormat(f.value)}
+                        className={`p-3 text-left transition-colors ${
+                          active
+                            ? "bg-primary-container/20 ring-2 ring-primary-container ring-inset"
+                            : "bg-surface-container-high hover:bg-surface-container-highest"
+                        }`}
+                      >
+                        <span
+                          className={`material-symbols-outlined text-2xl ${active ? "text-primary-container" : "text-outline"}`}
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          {f.icon}
+                        </span>
+                        <p className="font-headline font-black text-xs uppercase tracking-tight text-on-surface mt-1">
+                          {f.label}
+                        </p>
+                        <p className="font-body text-[11px] text-outline leading-snug mt-1">{f.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <button
                 onClick={createBracket}
