@@ -1,7 +1,12 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { AdminTournamentRegistrationsClient } from "@/components/admin/AdminTournamentRegistrationsClient";
 
-export default async function AdminTournamentRegistrationsPage() {
+export default async function AdminTournamentRegistrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tournamentId?: string }>;
+}) {
+  const { tournamentId } = await searchParams;
   const [{ data: registrations }, { data: tournaments }] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -18,6 +23,7 @@ export default async function AdminTournamentRegistrationsPage() {
     <AdminTournamentRegistrationsClient
       registrations={registrations ?? []}
       tournaments={tournaments ?? []}
+      initialTournamentId={tournamentId ?? ""}
     />
   );
 }

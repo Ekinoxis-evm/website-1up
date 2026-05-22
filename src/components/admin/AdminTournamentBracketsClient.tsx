@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { Bracket, BracketMatch, BracketParticipant } from "@/types/database.types";
 
-type Tournament = { id: number; name: string; status: string };
+type Tournament = {
+  id: number;
+  name: string;
+  status: string;
+  is_registration_open: boolean;
+  max_participants: number | null;
+};
 
 type BracketData = {
   bracket:      Bracket;
@@ -44,6 +52,7 @@ interface Props {
 
 export function AdminTournamentBracketsClient({ tournaments }: Props) {
   const { getAccessToken } = usePrivy();
+  const router = useRouter();
 
   const [selectedId, setSelectedId]   = useState<number | null>(null);
   const [bracketData, setBracketData] = useState<BracketData>(null);
@@ -148,11 +157,16 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
     setBusy(true); setError(null);
     try {
       const headers = await authHeaders();
-      // Draft already exists → regenerate: delete then recreate
+      // Draft already exists → regenerate: delete then recreate.
+      // The API refuses DELETE on non-draft brackets, so this only succeeds while in draft.
       if (bracketData) {
-        await fetch("/api/admin/brackets", {
+        const delRes = await fetch("/api/admin/brackets", {
           method: "DELETE", headers, body: JSON.stringify({ tournamentId: selectedId }),
         });
+        if (!delRes.ok) {
+          const delData = await delRes.json().catch(() => ({}));
+          throw new Error(delData.error ?? "No se pudo regenerar el bracket.");
+        }
       }
       const res = await fetch("/api/admin/brackets", {
         method: "POST", headers,
@@ -170,7 +184,12 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
 
   async function startTournament() {
     if (!selectedId) return;
-    if (!confirm("¿Iniciar el torneo? Los enfrentamientos iniciales quedarán bloqueados y no se podrán cambiar.")) return;
+    if (!confirm(
+      "¿Iniciar el torneo?\n\n" +
+      "• Las inscripciones se cerrarán automáticamente — no se aceptarán más participantes.\n" +
+      "• El bracket quedará bloqueado: no podrás cambiar los enfrentamientos iniciales ni regenerarlo.\n" +
+      "• El estado del torneo pasará a EN VIVO y los enfrentamientos serán públicos.",
+    )) return;
     setBusy(true); setError(null);
     try {
       const headers = await authHeaders();
@@ -180,6 +199,7 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error al iniciar el torneo");
       await load(selectedId);
+      router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -189,16 +209,20 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
 
   async function deleteBracket() {
     if (!selectedId) return;
-    if (!confirm("¿Eliminar el bracket? Esta acción no se puede deshacer.")) return;
+    if (!confirm("¿Eliminar el bracket borrador? Volverás a la selección de participantes.")) return;
     setBusy(true); setError(null);
     try {
       const headers = await authHeaders();
-      await fetch("/api/admin/brackets", {
+      const res = await fetch("/api/admin/brackets", {
         method: "DELETE", headers, body: JSON.stringify({ tournamentId: selectedId }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Error al eliminar el bracket.");
+      }
       await load(selectedId);
-    } catch {
-      setError("Error al eliminar el bracket.");
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -214,6 +238,8 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error al registrar el ganador");
       await load(selectedId!);
+      // Pull fresh tournament status — the final winner auto-completes the tournament.
+      router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -231,6 +257,7 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo deshacer");
       await load(selectedId!);
+      router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -241,6 +268,27 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
   const status = bracketData?.bracket.status;
   const isDraft   = status === "draft";
   const isRunning = status === "in_progress" || status === "completed";
+
+  const selected = selectedId ? tournaments.find(t => t.id === selectedId) ?? null : null;
+
+  // Which stage of the lifecycle this tournament is in — used to drive the banner copy.
+  // 1 Inscripciones · 2 Borrador del bracket · 3 Torneo en curso · 4 Finalizado
+  const stage: 1 | 2 | 3 | 4 | null = !selected
+    ? null
+    : selected.status === "completed"
+      ? 4
+      : status === "in_progress"
+        ? 3
+        : isDraft
+          ? 2
+          : 1;
+
+  const stageLabel: Record<1 | 2 | 3 | 4, string> = {
+    1: "Inscripciones abiertas",
+    2: "Borrador del bracket",
+    3: "Torneo en curso",
+    4: "Torneo finalizado",
+  };
 
   return (
     <div className="p-6 md:p-10 space-y-8">
@@ -262,6 +310,44 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
           {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
+
+      {/* Stage banner — the lifecycle snapshot for the selected tournament */}
+      {selected && stage !== null && (
+        <div className="bg-surface-container p-4 flex flex-wrap items-center gap-3">
+          <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${
+            stage === 3 ? "bg-primary text-background animate-pulse"
+            : stage === 4 ? "bg-surface-container-high text-outline"
+            : stage === 2 ? "bg-secondary/20 text-secondary"
+            : "bg-primary-container/20 text-primary-container"
+          }`}>
+            Etapa {stage} · {stageLabel[stage]}
+          </span>
+          <span className="font-body text-sm text-on-surface">{selected.name}</span>
+          <span className={`font-headline font-bold text-[10px] uppercase tracking-widest px-2 py-1 ${
+            selected.is_registration_open
+              ? "bg-secondary/15 text-secondary"
+              : "bg-surface-container-high text-outline"
+          }`}>
+            Inscripciones {selected.is_registration_open ? "abiertas" : "cerradas"}
+          </span>
+          {roster.length > 0 && (
+            <span className="font-body text-xs text-outline">
+              {roster.filter(e => e.included).length}
+              {selected.max_participants ? ` / ${selected.max_participants}` : ""} participantes
+              {!isRunning && roster.filter(e => !e.included).length > 0
+                ? ` · ${roster.filter(e => !e.included).length} excluidos`
+                : ""}
+            </span>
+          )}
+          <Link
+            href={`/admin/tournament-registrations?tournamentId=${selected.id}`}
+            className="ml-auto font-headline font-bold text-[10px] uppercase tracking-widest text-outline hover:text-on-surface flex items-center gap-1"
+          >
+            Ver inscripciones
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </Link>
+        </div>
+      )}
 
       {loading && (
         <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40 animate-pulse">Cargando…</p>

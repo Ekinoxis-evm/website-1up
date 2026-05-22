@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { supabaseAdmin } from "@/lib/supabase";
 import { moveComprobanteToOrder } from "@/lib/blob";
-import { isAddress } from "viem";
 import { revalidatePath } from "next/cache";
 import { sendTokenOrderEmails } from "@/lib/email";
+import { getVerifiedWallet } from "@/lib/verifiedWallet";
 
 async function getPrivyUser(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -49,10 +49,17 @@ export async function POST(req: NextRequest) {
     celular?: string;
   };
 
-  const { walletAddress, copAmount, bankAccountId, comprobantePath } = body;
+  const { walletAddress: bodyWallet, copAmount, bankAccountId, comprobantePath } = body;
 
-  if (!walletAddress || !isAddress(walletAddress))
-    return NextResponse.json({ error: "Wallet inválida" }, { status: 400 });
+  const walletLookup = await getVerifiedWallet(user.userId, bodyWallet);
+  if (!walletLookup.ok) {
+    if (walletLookup.reason === "no_wallet")
+      return NextResponse.json({ error: "Tu perfil no tiene wallet asociada. Cierra sesión y vuelve a entrar." }, { status: 400 });
+    if (walletLookup.reason === "mismatch")
+      return NextResponse.json({ error: "La wallet enviada no coincide con tu wallet verificada." }, { status: 400 });
+    return NextResponse.json({ error: "Perfil no encontrado." }, { status: 400 });
+  }
+  const walletAddress = walletLookup.wallet;
 
   if (!copAmount || !Number.isInteger(copAmount) || copAmount < 1000 || copAmount % 1000 !== 0)
     return NextResponse.json({ error: "Monto COP inválido (mínimo 1,000, múltiplo de 1,000)" }, { status: 400 });
@@ -114,7 +121,7 @@ export async function POST(req: NextRequest) {
       email:            user.email ?? "",
       nombre:           profileNombre ?? "",
       celular_contacto: profileCelular ?? "",
-      wallet_address:   walletAddress.toLowerCase(),
+      wallet_address:   walletAddress,
       cop_amount:       copAmount,
       token_amount:     tokenAmount,
       exchange_rate_cop: 1000,

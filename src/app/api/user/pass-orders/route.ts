@@ -5,6 +5,7 @@ import { verifyPassTransfer } from "@/lib/passVerifier";
 import { revalidatePath } from "next/cache";
 import { moveComprobanteToOrder } from "@/lib/blob";
 import { sendPassTokenEmails, sendPassBankEmails } from "@/lib/email";
+import { getVerifiedWallet } from "@/lib/verifiedWallet";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { txHash, walletAddress, paymentMethod, bankAccountId, comprobantePath } =
+  const { txHash, walletAddress: bodyWallet, paymentMethod, bankAccountId, comprobantePath } =
     body as {
       txHash?: string;
       walletAddress?: string;
@@ -60,6 +61,16 @@ export async function POST(req: NextRequest) {
       bankAccountId?: number;
       comprobantePath?: string;
     };
+
+  const walletLookup = await getVerifiedWallet(claims.userId, bodyWallet);
+  if (!walletLookup.ok) {
+    if (walletLookup.reason === "no_wallet")
+      return NextResponse.json({ error: "Tu perfil no tiene wallet asociada. Cierra sesión y vuelve a entrar." }, { status: 400 });
+    if (walletLookup.reason === "mismatch")
+      return NextResponse.json({ error: "La wallet enviada no coincide con tu wallet verificada." }, { status: 400 });
+    return NextResponse.json({ error: "Perfil no encontrado." }, { status: 400 });
+  }
+  const walletAddress = walletLookup.wallet;
 
   const method = paymentMethod === "bank" ? "bank" : "token";
 
@@ -71,9 +82,6 @@ export async function POST(req: NextRequest) {
   // Token (blockchain) path
   if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
     return NextResponse.json({ error: "txHash inválido." }, { status: 400 });
-  }
-  if (!walletAddress) {
-    return NextResponse.json({ error: "walletAddress es requerido." }, { status: 400 });
   }
 
   // Duplicate tx_hash guard
@@ -191,11 +199,10 @@ export async function POST(req: NextRequest) {
 
 async function handleBankOrder(
   privyUserId: string,
-  walletAddress: string | undefined,
+  walletAddress: `0x${string}`,
   bankAccountId: number | undefined,
   comprobantePath: string | undefined,
 ): Promise<NextResponse> {
-  if (!walletAddress) return NextResponse.json({ error: "walletAddress es requerido." }, { status: 400 });
   if (!bankAccountId) return NextResponse.json({ error: "Cuenta bancaria requerida." }, { status: 400 });
   if (!comprobantePath) return NextResponse.json({ error: "Comprobante requerido." }, { status: 400 });
   if (!comprobantePath.startsWith("pending/"))

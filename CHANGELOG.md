@@ -5,6 +5,118 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.1] — 2026-05-22
+
+### Changed
+
+- **Clean tournament protocol — status is now derived from the bracket, not edited.** The
+  tournament `status` column is no longer an input the admin can flip from the editor —
+  it's a *consequence* of the bracket lifecycle, eliminating the "edit could make things
+  crazy in that variable" surface:
+
+  | Phase | Bracket | `tournaments.status` | Registration |
+  |---|---|---|---|
+  | 1 Setup | none | `upcoming` | admin toggles |
+  | 2 Borrador | `draft` | `upcoming` (still) | open (still) |
+  | 3 En vivo | `in_progress` | `live` (auto on **Iniciar Torneo**) | closed (auto) |
+  | 4 Finalizado | `completed` | `completed` (auto on last winner) | closed |
+
+  - `POST /api/admin/tournaments` forces `status: 'upcoming'` on every insert — body status field ignored.
+  - `PUT /api/admin/tournaments` no longer writes `status` from the body. The status column is preserved on every edit; only the explicit **Cancelar Torneo** action (`cancelTournament: true`) is allowed to force `status: 'completed'` as a sanctioned admin-controlled end-of-life. `is_registration_open` can only be opened while status is `upcoming`; any later phase forces it closed.
+  - `PATCH /api/admin/brackets` `action: "result"` — when picking a winner that completes the bracket (`allMatches.every(state = completed)`), the tournament is auto-set to `completed` in the same transaction.
+  - `PATCH /api/admin/brackets` `action: "undo"` — if the undone match was the final-final and the tournament had been auto-completed, the tournament reverts to `live`.
+  - **Admin editor:** the **Estado** field in the tournament create/edit form is now a read-only badge with a hint pointing to the brackets page. There is no path left in the admin UI to set status directly outside the bracket lifecycle (and the cancel button).
+  - **Admin brackets client** now calls `router.refresh()` after `start`/`result`/`undo` so the stage banner re-reads the tournament status from the Server Component the moment it changes.
+
+- **Tournament lifecycle hardened — registration auto-closes when the bracket starts and
+  the structure locks after start.** The flow now matches the documented spec end-to-end:
+  *create → register → manage entries → seed draft bracket → start*.
+  - `PATCH /api/admin/brackets` `action: "start"` sets `tournaments.is_registration_open = false`
+    in the same transition that flips the bracket to `in_progress` and the tournament `status` to
+    `live`. After this point the `register_for_tournament` RPC refuses new entries because the
+    flag is false — closing the previous gap where a `live` tournament could still accept
+    registrations if the flag had been left on.
+  - `DELETE /api/admin/brackets` now refuses with `409` unless `bracket.status = 'draft'`. A
+    running or finished bracket cannot be wiped or re-seeded — preventing the silent
+    "edit-after-start" escape hatch the audit flagged. Regenerate-from-the-roster still works
+    while the bracket is in draft, exactly as before.
+  - `PUT /api/admin/tournaments` now defensively forces `is_registration_open = false` whenever
+    `status` is set to `live` or `completed`, regardless of the body flag. Status and
+    registration can no longer drift apart by accident.
+  - Bracket + tournament mutations now `revalidatePath("/torneos/[slug]", "page")` so the
+    public detail page no longer goes stale after admin actions (audit medium).
+- **Admin brackets UI redesigned around the lifecycle stage.** A new banner above the
+  selector shows *Etapa 1 Inscripciones · 2 Borrador · 3 En curso · 4 Finalizado* with the
+  tournament name, an `Inscripciones abiertas/cerradas` pill, and a `Ver inscripciones`
+  cross-link to `/admin/tournament-registrations` pre-filtered by tournament. The "Iniciar
+  Torneo" confirmation now spells out the three consequences explicitly: registration closes,
+  matchups lock, status goes live. Failed deletes/regenerations surface the server's error
+  message instead of looking successful.
+- **`/admin/tournament-registrations`** accepts a `?tournamentId=` query param to drive the
+  initial filter, and the PATCH call now checks `res.ok` and surfaces a banner error on
+  failure (audit H-12 — first half).
+
+### Security
+
+Three Critical findings from the 2026-05-22 website audit (`AUDIT.md` → C-1/C-2/C-3) are now
+fixed. The first two close a wallet-IDOR family of bugs; the third makes the MercadoPago
+webhook safe under retries.
+
+- **C-1 · Wallet IDOR on order creation.** `POST /api/user/token-orders`,
+  `POST /api/user/pass-orders` (token + bank paths), and `POST /api/user/course-orders`
+  (token + bank paths) read `walletAddress` verbatim from the request body — an attacker
+  could submit an order naming any wallet as the credit destination, and on approval the
+  $1UP tokens would have been sent to that wallet. The credited wallet is now derived
+  server-side from `user_profiles.wallet_address` (synced from Privy by
+  `src/lib/privySync.ts`). If the body still supplies a `walletAddress`, it must match the
+  profile's wallet case-insensitively or the request is rejected with `400`. A profile with
+  no synced wallet now returns a clear "wallet not associated" error instead of accepting an
+  arbitrary one. New helper: `src/lib/verifiedWallet.ts` + `src/__tests__/lib/verifiedWallet.test.ts`.
+- **C-2 · `verifyPassTransfer` trusted a client-supplied sender.** The on-chain check in
+  `src/lib/passVerifier.ts` used the body's `walletAddress` as `expectedFrom`, so any user
+  who knew a treasury-paid tx hash could submit `{ txHash, walletAddress: <real sender> }`
+  and have a `confirmed` pass granted to their own profile, funded by someone else. Same
+  root cause as C-1 — `expectedFrom` is now the caller's verified profile wallet, never the
+  request body. Applies to both pass purchases and $1UP-paid course enrollments.
+- **C-3 · MercadoPago webhook had no idempotency.** `POST /api/webhooks/mercadopago` updated
+  the enrollment unconditionally on every delivery; a late `in_process` retry would regress
+  an `approved` enrollment back to `pending` and overwrite `paid_at`. Added an allowed-
+  transition map (`approved` and `rejected` are terminal except for refund/chargeback →
+  `cancelled`) plus dedupe-on-`mp_payment_id` so a repeated delivery for an already-bound
+  payment is a no-op. A delivery referencing a *different* `mp_payment_id` than the one
+  already on the enrollment is now refused. `paid_at` is only stamped on the first
+  pending → approved transition and never re-stamped. HMAC verification is unchanged.
+  Logic extracted into the pure `src/lib/mpWebhookDecision.ts` module + unit-tested in
+  `src/__tests__/lib/mpWebhookDecision.test.ts` (11 cases).
+
+Verified: `npm run build` passes (117 routes), `npm run test:run` is green (70 tests, up
+from 52). Follow-up items H-3 (no on-chain verify on token-order approval), H-8 (no
+confirmation-depth check in `verifyPassTransfer`), and H-9 (non-standard webhook HMAC
+manifest) remain open.
+
+### Database
+
+- **`register_for_tournament` RPC hardened — third layer on the registration lock.** The
+  Postgres function previously allowed both `'upcoming'` and `'live'` statuses and only
+  blocked when `is_registration_open` was false. With the boolean now driven in lockstep
+  with status by the API routes, the function itself has been tightened to
+  `IF t.status <> 'upcoming' THEN not_active`. It also now refuses soft-deleted tournaments
+  (`IF NOT t.is_active`). A drifted boolean can no longer let a `live` or `completed`
+  tournament accept signups. Applied via Supabase MCP as
+  `20260522232128_gate_register_for_tournament_on_upcoming_status` and committed to
+  `supabase/migrations/` — the repo now mirrors the live RPC body, a first concrete step on
+  audit H-7 (un-versioned schema).
+
+### Fixed
+
+- **`GET /api/admin/tournaments` leaked draft tournaments.** This endpoint is public by
+  design (consumed for the tournament list), but the handler selected every tournament row —
+  including `is_active = false` drafts and their prize structures — via the service-role
+  client, bypassing RLS. Added the missing `.eq("is_active", true)` filter so only active
+  tournaments are returned. Found during the 2026-05-22 website security audit (see `AUDIT.md`).
+
+---
+
 ## [2.29.0] — 2026-05-21
 
 ### Changed

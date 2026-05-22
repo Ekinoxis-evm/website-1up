@@ -11,8 +11,9 @@ type RegWithRelations = TournamentRegistration & {
 };
 
 interface Props {
-  registrations: RegWithRelations[];
-  tournaments:   { id: number; name: string }[];
+  registrations:        RegWithRelations[];
+  tournaments:          { id: number; name: string }[];
+  initialTournamentId?: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -29,27 +30,38 @@ const STATUS_COLORS: Record<string, string> = {
   no_show:    "text-error",
 };
 
-export function AdminTournamentRegistrationsClient({ registrations, tournaments }: Props) {
+export function AdminTournamentRegistrationsClient({ registrations, tournaments, initialTournamentId = "" }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
-  const [filterTournament, setFilterTournament] = useState<string>("");
+  const [filterTournament, setFilterTournament] = useState<string>(initialTournamentId);
   const [filterStatus, setFilterStatus]         = useState<string>("");
   const [loading, setLoading] = useState<number | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
   async function authHeaders() {
     const token = await getAccessToken();
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
   }
 
+  // Audit H-12 — PATCH must surface failures instead of looking successful.
   async function updateStatus(id: number, status: string) {
     setLoading(id);
-    await fetch("/api/admin/tournament-registrations", {
-      method: "PATCH",
-      headers: await authHeaders(),
-      body: JSON.stringify({ id, status }),
-    });
-    setLoading(null);
-    router.refresh();
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/tournament-registrations", {
+        method: "PATCH",
+        headers: await authHeaders(),
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "No se pudo actualizar el registro.");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setLoading(null);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -109,6 +121,8 @@ export function AdminTournamentRegistrationsClient({ registrations, tournaments 
           EXPORTAR CSV
         </button>
       </div>
+
+      {error && <p className="font-body text-sm text-error mb-4">{error}</p>}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">

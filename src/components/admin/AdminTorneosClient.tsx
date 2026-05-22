@@ -352,12 +352,18 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 </div>
                 <div>
                   <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Estado</label>
-                  <select value={form.status} onChange={(e) => f("status", e.target.value as FormState["status"])}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none">
-                    <option value="upcoming">Próximo</option>
-                    <option value="live">En vivo</option>
-                    <option value="completed">Finalizado</option>
-                  </select>
+                  <div className="w-full bg-surface-container-lowest p-3 flex items-center justify-between">
+                    <span className={`font-headline font-bold text-xs uppercase tracking-widest ${STATUS_COLORS[form.status]}`}>
+                      {STATUS_LABELS[form.status]}
+                    </span>
+                    <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline/60">
+                      Automático
+                    </span>
+                  </div>
+                  <p className="font-body text-[11px] text-outline mt-1 leading-snug">
+                    El estado lo controla el bracket: <span className="text-on-surface">Iniciar Torneo</span> en
+                    <span className="text-on-surface"> Brackets</span> lo pone En vivo; el último ganador lo cierra como Finalizado.
+                  </p>
                 </div>
               </div>
 
