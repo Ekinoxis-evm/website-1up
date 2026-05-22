@@ -4,7 +4,7 @@ import { AdminTournamentBracketsClient } from "@/components/admin/AdminTournamen
 export default async function AdminTournamentBracketsPage() {
   const { data: tournaments } = await supabaseAdmin
     .from("tournaments")
-    .select("id, name, status")
+    .select("id, name, status, is_registration_open, max_participants")
     .eq("is_active", true)
     .order("sort_order");
 

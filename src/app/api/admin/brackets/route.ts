@@ -211,6 +211,7 @@ export async function POST(req: NextRequest) {
   }));
 
   revalidatePath("/torneos");
+  revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/tournament-brackets");
 
   return NextResponse.json({ bracket, participants, matchCount: insertedMatches.length });
@@ -242,15 +243,18 @@ export async function PATCH(req: NextRequest) {
       .update({ status: "in_progress", updated_at: new Date().toISOString() })
       .eq("id", bracket.id);
 
-    // Starting the bracket also puts the tournament live (unless already finished)
+    // Starting the bracket puts the tournament live AND closes registration —
+    // after this point no new entries are accepted and the structure is locked.
     await supabaseAdmin
       .from("tournaments")
-      .update({ status: "live" })
+      .update({ status: "live", is_registration_open: false })
       .eq("id", tournamentId)
       .neq("status", "completed");
 
     revalidatePath("/torneos");
+    revalidatePath("/torneos/[slug]", "page");
     revalidatePath("/admin/tournament-brackets");
+    revalidatePath("/admin/torneos");
     return NextResponse.json({ ok: true });
   }
 
@@ -265,7 +269,7 @@ export async function PATCH(req: NextRequest) {
     if (!match) return NextResponse.json({ error: "Match no encontrado" }, { status: 404 });
 
     const { data: bracket } = await supabaseAdmin
-      .from("brackets").select("status").eq("id", match.bracket_id).single();
+      .from("brackets").select("status, tournament_id").eq("id", match.bracket_id).single();
     if (bracket?.status !== "in_progress")
       return NextResponse.json({ error: "El torneo no está en curso" }, { status: 400 });
     if (match.state === "completed" || match.state === "bye")
@@ -318,9 +322,20 @@ export async function PATCH(req: NextRequest) {
       .update({ status: allDone ? "completed" : "in_progress", updated_at: new Date().toISOString() })
       .eq("id", match.bracket_id);
 
+    // Tournament lifecycle is driven by the bracket — when the bracket completes,
+    // the tournament does too. The status is a derived value, not editor-controlled.
+    if (allDone && bracket.tournament_id) {
+      await supabaseAdmin
+        .from("tournaments")
+        .update({ status: "completed" })
+        .eq("id", bracket.tournament_id);
+    }
+
     revalidatePath("/torneos");
+    revalidatePath("/torneos/[slug]", "page");
     revalidatePath("/admin/tournament-brackets");
-    return NextResponse.json({ ok: true, winnerId, loserId });
+    revalidatePath("/admin/torneos");
+    return NextResponse.json({ ok: true, winnerId, loserId, tournamentCompleted: allDone });
   }
 
   // ── UNDO (safe revert) ─────────────────────────────────────────────────
@@ -376,15 +391,34 @@ export async function PATCH(req: NextRequest) {
       .update({ status: "in_progress", updated_at: new Date().toISOString() })
       .eq("id", match.bracket_id);
 
+    // If the undo was on the final-final match, the tournament had already been
+    // auto-completed — revert it to `live` so the lifecycle stays in sync with
+    // the bracket. Safe no-op for any other undo because of the .eq guard.
+    const { data: br } = await supabaseAdmin
+      .from("brackets").select("tournament_id").eq("id", match.bracket_id).single();
+    if (br?.tournament_id) {
+      await supabaseAdmin
+        .from("tournaments")
+        .update({ status: "live" })
+        .eq("id", br.tournament_id)
+        .eq("status", "completed");
+    }
+
     revalidatePath("/torneos");
+    revalidatePath("/torneos/[slug]", "page");
     revalidatePath("/admin/tournament-brackets");
+    revalidatePath("/admin/torneos");
     return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
 }
 
-// DELETE /api/admin/brackets — remove the entire bracket
+// DELETE /api/admin/brackets — remove the entire bracket.
+// Only a DRAFT bracket can be deleted. Once the tournament has started
+// (in_progress / completed) the structure is locked — no re-seeding,
+// no editing participants. This matches the documented flow:
+// "after the tournament start it is not possible to edit or add people."
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -392,12 +426,20 @@ export async function DELETE(req: NextRequest) {
   if (!tournamentId) return NextResponse.json({ error: "tournamentId requerido" }, { status: 400 });
 
   const { data: bracket } = await supabaseAdmin
-    .from("brackets").select("id").eq("tournament_id", tournamentId).maybeSingle();
+    .from("brackets").select("id, status").eq("tournament_id", tournamentId).maybeSingle();
   if (!bracket) return NextResponse.json({ error: "No existe bracket para este torneo" }, { status: 404 });
+
+  if (bracket.status !== "draft") {
+    return NextResponse.json(
+      { error: "No se puede eliminar un bracket que ya inició. Una vez iniciado el torneo, los enfrentamientos quedan bloqueados." },
+      { status: 409 },
+    );
+  }
 
   await supabaseAdmin.from("brackets").delete().eq("id", bracket.id);
 
   revalidatePath("/torneos");
+  revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/tournament-brackets");
   return NextResponse.json({ ok: true });
 }

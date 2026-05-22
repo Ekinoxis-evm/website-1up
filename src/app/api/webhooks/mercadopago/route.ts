@@ -13,6 +13,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getPaymentById } from "@/lib/mercadopago";
 import { revalidatePath } from "next/cache";
+import {
+  decideWebhookAction,
+  STATUS_MAP,
+  type EnrollmentStatus,
+} from "@/lib/mpWebhookDecision";
 
 interface MpWebhookPayload {
   action: string;
@@ -20,17 +25,6 @@ interface MpWebhookPayload {
   data: { id: string };
   external_reference?: string;
 }
-
-// MercadoPago payment status → our internal status
-const STATUS_MAP: Record<string, "approved" | "rejected" | "pending" | "cancelled"> = {
-  approved:       "approved",
-  rejected:       "rejected",
-  pending:        "pending",
-  in_process:     "pending",
-  cancelled:      "cancelled",
-  refunded:       "cancelled",
-  charged_back:   "cancelled",
-};
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as MpWebhookPayload;
@@ -70,16 +64,63 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const newStatus = STATUS_MAP[payment.status ?? ""] ?? "pending";
+  // ── Idempotency + transition guard ────────────────────────────
+  const { data: enrollment, error: fetchErr } = await supabaseAdmin
+    .from("enrollments")
+    .select("id, payment_status, mp_payment_id, paid_at")
+    .eq("id", enrollmentId)
+    .maybeSingle();
+
+  if (fetchErr) {
+    console.error("[MP Webhook] Failed to fetch enrollment:", fetchErr);
+    return NextResponse.json({ error: "DB read failed" }, { status: 500 });
+  }
+  if (!enrollment) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const decision = decideWebhookAction(
+    {
+      payment_status: enrollment.payment_status as EnrollmentStatus | null,
+      mp_payment_id:  enrollment.mp_payment_id,
+      paid_at:        enrollment.paid_at,
+    },
+    { paymentId, mpStatus: payment.status ?? "" },
+  );
+
+  if (decision.kind === "ignore_other_payment") {
+    console.warn(
+      `[MP Webhook] Enrollment ${enrollmentId} already bound to payment ${enrollment.mp_payment_id}; ignoring delivery for ${paymentId}`,
+    );
+    return NextResponse.json({ ok: true });
+  }
+  if (decision.kind === "dedupe") {
+    return NextResponse.json({ ok: true, deduped: true });
+  }
+  if (decision.kind === "ignore_regression") {
+    console.warn(
+      `[MP Webhook] Ignoring disallowed transition ${enrollment.payment_status} → ${STATUS_MAP[payment.status ?? ""] ?? "pending"} for enrollment ${enrollmentId}`,
+    );
+    return NextResponse.json({ ok: true, ignored: true });
+  }
 
   // ── Update enrollment ──────────────────────────────────────────
+  const newStatus: EnrollmentStatus = STATUS_MAP[payment.status ?? ""] ?? "pending";
+  const update: {
+    mp_payment_id:  string;
+    payment_status: EnrollmentStatus;
+    paid_at?:       string;
+  } = {
+    mp_payment_id:  paymentId,
+    payment_status: newStatus,
+  };
+  if (decision.stampPaidAt) {
+    update.paid_at = new Date().toISOString();
+  }
+
   const { error } = await supabaseAdmin
     .from("enrollments")
-    .update({
-      mp_payment_id:  paymentId,
-      payment_status: newStatus,
-      paid_at:        newStatus === "approved" ? new Date().toISOString() : null,
-    })
+    .update(update)
     .eq("id", enrollmentId);
 
   if (error) {

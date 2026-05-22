@@ -1,8 +1,8 @@
 # ESTADO DE ENTREGA — EKX-2026-006
 ## 1UP Gaming Tower × Ekinoxis Labs
 
-**Fecha de corte:** 19 de mayo de 2026  
-**Versión en producción:** v2.26.0  
+**Fecha de corte:** 21 de mayo de 2026  
+**Versión en producción:** v2.29.0  
 **Referencia contractual:** EKX-2026-005
 
 ---
@@ -12,11 +12,11 @@
 | | |
 |--|--|
 | **Scope original entregado** | 100% — todas las páginas y módulos del contrato EKX-2026-005 están funcionando en producción |
-| **Funcionalidades adicionales** | ~350h de desarrollo fuera del scope original, implementadas y en producción |
+| **Funcionalidades adicionales** | ~396h de desarrollo fuera del scope original, implementadas y en producción |
 | **Estado del proyecto** | Activo — una integración pendiente por gestión externa (MercadoPago automático) |
 | **Cloudflare Stream** | ✅ Activo — videos de academia protegidos por JWT, cargados desde el admin, reproducción gated por inscripción |
-| **Total facturado adiciones** | $52.500.000 COP (~350h × $150.000/h) |
-| **Total proyecto** | **$72.500.000 COP** |
+| **Total facturado adiciones** | $59.400.000 COP (~396h × $150.000/h) |
+| **Total proyecto** | **$79.400.000 COP** |
 
 ---
 

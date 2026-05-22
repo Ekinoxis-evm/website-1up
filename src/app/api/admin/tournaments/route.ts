@@ -19,10 +19,14 @@ async function checkAdmin(req: NextRequest) {
   return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
+// GET is public by design (CLAUDE.md) — but must return active tournaments only.
+// Without the is_active filter this leaks unpublished/draft tournaments and their
+// prize structures to any unauthenticated caller.
 export async function GET() {
   const { data } = await supabaseAdmin
     .from("tournaments")
     .select("*, games(id, name), tournament_prizes(*)")
+    .eq("is_active", true)
     .order("sort_order")
     .order("date", { ascending: true });
   return NextResponse.json(data ?? []);
@@ -56,6 +60,9 @@ export async function POST(req: NextRequest) {
   const { count } = await supabaseAdmin.from("tournaments").select("id", { count: "exact", head: true }).eq("slug", baseSlug);
   if (count && count > 0) slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
 
+  // Status is derived from the bracket lifecycle — every new tournament starts
+  // as `upcoming` and only transitions via the bracket: `Iniciar Torneo` → live,
+  // last winner → completed. The editor never sets status directly.
   const { data, error } = await supabaseAdmin.from("tournaments").insert({
     name:                 body.name,
     slug,
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
     date:                 body.date || null,
     prize_pool_cop:       null,
     max_participants:     body.maxParticipants ? parseInt(body.maxParticipants) : null,
-    status:               body.status ?? "upcoming",
+    status:               "upcoming",
     location_type:        body.locationType ?? "presencial",
     image_url:            body.imageUrl || null,
     description:          body.description || null,
@@ -77,6 +84,7 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (body.prizes?.length) await savePrizes(data.id, body.prizes);
   revalidatePath("/torneos");
+  revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);
 }
@@ -97,6 +105,19 @@ export async function PUT(req: NextRequest) {
     updatedSlug = (count && count > 0) ? `${baseSlug}-${Math.random().toString(36).slice(2, 6)}` : baseSlug;
   }
 
+  // Status is owned by the bracket lifecycle, not the editor — read the current
+  // value so we can preserve it on update. The editor only changes metadata
+  // (name, prizes, sponsor, dates) and registration on `upcoming` tournaments.
+  const { data: current } = await supabaseAdmin
+    .from("tournaments").select("status").eq("id", body.id).single();
+  const currentStatus = (current?.status ?? "upcoming") as "upcoming" | "live" | "completed";
+
+  // Registration can only be opened while the tournament is still `upcoming`.
+  // Anything later (live/completed) forces the flag closed regardless of the body.
+  const registrationOpen = isCancelling
+    ? false
+    : (currentStatus === "upcoming" ? !!body.isRegistrationOpen : false);
+
   const { data, error } = await supabaseAdmin.from("tournaments").update({
     name:                 body.name,
     ...(updatedSlug ? { slug: updatedSlug } : {}),
@@ -104,12 +125,14 @@ export async function PUT(req: NextRequest) {
     date:                 body.date || null,
     prize_pool_cop:       null,
     max_participants:     body.maxParticipants ? parseInt(body.maxParticipants) : null,
-    status:               body.status,
+    // Status is owned by /api/admin/brackets — the only exception is the explicit
+    // "Cancelar Torneo" action, which is a sanctioned admin-controlled end-of-life.
+    ...(isCancelling ? { status: "completed" as const } : {}),
     location_type:        body.locationType,
     image_url:            body.imageUrl || null,
     description:          body.description || null,
     is_active:            body.isActive,
-    is_registration_open: isCancelling ? false : body.isRegistrationOpen,
+    is_registration_open: registrationOpen,
     sort_order:           body.sortOrder ?? 0,
     sponsor_name:         body.sponsorName !== undefined ? (body.sponsorName || null) : undefined,
     sponsor_website_url:  body.sponsorWebsiteUrl !== undefined ? (body.sponsorWebsiteUrl || null) : undefined,
@@ -127,6 +150,7 @@ export async function PUT(req: NextRequest) {
   }
 
   revalidatePath("/torneos");
+  revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/torneos");
   return NextResponse.json(data);
 }
@@ -136,6 +160,7 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   await supabaseAdmin.from("tournaments").delete().eq("id", id);
   revalidatePath("/torneos");
+  revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/torneos");
   return NextResponse.json({ ok: true });
 }
