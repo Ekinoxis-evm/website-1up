@@ -1,4 +1,5 @@
-import { SignJWT, importPKCS8 } from "jose";
+import { SignJWT } from "jose";
+import { createPrivateKey } from "node:crypto";
 
 const ACCOUNT_ID    = process.env.CF_STREAM_ACCOUNT_ID!;
 const API_TOKEN     = process.env.CF_STREAM_API_TOKEN!;
@@ -12,12 +13,16 @@ export function streamEmbedUrl(token: string) {
 
 export async function signStreamToken(videoUid: string): Promise<string> {
   const pem = Buffer.from(PEM_B64, "base64").toString("utf-8");
-  const privateKey = await importPKCS8(pem, "RS256");
-  return new SignJWT({})
+  // Cloudflare's signing key is PKCS#1 ("BEGIN RSA PRIVATE KEY"); createPrivateKey
+  // auto-detects PKCS#1 vs PKCS#8, unlike jose's importPKCS8 which rejects PKCS#1.
+  const privateKey = createPrivateKey(pem);
+  // Cloudflare requires `kid` in the JWT payload (not only the header) to
+  // resolve the signing key — without it the token is rejected with 401.
+  return new SignJWT({ kid: KEY_ID })
     .setProtectedHeader({ alg: "RS256", kid: KEY_ID })
     .setSubject(videoUid)
     .setExpirationTime("1h")
-    .setNotBefore("-5s")
+    .setNotBefore(Math.floor(Date.now() / 1000) - 5)
     .sign(privateKey);
 }
 

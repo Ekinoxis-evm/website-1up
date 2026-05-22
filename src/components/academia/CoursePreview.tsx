@@ -129,27 +129,43 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
         <span className="text-on-surface truncate">{course.name}</span>
       </div>
 
-      {/* Hero — image left, info right */}
+      {/* Hero — intro video left, info card (with cover image) right */}
       <section className="px-8 md:px-16 grid grid-cols-1 lg:grid-cols-5 gap-6 pb-12">
-        {/* Left — image */}
-        <div className="lg:col-span-3">
-          <div className="aspect-video bg-surface-container relative overflow-hidden">
-            {course.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={course.image_url} alt={course.name} className="w-full h-full object-cover" />
+        {/* Left — intro video (falls back to the cover image when there is no video) */}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="relative">
+            {course.intro_video_uid ? (
+              <IntroPlayer courseId={course.id} />
+            ) : course.image_url ? (
+              <div className="aspect-video bg-surface-container overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={course.image_url} alt={course.name} className="w-full h-full object-cover" />
+              </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
+              <div className="aspect-video bg-surface-container flex items-center justify-center">
                 <span className="material-symbols-outlined text-7xl text-surface-container-highest">school</span>
               </div>
             )}
-            <span className={`absolute top-4 left-4 ${style.badge} font-headline font-black text-xs px-3 py-1 uppercase tracking-widest`}>
+            <span className={`absolute top-4 left-4 ${style.badge} font-headline font-black text-xs px-3 py-1 uppercase tracking-widest z-10`}>
               {course.category}
             </span>
           </div>
+          {course.intro_video_uid && (
+            <p className="font-body text-sm md:text-base text-on-surface-variant leading-relaxed whitespace-pre-line">
+              {course.intro_description || "Mira el video de presentación para conocer este curso por dentro."}
+            </p>
+          )}
         </div>
 
         {/* Right — info card */}
         <div className="lg:col-span-2 bg-surface-container p-6 flex flex-col gap-4">
+          {/* Cover image (shown here when the hero slot is taken by the video) */}
+          {course.intro_video_uid && course.image_url && (
+            <div className="aspect-video bg-surface overflow-hidden -mt-6 -mx-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={course.image_url} alt={course.name} className="w-full h-full object-cover" />
+            </div>
+          )}
           <div>
             <div className="inline-block bg-primary-container px-3 py-1 mb-3 skew-fix">
               <span className="text-white font-black italic skew-content block text-[10px] tracking-widest font-headline">
@@ -220,36 +236,6 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
           )}
         </div>
       </section>
-
-      {/* Intro video + description */}
-      {course.intro_video_uid && (
-        <section className="px-8 md:px-16 pb-12">
-          <div className="bg-surface-container p-6 md:p-8">
-            <div className="inline-block bg-tertiary px-3 py-1 mb-4 skew-fix">
-              <span className="text-background font-black italic skew-content block text-[10px] tracking-widest font-headline">
-                PRESENTACIÓN
-              </span>
-            </div>
-            <h2 className="font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter mb-4">
-              VIDEO DE <span className="text-tertiary">PRESENTACIÓN</span>
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              <IntroPlayer courseId={course.id} />
-              <div className="space-y-3">
-                {course.intro_description ? (
-                  <p className="font-body text-sm md:text-base text-on-surface-variant leading-relaxed whitespace-pre-line">
-                    {course.intro_description}
-                  </p>
-                ) : (
-                  <p className="font-body text-sm text-outline italic">
-                    Mira el video de presentación para conocer este curso por dentro.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Curriculum */}
       <section className="px-8 md:px-16 pb-12">

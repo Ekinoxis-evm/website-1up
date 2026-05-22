@@ -5,6 +5,18 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.28.1] — 2026-05-21
+
+### Fixed
+
+- **Cloudflare Stream videos never played — the token signing was broken.** Two bugs in `signStreamToken` (`src/lib/stream.ts`): (1) it used `jose`'s `importPKCS8`, which rejects Cloudflare's PKCS#1 signing key (`BEGIN RSA PRIVATE KEY`) with `TypeError: "pkcs8" must be …` — switched to Node's `crypto.createPrivateKey`, which accepts both PKCS#1 and PKCS#8; (2) Cloudflare requires `kid` in the JWT **payload**, not only the header — without it every token was rejected with 401. Also replaced the unsupported `setNotBefore("-5s")` with a numeric timestamp. This affected every academia video — course intro previews and enrolled-course session playback.
+
+### Changed
+
+- **Course preview layout** (`/academia/[courseId]`) — the intro video now occupies the main hero slot; the course cover image moves into the details card. Courses without an intro video keep the cover image in the hero.
+
+---
+
 ## [2.28.0] — 2026-05-21
 
 ### Added
