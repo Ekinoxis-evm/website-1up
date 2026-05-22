@@ -83,7 +83,7 @@ function buildMatchType(
     nextMatchId:          match.next_match_id ?? null,
     nextLooserMatchId:    match.next_loser_match_id ?? undefined,
     tournamentRoundText:  roundLabel,
-    startTime:            match.created_at,
+    startTime:            "",
     state:                STATE_MAP[match.state] ?? "NO_PARTY",
     participants: [
       toParty(p1, match.p1_score, match.winner_id === match.p1_id, "tbd-p1"),

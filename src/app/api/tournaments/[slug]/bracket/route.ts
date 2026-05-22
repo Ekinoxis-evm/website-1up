@@ -33,10 +33,12 @@ export async function GET(
 
   if (!tournamentId) return NextResponse.json(null);
 
+  // Only published-state brackets are public — drafts stay hidden until the tournament starts
   const { data: bracket } = await supabase
     .from("brackets")
     .select("*")
     .eq("tournament_id", tournamentId)
+    .in("status", ["in_progress", "completed"])
     .maybeSingle();
 
   if (!bracket) return NextResponse.json(null);

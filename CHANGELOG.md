@@ -5,6 +5,23 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.0] — 2026-05-21
+
+### Changed
+
+- **Tournament bracket workflow redesigned around a draft → start → run flow.**
+  - **Setup (draft):** the admin picks which registered users are in from a checklist, orders them (up/down or an "Aleatorio" shuffle) to define the seeding, and chooses the format. The bracket is created as a `draft` — fully re-editable and hidden from the public.
+  - **Iniciar Torneo:** one button locks the initial matchups, flips the bracket to `in_progress`, and sets the tournament `live`. After this the initial versus cannot change.
+  - **Running:** the admin just clicks the winner of each match and it advances automatically — no score grid. A safe **Deshacer** reverts a result, but only while no later match that depended on it has been played.
+  - `POST /api/admin/brackets` now accepts an ordered `participantIds` array and creates the bracket as `draft`. `PATCH` is action-based: `start`, `result` (pick winner), `undo`.
+- **Public tournament detail page reworked** — two-column hero (cover image + key-info card), cleaner description/prizes/sponsor sections, and a properly framed bracket block. The bracket only appears once the tournament is `in_progress`/`completed` — drafts stay private.
+
+### Fixed
+
+- **Bracket match boxes no longer show a raw timestamp.** `TournamentBracketView` was passing `created_at` as the match `startTime`, rendering `2026-05-21T23:55:07...`. Match boxes now show only the round label.
+
+---
+
 ## [2.28.1] — 2026-05-21
 
 ### Fixed

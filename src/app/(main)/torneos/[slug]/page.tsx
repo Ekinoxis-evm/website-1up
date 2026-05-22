@@ -31,7 +31,6 @@ const STATUS_BADGE: Record<Tournament["status"], string> = {
 };
 
 async function fetchTournament(slug: string): Promise<TournamentFull | null> {
-  // Primary: look up by slug
   const { data: bySlug } = await supabase
     .from("tournaments")
     .select("*, games(id, name), tournament_prizes(*)")
@@ -40,7 +39,6 @@ async function fetchTournament(slug: string): Promise<TournamentFull | null> {
     .maybeSingle();
   if (bySlug) return bySlug as TournamentFull;
 
-  // Fallback: numeric ID (supports old QR codes / bookmarks)
   const numericId = Number(slug);
   if (!Number.isFinite(numericId) || numericId <= 0) return null;
   const { data: byId } = await supabase
@@ -78,10 +76,12 @@ async function fetchBracket(tournamentId: number): Promise<{
   participants: BracketParticipant[];
   matches: BracketMatch[];
 } | null> {
+  // Drafts stay private — only show the bracket once the tournament has started.
   const { data: bracket } = await supabase
     .from("brackets")
     .select("*")
     .eq("tournament_id", tournamentId)
+    .in("status", ["in_progress", "completed"])
     .maybeSingle();
   if (!bracket) return null;
 
@@ -104,19 +104,32 @@ export default async function TournamentDetailPage(
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
   const bracketData = await fetchBracket(t.id);
 
+  const dateLong = t.date
+    ? new Date(t.date).toLocaleDateString("es-CO", {
+        weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota",
+      })
+    : null;
+  const dateTime = t.date
+    ? new Date(t.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" })
+    : null;
+
   return (
-    <section className="py-12 px-8 md:px-16 bg-background min-h-screen">
-      <div className="max-w-4xl">
+    <div className="bg-background min-h-screen pb-20">
+      {/* Back link */}
+      <div className="px-8 md:px-16 pt-8">
         <Link
           href="/torneos"
-          className="inline-flex items-center gap-1 font-headline font-bold text-xs uppercase tracking-widest text-outline hover:text-primary-container transition-colors mb-8"
+          className="inline-flex items-center gap-1 font-headline font-bold text-xs uppercase tracking-widest text-outline hover:text-primary-container transition-colors"
         >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
-          VOLVER A TORNEOS
+          Volver a torneos
         </Link>
+      </div>
 
-        <div className="bg-surface-container">
-          <div className="relative aspect-video bg-surface-container-high overflow-hidden">
+      {/* Hero — cover image + key info side by side */}
+      <section className="px-8 md:px-16 pt-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <div className="relative aspect-video bg-surface-container overflow-hidden">
             {t.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
@@ -127,98 +140,55 @@ export default async function TournamentDetailPage(
                 </span>
               </div>
             )}
+            <span className={`absolute top-4 left-4 font-headline font-black text-[10px] uppercase tracking-widest px-3 py-1 ${STATUS_BADGE[t.status]}`}>
+              {STATUS_LABEL[t.status]}
+            </span>
+          </div>
+        </div>
+
+        {/* Info card */}
+        <div className="lg:col-span-2 bg-surface-container p-6 flex flex-col gap-5">
+          <div className="flex flex-wrap gap-2">
+            <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-outline">
+              {LOC_LABEL[t.location_type]}
+            </span>
+            {t.games && (
+              <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-secondary">
+                {t.games.name}
+              </span>
+            )}
           </div>
 
-          <div className="p-8 md:p-10 space-y-8">
-            <div className="flex flex-wrap gap-2">
-              <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${STATUS_BADGE[t.status]}`}>
-                {STATUS_LABEL[t.status]}
-              </span>
-              <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-outline">
-                {LOC_LABEL[t.location_type]}
-              </span>
-              {t.games && (
-                <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-secondary">
-                  {t.games.name}
-                </span>
-              )}
+          <div>
+            <h1 className="font-headline font-black text-3xl md:text-4xl uppercase tracking-tighter leading-none text-on-surface">
+              {t.name}
+            </h1>
+            <div className="h-1 w-20 bg-primary-container mt-3" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-px bg-outline-variant">
+            <div className="bg-surface px-3 py-3">
+              <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Fecha</p>
+              <p className="font-body text-sm text-on-surface capitalize">{dateLong ?? "Por confirmar"}</p>
+              {dateTime && <p className="font-body text-xs text-outline mt-0.5">{dateTime}</p>}
             </div>
-
-            <div>
-              <h1 className="font-headline font-black text-4xl md:text-5xl uppercase tracking-tighter leading-tight text-on-surface">
-                {t.name}
-              </h1>
-              <div className="h-1 w-20 bg-primary-container mt-3" />
+            <div className="bg-surface px-3 py-3">
+              <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Cupos</p>
+              <p className="font-body text-sm text-on-surface">
+                {t.max_participants ? `Máximo ${t.max_participants}` : "Sin límite definido"}
+              </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {t.date && (
-                <div>
-                  <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha</p>
-                  <p className="font-body text-sm text-on-surface">
-                    {new Date(t.date).toLocaleDateString("es-CO", {
-                      weekday: "long", day: "2-digit", month: "long", year: "numeric",
-                      timeZone: "America/Bogota",
-                    })}
-                  </p>
-                  <p className="font-body text-sm text-on-surface/60">
-                    {new Date(t.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" })}
-                  </p>
-                </div>
-              )}
-              {t.max_participants && (
-                <div>
-                  <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Cupos</p>
-                  <p className="font-body text-sm text-on-surface">Máximo {t.max_participants} participantes</p>
-                </div>
-              )}
-            </div>
-
-            {t.description && (
-              <div>
-                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">Sobre el torneo</p>
-                <p className="font-body text-sm text-on-surface/80 leading-relaxed whitespace-pre-line">{t.description}</p>
-              </div>
-            )}
-
-            {prizes.length > 0 && (
-              <div>
-                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">Premios</p>
-                <PrizePodium prizes={prizes} />
-              </div>
-            )}
-
-            {/* Sponsor block */}
-            {t.sponsor_name && (
-              <div className="bg-surface-container-low p-5 flex items-center gap-4">
-                {t.sponsor_logo_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-10 w-auto object-contain shrink-0" />
-                )}
-                <div>
-                  <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-0.5">Patrocinador</p>
-                  {t.sponsor_website_url ? (
-                    <a href={t.sponsor_website_url} target="_blank" rel="noopener noreferrer"
-                      className="font-headline font-black text-sm text-primary-container hover:underline">
-                      {t.sponsor_name}
-                    </a>
-                  ) : (
-                    <p className="font-headline font-black text-sm text-on-surface">{t.sponsor_name}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
+          <div className="mt-auto">
             {t.is_registration_open && t.status !== "completed" && (
-              <div className="pt-2">
-                <RegisterButton
-                  tournamentId={t.id}
-                  tournamentName={t.name}
-                  tournamentDate={t.date}
-                  locationType={t.location_type}
-                  isRegistered={false}
-                />
-              </div>
+              <RegisterButton
+                tournamentId={t.id}
+                tournamentName={t.name}
+                tournamentDate={t.date}
+                locationType={t.location_type}
+                isRegistered={false}
+              />
             )}
             {!t.is_registration_open && t.status !== "completed" && (
               <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40">
@@ -232,17 +202,67 @@ export default async function TournamentDetailPage(
             )}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Description */}
+      {t.description && (
+        <section className="px-8 md:px-16 pt-10">
+          <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">Sobre el torneo</p>
+          <p className="font-body text-sm md:text-base text-on-surface/80 leading-relaxed whitespace-pre-line max-w-3xl">
+            {t.description}
+          </p>
+        </section>
+      )}
+
+      {/* Prizes */}
+      {prizes.length > 0 && (
+        <section className="px-8 md:px-16 pt-10">
+          <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-4">Premios</p>
+          <PrizePodium prizes={prizes} />
+        </section>
+      )}
+
+      {/* Sponsor */}
+      {t.sponsor_name && (
+        <section className="px-8 md:px-16 pt-10">
+          <div className="bg-surface-container p-5 flex items-center gap-4 max-w-md">
+            {t.sponsor_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-10 w-auto object-contain shrink-0" />
+            )}
+            <div>
+              <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-0.5">Patrocinador</p>
+              {t.sponsor_website_url ? (
+                <a href={t.sponsor_website_url} target="_blank" rel="noopener noreferrer"
+                  className="font-headline font-black text-sm text-primary-container hover:underline">
+                  {t.sponsor_name}
+                </a>
+              ) : (
+                <p className="font-headline font-black text-sm text-on-surface">{t.sponsor_name}</p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Bracket */}
       {bracketData && (
-        <div className="mt-12">
-          <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">Bracket</p>
+        <section className="px-8 md:px-16 pt-12">
+          <div className="flex items-center gap-3 mb-4">
+            <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Bracket</p>
+            <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-0.5 ${
+              bracketData.bracket.status === "completed"
+                ? "bg-surface-container-high text-outline"
+                : "bg-primary text-background animate-pulse"
+            }`}>
+              {bracketData.bracket.status === "completed" ? "Finalizado" : "En vivo"}
+            </span>
+          </div>
           <div className="bg-surface-container p-4 md:p-6">
             <TournamentBracketView data={bracketData} />
           </div>
-        </div>
+        </section>
       )}
-    </section>
+    </div>
   );
 }

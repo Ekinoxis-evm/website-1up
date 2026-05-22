@@ -46,14 +46,18 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ bracket, participants: participants ?? [], matches: matches ?? [] });
 }
 
-// POST /api/admin/brackets — seed a new bracket from tournament registrations
+// POST /api/admin/brackets — seed a new DRAFT bracket.
+// Body: { tournamentId, format, participantIds? }
+//   participantIds — ordered array of user_profile_ids; index defines the seed.
+//   When omitted, falls back to every registered participant in registration order.
 export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { tournamentId, format } = body as {
+  const { tournamentId, format, participantIds } = body as {
     tournamentId: number;
     format: "single_elimination" | "double_elimination";
+    participantIds?: number[];
   };
 
   if (!tournamentId || !format)
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) return NextResponse.json({ error: "Ya existe un bracket para este torneo" }, { status: 409 });
 
-  // Fetch registered / attended participants
+  // Registered / attended participants for this tournament
   const { data: registrations, error: regError } = await supabaseAdmin
     .from("tournament_registrations")
     .select("user_profile_id, user_profiles(id, nombre, apellidos, username)")
@@ -78,21 +82,29 @@ export async function POST(req: NextRequest) {
   if (!registrations || registrations.length < 2)
     return NextResponse.json({ error: "Se necesitan al menos 2 participantes registrados" }, { status: 400 });
 
-  const n = registrations.length;
+  // Resolve the seed order: explicit participantIds, else registration order
+  const regByProfile = new Map(registrations.map(r => [r.user_profile_id, r]));
+  const ordered = (participantIds && participantIds.length > 0)
+    ? participantIds.map(id => regByProfile.get(id)).filter((r): r is NonNullable<typeof r> => !!r)
+    : registrations;
+
+  if (ordered.length < 2)
+    return NextResponse.json({ error: "Selecciona al menos 2 participantes registrados" }, { status: 400 });
+
+  const n = ordered.length;
   const size = nextPow2(n);
   const wRounds = Math.log2(size);
   const lRounds = format === "double_elimination" ? 2 * (wRounds - 1) : 0;
 
-  // Generate match seeds
   const seeds = seedBracket(n, format);
 
-  // 1. Insert bracket row
+  // 1. Bracket row — created as DRAFT (editable, not public)
   const { data: bracket, error: bracketError } = await supabaseAdmin
     .from("brackets")
     .insert({
       tournament_id:     tournamentId,
       format,
-      status:            "published",
+      status:            "draft",
       participant_count: n,
       rounds_winners:    wRounds,
       rounds_losers:     lRounds,
@@ -103,8 +115,8 @@ export async function POST(req: NextRequest) {
   if (bracketError || !bracket)
     return NextResponse.json({ error: bracketError?.message ?? "Error al crear bracket" }, { status: 500 });
 
-  // 2. Insert participants (seeded by registration order)
-  const participantInserts = registrations.map((reg, idx) => {
+  // 2. Participants — seeded by the resolved order
+  const participantInserts = ordered.map((reg, idx) => {
     const profile = reg.user_profiles as { nombre: string | null; apellidos: string | null; username: string | null } | null;
     const fullName = `${profile?.nombre ?? ""} ${profile?.apellidos ?? ""}`.trim();
     const displayName = profile?.username ?? (fullName || `Participante ${idx + 1}`);
@@ -125,11 +137,10 @@ export async function POST(req: NextRequest) {
   if (partError || !participants)
     return NextResponse.json({ error: partError?.message ?? "Error al crear participantes" }, { status: 500 });
 
-  // Map seed number → participant DB id
   const seedToId = new Map<number, number>();
   participants.forEach(p => seedToId.set(p.seed, p.id));
 
-  // 3. Insert all matches without pointer fields
+  // 3. Matches (no pointers yet)
   const matchInserts = seeds.map(s => {
     const p1Id = s.p1Seed ? (seedToId.get(s.p1Seed) ?? null) : null;
     const p2Id = s.p2Seed ? (seedToId.get(s.p2Seed) ?? null) : null;
@@ -159,18 +170,16 @@ export async function POST(req: NextRequest) {
   if (matchError || !insertedMatches)
     return NextResponse.json({ error: matchError?.message ?? "Error al crear matches" }, { status: 500 });
 
-  // 4. Build lookup: "side-round-matchNum" → DB id
+  // 4. Pointer lookup
   const matchKey = (side: string, round: number, num: number) => `${side}-${round}-${num}`;
   const matchMap = new Map<string, number>();
   insertedMatches.forEach(m => matchMap.set(matchKey(m.bracket_side, m.round, m.match_number), m.id));
 
-  // 5. Batch-update next_match_id / next_loser_match_id pointers
+  // 5. Wire next_match_id / next_loser_match_id
   await Promise.all(seeds.map(s => {
     const id = matchMap.get(matchKey(s.side, s.round, s.matchNumber));
     if (!id) return Promise.resolve();
-
     const update: Record<string, unknown> = {};
-
     if (s.nextMatchNum !== null && s.nextSide !== null && s.nextRound !== null) {
       update.next_match_id   = matchMap.get(matchKey(s.nextSide, s.nextRound, s.nextMatchNum)) ?? null;
       update.next_match_slot = s.nextMatchSlot;
@@ -179,32 +188,23 @@ export async function POST(req: NextRequest) {
       update.next_loser_match_id = matchMap.get(matchKey(s.loserNextSide, s.loserNextRound, s.loserNextMatchNum)) ?? null;
       update.next_loser_slot     = s.loserNextSlot;
     }
-
     if (Object.keys(update).length === 0) return Promise.resolve();
     return supabaseAdmin.from("bracket_matches").update(update).eq("id", id);
   }));
 
-  // 6. Auto-advance BYE match winners into the next match slot
+  // 6. Auto-advance BYE winners
   await Promise.all(seeds.filter(s => s.isBye && s.nextMatchNum !== null).map(async s => {
     const p1Id = s.p1Seed ? (seedToId.get(s.p1Seed) ?? null) : null;
     if (!p1Id || !s.nextSide || !s.nextRound || !s.nextMatchNum) return;
-
-    const byeMatchId    = matchMap.get(matchKey(s.side, s.round, s.matchNumber))!;
-    const nextMatchId   = matchMap.get(matchKey(s.nextSide, s.nextRound, s.nextMatchNum));
+    const byeMatchId  = matchMap.get(matchKey(s.side, s.round, s.matchNumber))!;
+    const nextMatchId = matchMap.get(matchKey(s.nextSide, s.nextRound, s.nextMatchNum));
     if (!nextMatchId) return;
-
     const slotUpdate = s.nextMatchSlot === 1
       ? { p1_id: p1Id, p1_source: "winner_of" as const, p1_source_match_id: byeMatchId }
       : { p2_id: p1Id, p2_source: "winner_of" as const, p2_source_match_id: byeMatchId };
-
     await supabaseAdmin.from("bracket_matches").update(slotUpdate).eq("id", nextMatchId);
-
-    // Mark as ready if both slots now filled
     const { data: nm } = await supabaseAdmin
-      .from("bracket_matches")
-      .select("p1_id, p2_id")
-      .eq("id", nextMatchId)
-      .single();
+      .from("bracket_matches").select("p1_id, p2_id").eq("id", nextMatchId).single();
     if (nm?.p1_id && nm?.p2_id) {
       await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", nextMatchId);
     }
@@ -216,110 +216,175 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ bracket, participants, matchCount: insertedMatches.length });
 }
 
-// PATCH /api/admin/brackets — record match result and advance players
+// PATCH /api/admin/brackets — action-based:
+//   { action: "start",  tournamentId }      draft -> in_progress (locks the structure)
+//   { action: "result", matchId, winnerId } record a winner and advance them
+//   { action: "undo",   matchId }           revert a result (only if no played match downstream)
 export async function PATCH(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { matchId, p1Score, p2Score } = body as {
-    matchId: number;
-    p1Score: number;
-    p2Score: number;
-  };
+  const action = body.action as "start" | "result" | "undo" | undefined;
 
-  if (matchId == null || p1Score == null || p2Score == null)
-    return NextResponse.json({ error: "matchId, p1Score y p2Score son requeridos" }, { status: 400 });
+  // ── START ──────────────────────────────────────────────────────────────
+  if (action === "start") {
+    const tournamentId = body.tournamentId as number;
+    if (!tournamentId) return NextResponse.json({ error: "tournamentId requerido" }, { status: 400 });
 
-  const { data: match, error: matchFetchError } = await supabaseAdmin
-    .from("bracket_matches")
-    .select("*")
-    .eq("id", matchId)
-    .single();
+    const { data: bracket } = await supabaseAdmin
+      .from("brackets").select("id, status").eq("tournament_id", tournamentId).maybeSingle();
+    if (!bracket) return NextResponse.json({ error: "No existe bracket" }, { status: 404 });
+    if (bracket.status !== "draft")
+      return NextResponse.json({ error: "El torneo ya fue iniciado" }, { status: 400 });
 
-  if (matchFetchError || !match)
-    return NextResponse.json({ error: "Match no encontrado" }, { status: 404 });
-  if (match.state === "completed" || match.state === "bye")
-    return NextResponse.json({ error: "Match ya finalizado" }, { status: 400 });
-  if (!match.p1_id || !match.p2_id)
-    return NextResponse.json({ error: "Match no tiene ambos participantes" }, { status: 400 });
-
-  const winnerId = p1Score >= p2Score ? match.p1_id : match.p2_id;
-  const loserId  = p1Score >= p2Score ? match.p2_id : match.p1_id;
-
-  // Update the match itself
-  await supabaseAdmin.from("bracket_matches").update({
-    p1_score:   p1Score,
-    p2_score:   p2Score,
-    winner_id:  winnerId,
-    loser_id:   loserId,
-    state:      "completed",
-    updated_at: new Date().toISOString(),
-  }).eq("id", matchId);
-
-  // Advance winner to next match
-  if (match.next_match_id && match.next_match_slot) {
-    const winnerUpdate = match.next_match_slot === 1
-      ? { p1_id: winnerId, p1_source: "winner_of" as const, p1_source_match_id: matchId }
-      : { p2_id: winnerId, p2_source: "winner_of" as const, p2_source_match_id: matchId };
-
-    await supabaseAdmin.from("bracket_matches").update(winnerUpdate).eq("id", match.next_match_id);
-
-    const { data: nm } = await supabaseAdmin
-      .from("bracket_matches")
-      .select("p1_id, p2_id, state")
-      .eq("id", match.next_match_id)
-      .single();
-    if (nm?.p1_id && nm?.p2_id && nm.state !== "completed") {
-      await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_match_id);
-    }
-  }
-
-  // Advance loser to losers bracket (double elimination — winners bracket matches only)
-  if (match.next_loser_match_id && match.next_loser_slot) {
-    const loserUpdate = match.next_loser_slot === 1
-      ? { p1_id: loserId, p1_source: "loser_of" as const, p1_source_match_id: matchId }
-      : { p2_id: loserId, p2_source: "loser_of" as const, p2_source_match_id: matchId };
-
-    await supabaseAdmin.from("bracket_matches").update(loserUpdate).eq("id", match.next_loser_match_id);
-
-    const { data: lm } = await supabaseAdmin
-      .from("bracket_matches")
-      .select("p1_id, p2_id, state")
-      .eq("id", match.next_loser_match_id)
-      .single();
-    if (lm?.p1_id && lm?.p2_id && lm.state !== "completed") {
-      await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_loser_match_id);
-    }
-  }
-
-  // Mark loser as eliminated (only when eliminated from losers or grand final)
-  if (match.bracket_side === "losers" || match.bracket_side === "grand_final") {
     await supabaseAdmin
-      .from("bracket_participants")
-      .update({ eliminated: true })
-      .eq("id", loserId);
+      .from("brackets")
+      .update({ status: "in_progress", updated_at: new Date().toISOString() })
+      .eq("id", bracket.id);
+
+    // Starting the bracket also puts the tournament live (unless already finished)
+    await supabaseAdmin
+      .from("tournaments")
+      .update({ status: "live" })
+      .eq("id", tournamentId)
+      .neq("status", "completed");
+
+    revalidatePath("/torneos");
+    revalidatePath("/admin/tournament-brackets");
+    return NextResponse.json({ ok: true });
   }
 
-  // Update bracket status
-  const { data: allMatches } = await supabaseAdmin
-    .from("bracket_matches")
-    .select("state")
-    .eq("bracket_id", match.bracket_id)
-    .not("state", "eq", "bye");
+  // ── RESULT (pick winner) ───────────────────────────────────────────────
+  if (action === "result") {
+    const { matchId, winnerId } = body as { matchId: number; winnerId: number };
+    if (matchId == null || winnerId == null)
+      return NextResponse.json({ error: "matchId y winnerId son requeridos" }, { status: 400 });
 
-  const allDone = allMatches?.every(m => m.state === "completed") ?? false;
-  await supabaseAdmin
-    .from("brackets")
-    .update({ status: allDone ? "completed" : "in_progress", updated_at: new Date().toISOString() })
-    .eq("id", match.bracket_id);
+    const { data: match } = await supabaseAdmin
+      .from("bracket_matches").select("*").eq("id", matchId).single();
+    if (!match) return NextResponse.json({ error: "Match no encontrado" }, { status: 404 });
 
-  revalidatePath("/torneos");
-  revalidatePath("/admin/tournament-brackets");
+    const { data: bracket } = await supabaseAdmin
+      .from("brackets").select("status").eq("id", match.bracket_id).single();
+    if (bracket?.status !== "in_progress")
+      return NextResponse.json({ error: "El torneo no está en curso" }, { status: 400 });
+    if (match.state === "completed" || match.state === "bye")
+      return NextResponse.json({ error: "Este match ya está cerrado" }, { status: 400 });
+    if (!match.p1_id || !match.p2_id)
+      return NextResponse.json({ error: "El match aún no tiene ambos participantes" }, { status: 400 });
+    if (winnerId !== match.p1_id && winnerId !== match.p2_id)
+      return NextResponse.json({ error: "El ganador debe ser uno de los participantes" }, { status: 400 });
 
-  return NextResponse.json({ ok: true, winnerId, loserId });
+    const loserId = winnerId === match.p1_id ? match.p2_id : match.p1_id;
+
+    await supabaseAdmin.from("bracket_matches").update({
+      winner_id: winnerId, loser_id: loserId, state: "completed",
+      updated_at: new Date().toISOString(),
+    }).eq("id", matchId);
+
+    // Advance winner
+    if (match.next_match_id && match.next_match_slot) {
+      const upd = match.next_match_slot === 1
+        ? { p1_id: winnerId, p1_source: "winner_of" as const, p1_source_match_id: matchId }
+        : { p2_id: winnerId, p2_source: "winner_of" as const, p2_source_match_id: matchId };
+      await supabaseAdmin.from("bracket_matches").update(upd).eq("id", match.next_match_id);
+      const { data: nm } = await supabaseAdmin
+        .from("bracket_matches").select("p1_id, p2_id, state").eq("id", match.next_match_id).single();
+      if (nm?.p1_id && nm?.p2_id && nm.state !== "completed")
+        await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_match_id);
+    }
+
+    // Advance loser (double elimination)
+    if (match.next_loser_match_id && match.next_loser_slot) {
+      const upd = match.next_loser_slot === 1
+        ? { p1_id: loserId, p1_source: "loser_of" as const, p1_source_match_id: matchId }
+        : { p2_id: loserId, p2_source: "loser_of" as const, p2_source_match_id: matchId };
+      await supabaseAdmin.from("bracket_matches").update(upd).eq("id", match.next_loser_match_id);
+      const { data: lm } = await supabaseAdmin
+        .from("bracket_matches").select("p1_id, p2_id, state").eq("id", match.next_loser_match_id).single();
+      if (lm?.p1_id && lm?.p2_id && lm.state !== "completed")
+        await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_loser_match_id);
+    }
+
+    // Eliminated when knocked out of losers / grand final
+    if (match.bracket_side === "losers" || match.bracket_side === "grand_final")
+      await supabaseAdmin.from("bracket_participants").update({ eliminated: true }).eq("id", loserId);
+
+    const { data: allMatches } = await supabaseAdmin
+      .from("bracket_matches").select("state").eq("bracket_id", match.bracket_id).neq("state", "bye");
+    const allDone = allMatches?.every(m => m.state === "completed") ?? false;
+    await supabaseAdmin
+      .from("brackets")
+      .update({ status: allDone ? "completed" : "in_progress", updated_at: new Date().toISOString() })
+      .eq("id", match.bracket_id);
+
+    revalidatePath("/torneos");
+    revalidatePath("/admin/tournament-brackets");
+    return NextResponse.json({ ok: true, winnerId, loserId });
+  }
+
+  // ── UNDO (safe revert) ─────────────────────────────────────────────────
+  if (action === "undo") {
+    const matchId = body.matchId as number;
+    if (matchId == null) return NextResponse.json({ error: "matchId requerido" }, { status: 400 });
+
+    const { data: match } = await supabaseAdmin
+      .from("bracket_matches").select("*").eq("id", matchId).single();
+    if (!match) return NextResponse.json({ error: "Match no encontrado" }, { status: 404 });
+    if (match.state !== "completed")
+      return NextResponse.json({ error: "Solo se puede deshacer un match finalizado" }, { status: 400 });
+
+    // Refuse if a downstream match was already played
+    for (const nextId of [match.next_match_id, match.next_loser_match_id]) {
+      if (!nextId) continue;
+      const { data: nx } = await supabaseAdmin
+        .from("bracket_matches").select("state").eq("id", nextId).single();
+      if (nx?.state === "completed")
+        return NextResponse.json(
+          { error: "No se puede deshacer: un match posterior ya fue jugado." },
+          { status: 409 },
+        );
+    }
+
+    const advancedWinner = match.winner_id;
+    const advancedLoser  = match.loser_id;
+
+    // Clear the slot this match fed in each downstream match
+    async function clearSlot(nextId: number | null, slot: number | null) {
+      if (!nextId || !slot) return;
+      const upd = slot === 1
+        ? { p1_id: null, p1_source: null, p1_source_match_id: null, state: "pending" as const }
+        : { p2_id: null, p2_source: null, p2_source_match_id: null, state: "pending" as const };
+      await supabaseAdmin.from("bracket_matches").update(upd).eq("id", nextId);
+    }
+    await clearSlot(match.next_match_id, match.next_match_slot);
+    await clearSlot(match.next_loser_match_id, match.next_loser_slot);
+
+    // Reset this match
+    await supabaseAdmin.from("bracket_matches").update({
+      winner_id: null, loser_id: null, p1_score: null, p2_score: null,
+      state: "ready", updated_at: new Date().toISOString(),
+    }).eq("id", matchId);
+
+    // Un-eliminate whoever this match had eliminated
+    if ((match.bracket_side === "losers" || match.bracket_side === "grand_final") && advancedLoser)
+      await supabaseAdmin.from("bracket_participants").update({ eliminated: false }).eq("id", advancedLoser);
+    void advancedWinner;
+
+    await supabaseAdmin
+      .from("brackets")
+      .update({ status: "in_progress", updated_at: new Date().toISOString() })
+      .eq("id", match.bracket_id);
+
+    revalidatePath("/torneos");
+    revalidatePath("/admin/tournament-brackets");
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
 }
 
-// DELETE /api/admin/brackets — remove entire bracket (resets tournament bracket)
+// DELETE /api/admin/brackets — remove the entire bracket
 export async function DELETE(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -327,18 +392,12 @@ export async function DELETE(req: NextRequest) {
   if (!tournamentId) return NextResponse.json({ error: "tournamentId requerido" }, { status: 400 });
 
   const { data: bracket } = await supabaseAdmin
-    .from("brackets")
-    .select("id")
-    .eq("tournament_id", tournamentId)
-    .maybeSingle();
-
+    .from("brackets").select("id").eq("tournament_id", tournamentId).maybeSingle();
   if (!bracket) return NextResponse.json({ error: "No existe bracket para este torneo" }, { status: 404 });
 
-  // Cascade deletes bracket_matches and bracket_participants via FK ON DELETE CASCADE
   await supabaseAdmin.from("brackets").delete().eq("id", bracket.id);
 
   revalidatePath("/torneos");
   revalidatePath("/admin/tournament-brackets");
-
   return NextResponse.json({ ok: true });
 }

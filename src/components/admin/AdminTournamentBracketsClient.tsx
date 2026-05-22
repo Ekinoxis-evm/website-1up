@@ -12,29 +12,15 @@ type BracketData = {
   matches:      BracketMatch[];
 } | null;
 
-const SIDE_ORDER = { winners: 0, losers: 1, grand_final: 2, gf_reset: 3 } as Record<string, number>;
+type RosterEntry = { userProfileId: number; name: string; included: boolean };
 
+const SIDE_ORDER: Record<string, number> = { winners: 0, losers: 1, grand_final: 2, gf_reset: 3 };
 const SIDE_LABEL: Record<string, string> = {
-  winners:     "Winners",
-  losers:      "Losers",
-  grand_final: "Gran Final",
-  gf_reset:    "Reset",
+  winners: "Winners", losers: "Losers", grand_final: "Gran Final", gf_reset: "Reset",
 };
-
-const STATE_BADGE: Record<string, string> = {
-  pending:     "bg-surface-container-high text-outline",
-  ready:       "bg-secondary text-background",
-  in_progress: "bg-primary text-background animate-pulse",
-  completed:   "bg-surface-container-high text-on-surface",
-  bye:         "bg-surface-container text-outline/60",
-};
-
 const STATE_LABEL: Record<string, string> = {
-  pending:     "Pendiente",
-  ready:       "Listo",
-  in_progress: "En curso",
-  completed:   "Finalizado",
-  bye:         "BYE",
+  pending: "Pendiente", ready: "Por jugar", in_progress: "En curso",
+  completed: "Finalizado", bye: "BYE",
 };
 
 interface Props {
@@ -46,336 +32,484 @@ export function AdminTournamentBracketsClient({ tournaments }: Props) {
 
   const [selectedId, setSelectedId]   = useState<number | null>(null);
   const [bracketData, setBracketData] = useState<BracketData>(null);
+  const [roster, setRoster]           = useState<RosterEntry[]>([]);
+  const [format, setFormat]           = useState<"double_elimination" | "single_elimination">("single_elimination");
   const [loading, setLoading]         = useState(false);
+  const [busy, setBusy]               = useState(false);
   const [error, setError]             = useState<string | null>(null);
-
-  // Seed form
-  const [format, setFormat] = useState<"double_elimination" | "single_elimination">("double_elimination");
-  const [seeding, setSeeding] = useState(false);
-  const [seedError, setSeedError] = useState<string | null>(null);
-
-  // Score form
-  const [scoring, setScoring]     = useState<number | null>(null); // matchId being scored
-  const [p1Score, setP1Score]     = useState("");
-  const [p2Score, setP2Score]     = useState("");
-  const [scoreError, setScoreError] = useState<string | null>(null);
-  const [scoreLoading, setScoreLoading] = useState(false);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessToken();
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
   }, [getAccessToken]);
 
-  async function loadBracket(tournamentId: number) {
+  const load = useCallback(async (tournamentId: number) => {
     setLoading(true);
     setError(null);
     setBracketData(null);
+    setRoster([]);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`/api/admin/brackets?tournamentId=${tournamentId}`, { headers });
-      if (!res.ok) throw new Error("Error al cargar bracket");
-      const data = await res.json();
-      setBracketData(data);
-    } catch (e) {
-      setError((e as Error).message);
+      const [bRes, rRes] = await Promise.all([
+        fetch(`/api/admin/brackets?tournamentId=${tournamentId}`, { headers }),
+        fetch(`/api/admin/tournament-registrations?tournamentId=${tournamentId}`, { headers }),
+      ]);
+      const bracket: BracketData = bRes.ok ? await bRes.json() : null;
+      const regs: Array<{
+        user_profile_id: number;
+        status: string;
+        user_profiles: { nombre: string | null; apellidos: string | null; username: string | null } | null;
+      }> = rRes.ok ? await rRes.json() : [];
+
+      const eligible = regs.filter(r => r.status === "registered" || r.status === "attended");
+      const nameOf = (r: (typeof eligible)[number]) => {
+        const p = r.user_profiles;
+        const full = `${p?.nombre ?? ""} ${p?.apellidos ?? ""}`.trim();
+        return p?.username ?? (full || `Perfil #${r.user_profile_id}`);
+      };
+
+      if (bracket) {
+        // Draft order comes from the bracket's participants; others appear unchecked.
+        const inBracket = new Map(bracket.participants.map(p => [p.user_profile_id, p]));
+        const ordered: RosterEntry[] = [...bracket.participants]
+          .sort((a, b) => a.seed - b.seed)
+          .map(p => ({ userProfileId: p.user_profile_id ?? 0, name: p.display_name, included: true }));
+        for (const r of eligible) {
+          if (!inBracket.has(r.user_profile_id)) {
+            ordered.push({ userProfileId: r.user_profile_id, name: nameOf(r), included: false });
+          }
+        }
+        setRoster(ordered);
+        setFormat(bracket.bracket.format);
+        setBracketData(bracket);
+      } else {
+        setRoster(eligible.map(r => ({ userProfileId: r.user_profile_id, name: nameOf(r), included: true })));
+      }
+    } catch {
+      setError("Error al cargar la información del torneo.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [authHeaders]);
 
-  function handleTournamentChange(id: number | null) {
+  function selectTournament(id: number | null) {
     setSelectedId(id);
     setBracketData(null);
-    setSeedError(null);
+    setRoster([]);
     setError(null);
-    setScoring(null);
-    if (id) loadBracket(id);
+    if (id) load(id);
   }
 
-  async function handleSeed() {
-    if (!selectedId) return;
-    setSeeding(true);
-    setSeedError(null);
-    try {
-      const headers = await authHeaders();
-      const res = await fetch("/api/admin/brackets", {
-        method:  "POST",
-        headers,
-        body:    JSON.stringify({ tournamentId: selectedId, format }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al crear bracket");
-      await loadBracket(selectedId);
-    } catch (e) {
-      setSeedError((e as Error).message);
-    } finally {
-      setSeeding(false);
-    }
+  // ── Roster editing (setup / draft) ──────────────────────────────────────
+  function toggle(upid: number) {
+    setRoster(r => r.map(e => e.userProfileId === upid ? { ...e, included: !e.included } : e));
   }
-
-  async function handleDelete() {
-    if (!selectedId || !bracketData) return;
-    if (!confirm("¿Eliminar el bracket? Esta acción no se puede deshacer.")) return;
-    const headers = await authHeaders();
-    await fetch("/api/admin/brackets", {
-      method:  "DELETE",
-      headers,
-      body:    JSON.stringify({ tournamentId: selectedId }),
+  function move(idx: number, dir: -1 | 1) {
+    setRoster(r => {
+      const next = [...r];
+      const j = idx + dir;
+      if (j < 0 || j >= next.length) return r;
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
     });
-    setBracketData(null);
+  }
+  function shuffle() {
+    setRoster(r => {
+      const inc = r.filter(e => e.included);
+      const exc = r.filter(e => !e.included);
+      for (let i = inc.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [inc[i], inc[j]] = [inc[j], inc[i]];
+      }
+      return [...inc, ...exc];
+    });
   }
 
-  async function handleScoreSubmit(matchId: number) {
-    const p1 = parseInt(p1Score);
-    const p2 = parseInt(p2Score);
-    if (isNaN(p1) || isNaN(p2)) { setScoreError("Ingresa puntajes válidos"); return; }
-    setScoreLoading(true);
-    setScoreError(null);
+  const includedIds = roster.filter(e => e.included).map(e => e.userProfileId);
+
+  async function createBracket() {
+    if (!selectedId) return;
+    if (includedIds.length < 2) { setError("Selecciona al menos 2 participantes."); return; }
+    setBusy(true); setError(null);
     try {
       const headers = await authHeaders();
+      // Draft already exists → regenerate: delete then recreate
+      if (bracketData) {
+        await fetch("/api/admin/brackets", {
+          method: "DELETE", headers, body: JSON.stringify({ tournamentId: selectedId }),
+        });
+      }
       const res = await fetch("/api/admin/brackets", {
-        method:  "PATCH",
-        headers,
-        body:    JSON.stringify({ matchId, p1Score: p1, p2Score: p2 }),
+        method: "POST", headers,
+        body: JSON.stringify({ tournamentId: selectedId, format, participantIds: includedIds }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al registrar resultado");
-      setScoring(null);
-      setP1Score("");
-      setP2Score("");
-      await loadBracket(selectedId!);
+      if (!res.ok) throw new Error(data.error ?? "Error al crear el bracket");
+      await load(selectedId);
     } catch (e) {
-      setScoreError((e as Error).message);
+      setError((e as Error).message);
     } finally {
-      setScoreLoading(false);
+      setBusy(false);
     }
   }
 
-  // Group matches by side → round
-  const groupedMatches = bracketData
-    ? Object.entries(
-        bracketData.matches.reduce<Record<string, BracketMatch[]>>((acc, m) => {
-          const key = `${m.bracket_side}-${m.round}`;
-          (acc[key] ??= []).push(m);
-          return acc;
-        }, {}),
-      ).sort(([a], [b]) => {
-        const [sideA, rA] = a.split("-");
-        const [sideB, rB] = b.split("-");
-        const so = (SIDE_ORDER[sideA] ?? 9) - (SIDE_ORDER[sideB] ?? 9);
-        return so !== 0 ? so : parseInt(rA) - parseInt(rB);
-      })
-    : [];
+  async function startTournament() {
+    if (!selectedId) return;
+    if (!confirm("¿Iniciar el torneo? Los enfrentamientos iniciales quedarán bloqueados y no se podrán cambiar.")) return;
+    setBusy(true); setError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/brackets", {
+        method: "PATCH", headers, body: JSON.stringify({ action: "start", tournamentId: selectedId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error al iniciar el torneo");
+      await load(selectedId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  const participantMap = new Map(bracketData?.participants.map(p => [p.id, p]) ?? []);
+  async function deleteBracket() {
+    if (!selectedId) return;
+    if (!confirm("¿Eliminar el bracket? Esta acción no se puede deshacer.")) return;
+    setBusy(true); setError(null);
+    try {
+      const headers = await authHeaders();
+      await fetch("/api/admin/brackets", {
+        method: "DELETE", headers, body: JSON.stringify({ tournamentId: selectedId }),
+      });
+      await load(selectedId);
+    } catch {
+      setError("Error al eliminar el bracket.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pickWinner(matchId: number, winnerId: number) {
+    setBusy(true); setError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/brackets", {
+        method: "PATCH", headers, body: JSON.stringify({ action: "result", matchId, winnerId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error al registrar el ganador");
+      await load(selectedId!);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undoMatch(matchId: number) {
+    setBusy(true); setError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/brackets", {
+        method: "PATCH", headers, body: JSON.stringify({ action: "undo", matchId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "No se pudo deshacer");
+      await load(selectedId!);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const status = bracketData?.bracket.status;
+  const isDraft   = status === "draft";
+  const isRunning = status === "in_progress" || status === "completed";
 
   return (
     <div className="p-6 md:p-10 space-y-8">
       <div>
         <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Competiciones</p>
-        <h1 className="font-headline font-black text-3xl uppercase tracking-tighter text-on-surface">
-          BRACKETS
-        </h1>
+        <h1 className="font-headline font-black text-3xl uppercase tracking-tighter text-on-surface">BRACKETS</h1>
         <div className="h-1 w-16 bg-primary-container mt-2" />
       </div>
 
       {/* Tournament selector */}
       <div className="max-w-sm">
-        <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">
-          Torneo
-        </label>
+        <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Torneo</label>
         <select
           value={selectedId ?? ""}
-          onChange={e => handleTournamentChange(e.target.value ? parseInt(e.target.value) : null)}
+          onChange={e => selectTournament(e.target.value ? parseInt(e.target.value) : null)}
           className="w-full bg-surface-container text-on-surface font-body text-sm px-3 py-2 border-0 outline-none focus:ring-2 focus:ring-primary-container"
         >
           <option value="">Seleccionar torneo…</option>
-          {tournaments.map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
+          {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
       {loading && (
-        <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40 animate-pulse">
-          Cargando…
-        </p>
+        <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline/40 animate-pulse">Cargando…</p>
       )}
+      {error && <p className="font-body text-sm text-error">{error}</p>}
 
-      {error && (
-        <p className="font-body text-sm text-error">{error}</p>
-      )}
-
-      {/* No bracket yet */}
-      {selectedId && !loading && !error && bracketData === null && (
-        <div className="bg-surface-container p-6 max-w-md space-y-4">
-          <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
-            Sin bracket
-          </p>
-          <p className="font-body text-sm text-on-surface/70">
-            No existe bracket para este torneo. Crea uno a partir de los participantes registrados.
-          </p>
-
-          <div>
-            <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">
-              Formato
-            </label>
-            <select
-              value={format}
-              onChange={e => setFormat(e.target.value as typeof format)}
-              className="w-full bg-surface-container-high text-on-surface font-body text-sm px-3 py-2 border-0 outline-none focus:ring-2 focus:ring-primary-container"
-            >
-              <option value="double_elimination">Doble Eliminación</option>
-              <option value="single_elimination">Eliminación Simple</option>
-            </select>
-          </div>
-
-          {seedError && <p className="font-body text-sm text-error">{seedError}</p>}
-
-          <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="bg-primary text-background font-headline font-black text-xs uppercase tracking-widest px-5 py-2 hover:bg-primary/80 disabled:opacity-40 transition-colors"
-          >
-            {seeding ? "Creando…" : "Crear Bracket"}
-          </button>
-        </div>
-      )}
-
-      {/* Bracket exists */}
-      {bracketData && (
-        <div className="space-y-6">
-          {/* Header row */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="bg-surface-container px-4 py-2 flex gap-6">
-              <div>
-                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-0.5">Formato</p>
-                <p className="font-headline font-black text-sm text-on-surface">
-                  {bracketData.bracket.format === "double_elimination" ? "Doble Eliminación" : "Eliminación Simple"}
-                </p>
-              </div>
-              <div>
-                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-0.5">Estado</p>
-                <p className="font-headline font-black text-sm text-on-surface capitalize">
-                  {bracketData.bracket.status}
-                </p>
-              </div>
-              <div>
-                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-0.5">Participantes</p>
-                <p className="font-headline font-black text-sm text-on-surface">
-                  {bracketData.bracket.participant_count}
-                </p>
-              </div>
+      {/* ── SETUP / DRAFT ──────────────────────────────────────────────── */}
+      {selectedId && !loading && (bracketData === null || isDraft) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Participant picker */}
+          <div className="bg-surface-container p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
+                Participantes ({includedIds.length})
+              </p>
+              <button
+                onClick={shuffle}
+                disabled={busy}
+                className="font-headline font-bold text-[10px] uppercase tracking-widest text-secondary hover:text-secondary/70 flex items-center gap-1 disabled:opacity-40"
+              >
+                <span className="material-symbols-outlined text-sm">shuffle</span>
+                Aleatorio
+              </button>
             </div>
 
-            <button
-              onClick={handleDelete}
-              className="font-headline font-bold text-xs uppercase tracking-widest text-error hover:text-error/70 transition-colors flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-sm">delete</span>
-              Eliminar bracket
-            </button>
+            {roster.length === 0 ? (
+              <p className="font-body text-sm text-outline">No hay participantes registrados en este torneo.</p>
+            ) : (
+              <div className="space-y-1 max-h-[420px] overflow-y-auto">
+                {roster.map((e, idx) => (
+                  <div
+                    key={e.userProfileId}
+                    className={`flex items-center gap-2 px-3 py-2 ${e.included ? "bg-surface-container-high" : "bg-surface-container-low opacity-50"}`}
+                  >
+                    <button onClick={() => toggle(e.userProfileId)} className="shrink-0">
+                      <span className={`material-symbols-outlined text-lg ${e.included ? "text-primary-container" : "text-outline"}`}>
+                        {e.included ? "check_box" : "check_box_outline_blank"}
+                      </span>
+                    </button>
+                    <span className="font-headline font-black text-xs text-outline w-6 shrink-0">
+                      {e.included ? roster.slice(0, idx + 1).filter(x => x.included).length : "—"}
+                    </span>
+                    <span className="font-body text-sm text-on-surface flex-1 min-w-0 truncate">{e.name}</span>
+                    {e.included && (
+                      <div className="flex shrink-0">
+                        <button onClick={() => move(idx, -1)} disabled={idx === 0}
+                          className="text-outline hover:text-on-surface disabled:opacity-20">
+                          <span className="material-symbols-outlined text-base">keyboard_arrow_up</span>
+                        </button>
+                        <button onClick={() => move(idx, 1)} disabled={idx === roster.length - 1}
+                          className="text-outline hover:text-on-surface disabled:opacity-20">
+                          <span className="material-symbols-outlined text-base">keyboard_arrow_down</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Match table by round */}
-          {groupedMatches.map(([key, roundMatches]) => {
-            const [side, round] = key.split("-");
-            return (
-              <div key={key}>
-                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">
-                  {SIDE_LABEL[side] ?? side} — Ronda {round}
+          {/* Format + actions */}
+          <div className="space-y-4">
+            <div className="bg-surface-container p-5 space-y-4">
+              <div>
+                <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-2">Formato</label>
+                <select
+                  value={format}
+                  onChange={e => setFormat(e.target.value as typeof format)}
+                  className="w-full bg-surface-container-high text-on-surface font-body text-sm px-3 py-2 border-0 outline-none focus:ring-2 focus:ring-primary-container"
+                >
+                  <option value="single_elimination">Eliminación Simple</option>
+                  <option value="double_elimination">Doble Eliminación</option>
+                </select>
+              </div>
+              <button
+                onClick={createBracket}
+                disabled={busy || includedIds.length < 2}
+                className="w-full bg-primary text-background font-headline font-black text-xs uppercase tracking-widest py-3 hover:bg-primary/80 disabled:opacity-40 transition-colors"
+              >
+                {busy ? "Procesando…" : bracketData ? "Regenerar bracket" : "Crear bracket (borrador)"}
+              </button>
+              <p className="font-body text-xs text-outline">
+                El bracket se crea como <span className="text-on-surface">borrador</span>: ajusta participantes y orden
+                las veces que necesites. No es visible al público hasta iniciar el torneo.
+              </p>
+            </div>
+
+            {/* Draft pairings preview + start */}
+            {isDraft && bracketData && (
+              <div className="bg-surface-container p-5 space-y-4">
+                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
+                  Enfrentamientos iniciales
                 </p>
-                <div className="space-y-2">
-                  {roundMatches.map(match => {
-                    const p1 = match.p1_id ? participantMap.get(match.p1_id) : null;
-                    const p2 = match.p2_id ? participantMap.get(match.p2_id) : null;
-                    const canScore = match.state === "ready" || match.state === "in_progress";
-                    const isScoring = scoring === match.id;
-
-                    return (
-                      <div key={match.id} className="bg-surface-container p-4 flex flex-wrap items-center gap-4">
-                        <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-0.5 shrink-0 ${STATE_BADGE[match.state] ?? STATE_BADGE.pending}`}>
-                          {STATE_LABEL[match.state] ?? match.state}
-                        </span>
-
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className={`font-body text-sm truncate ${match.winner_id === match.p1_id && match.state === "completed" ? "text-primary-container font-bold" : "text-on-surface"}`}>
-                            {p1?.display_name ?? "TBD"}
-                          </span>
-                          <span className="font-headline font-black text-xs text-outline shrink-0">vs</span>
-                          <span className={`font-body text-sm truncate ${match.winner_id === match.p2_id && match.state === "completed" ? "text-primary-container font-bold" : "text-on-surface"}`}>
-                            {p2?.display_name ?? (match.state === "bye" ? "BYE" : "TBD")}
+                <div className="space-y-1">
+                  {bracketData.matches
+                    .filter(m => m.bracket_side === "winners" && m.round === 1)
+                    .sort((a, b) => a.match_number - b.match_number)
+                    .map(m => {
+                      const p1 = bracketData.participants.find(p => p.id === m.p1_id);
+                      const p2 = bracketData.participants.find(p => p.id === m.p2_id);
+                      return (
+                        <div key={m.id} className="bg-surface-container-high px-3 py-2 flex items-center gap-2 text-sm">
+                          <span className="font-body text-on-surface flex-1 truncate">{p1?.display_name ?? "—"}</span>
+                          <span className="font-headline font-black text-[10px] text-outline">VS</span>
+                          <span className="font-body text-on-surface flex-1 truncate text-right">
+                            {p2?.display_name ?? (m.state === "bye" ? "BYE" : "—")}
                           </span>
                         </div>
-
-                        {match.state === "completed" && (
-                          <span className="font-headline font-black text-sm text-outline shrink-0">
-                            {match.p1_score} – {match.p2_score}
-                          </span>
-                        )}
-
-                        {canScore && !isScoring && (
-                          <button
-                            onClick={() => { setScoring(match.id); setP1Score(""); setP2Score(""); setScoreError(null); }}
-                            className="font-headline font-bold text-[10px] uppercase tracking-widest text-primary-container hover:text-primary-container/70 transition-colors shrink-0 flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-sm">edit</span>
-                            Resultado
-                          </button>
-                        )}
-
-                        {isScoring && (
-                          <div className="flex flex-wrap items-center gap-2 w-full mt-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-body text-xs text-outline truncate max-w-[120px]">{p1?.display_name ?? "P1"}</span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={p1Score}
-                                onChange={e => setP1Score(e.target.value)}
-                                placeholder="0"
-                                className="w-14 bg-surface-container-high text-on-surface font-body text-sm px-2 py-1 border-0 outline-none focus:ring-2 focus:ring-primary-container text-center"
-                              />
-                            </div>
-                            <span className="font-headline font-black text-xs text-outline">–</span>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min={0}
-                                value={p2Score}
-                                onChange={e => setP2Score(e.target.value)}
-                                placeholder="0"
-                                className="w-14 bg-surface-container-high text-on-surface font-body text-sm px-2 py-1 border-0 outline-none focus:ring-2 focus:ring-primary-container text-center"
-                              />
-                              <span className="font-body text-xs text-outline truncate max-w-[120px]">{p2?.display_name ?? "P2"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleScoreSubmit(match.id)}
-                                disabled={scoreLoading}
-                                className="bg-primary text-background font-headline font-black text-[10px] uppercase tracking-widest px-3 py-1 hover:bg-primary/80 disabled:opacity-40 transition-colors"
-                              >
-                                {scoreLoading ? "…" : "Guardar"}
-                              </button>
-                              <button
-                                onClick={() => setScoring(null)}
-                                className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline hover:text-on-surface transition-colors"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                            {scoreError && <p className="w-full font-body text-xs text-error">{scoreError}</p>}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
+                <button
+                  onClick={startTournament}
+                  disabled={busy}
+                  className="w-full bg-primary-container text-white font-headline font-black text-sm uppercase tracking-widest py-3 hover:neo-shadow-pink disabled:opacity-40 transition-all"
+                >
+                  Iniciar Torneo
+                </button>
+                <button
+                  onClick={deleteBracket}
+                  disabled={busy}
+                  className="w-full font-headline font-bold text-[10px] uppercase tracking-widest text-error hover:text-error/70 disabled:opacity-40"
+                >
+                  Eliminar bracket
+                </button>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       )}
+
+      {/* ── RUNNING ────────────────────────────────────────────────────── */}
+      {selectedId && !loading && bracketData && isRunning && (
+        <RunningView
+          data={bracketData}
+          busy={busy}
+          onPickWinner={pickWinner}
+          onUndo={undoMatch}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Running view ──────────────────────────────────────────────────────────
+
+function RunningView({
+  data, busy, onPickWinner, onUndo,
+}: {
+  data: NonNullable<BracketData>;
+  busy: boolean;
+  onPickWinner: (matchId: number, winnerId: number) => void;
+  onUndo: (matchId: number) => void;
+}) {
+  const participantMap = new Map(data.participants.map(p => [p.id, p]));
+  const completed = data.bracket.status === "completed";
+
+  const grouped = Object.entries(
+    data.matches.reduce<Record<string, BracketMatch[]>>((acc, m) => {
+      (acc[`${m.bracket_side}-${m.round}`] ??= []).push(m);
+      return acc;
+    }, {}),
+  ).sort(([a], [b]) => {
+    const [sa, ra] = a.split("-"); const [sb, rb] = b.split("-");
+    const so = (SIDE_ORDER[sa] ?? 9) - (SIDE_ORDER[sb] ?? 9);
+    return so !== 0 ? so : parseInt(ra) - parseInt(rb);
+  });
+
+  const champion = completed
+    ? data.participants.find(p => !p.eliminated && data.matches.some(m =>
+        m.winner_id === p.id && (m.bracket_side === "grand_final" || (data.bracket.format === "single_elimination" && m.next_match_id === null))))
+    : null;
+
+  return (
+    <div className="space-y-6">
+      {/* Status banner */}
+      <div className="bg-surface-container p-4 flex flex-wrap items-center gap-4">
+        <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${
+          completed ? "bg-surface-container-high text-on-surface" : "bg-primary text-background animate-pulse"
+        }`}>
+          {completed ? "Torneo finalizado" : "Torneo en curso"}
+        </span>
+        <span className="font-body text-sm text-outline">
+          {data.bracket.format === "double_elimination" ? "Doble eliminación" : "Eliminación simple"} ·{" "}
+          {data.bracket.participant_count} participantes
+        </span>
+        {champion && (
+          <span className="font-headline font-black text-sm text-primary-container ml-auto flex items-center gap-1">
+            <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>trophy</span>
+            {champion.display_name}
+          </span>
+        )}
+      </div>
+
+      {grouped.map(([key, matches]) => {
+        const [side, round] = key.split("-");
+        return (
+          <div key={key}>
+            <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">
+              {SIDE_LABEL[side] ?? side} — Ronda {round}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {matches.sort((a, b) => a.match_number - b.match_number).map(m => {
+                const p1 = m.p1_id ? participantMap.get(m.p1_id) : null;
+                const p2 = m.p2_id ? participantMap.get(m.p2_id) : null;
+                const canPick = m.state === "ready" && p1 && p2;
+                const isCompleted = m.state === "completed";
+
+                return (
+                  <div key={m.id} className="bg-surface-container">
+                    {(["p1", "p2"] as const).map(slot => {
+                      const p = slot === "p1" ? p1 : p2;
+                      const isWinner = isCompleted && m.winner_id === (slot === "p1" ? m.p1_id : m.p2_id);
+                      const isLoser  = isCompleted && !isWinner;
+                      return (
+                        <button
+                          key={slot}
+                          disabled={!canPick || busy}
+                          onClick={() => canPick && p && onPickWinner(m.id, p.id)}
+                          className={`w-full flex items-center gap-2 px-4 py-3 text-left transition-colors ${
+                            canPick ? "hover:bg-primary-container/20 cursor-pointer" : "cursor-default"
+                          } ${slot === "p1" ? "border-b border-surface-container-low" : ""} ${
+                            isWinner ? "bg-primary-container/15" : isLoser ? "opacity-40" : ""
+                          }`}
+                        >
+                          {isWinner && (
+                            <span className="material-symbols-outlined text-sm text-primary-container"
+                              style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                          )}
+                          <span className={`font-body text-sm flex-1 truncate ${isWinner ? "text-primary-container font-bold" : "text-on-surface"}`}>
+                            {p?.display_name ?? (m.state === "bye" ? "BYE" : "Por definir")}
+                          </span>
+                          {canPick && (
+                            <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline">
+                              Ganó
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    <div className="px-4 py-1.5 bg-surface-container-high flex items-center justify-between">
+                      <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline">
+                        {STATE_LABEL[m.state] ?? m.state}
+                      </span>
+                      {isCompleted && !completed && (
+                        <button
+                          onClick={() => onUndo(m.id)}
+                          disabled={busy}
+                          className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline hover:text-error disabled:opacity-40 flex items-center gap-0.5"
+                        >
+                          <span className="material-symbols-outlined text-xs">undo</span>
+                          Deshacer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

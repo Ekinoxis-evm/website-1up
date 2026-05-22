@@ -121,7 +121,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `GET /api/user/course-session` | Privy user | Session data + links + doc metadata for enrolled user (`?sessionId=N`) |
 | `GET /api/user/course-document` | Privy user | 1-hour signed Supabase Storage URL for a session document (`?id=N`) — enrollment required |
 | `GET /api/tournaments/[slug]/bracket` | Public | Returns bracket + participants + matches by tournament slug (null if no bracket exists) |
-| `GET\|POST\|PATCH\|DELETE /api/admin/brackets` | isAdmin | GET fetch bracket+participants+matches; POST seed from registrations (2-phase: insert rows then wire next_match_id pointers, auto-advance byes); PATCH record scores + advance winner/loser; DELETE reset bracket (CASCADE) |
+| `GET\|POST\|PATCH\|DELETE /api/admin/brackets` | isAdmin | GET fetch bracket+participants+matches; POST seed as **draft** from an ordered `participantIds[]` (2-phase insert + pointer wiring + bye auto-advance); PATCH is action-based — `start` (draft→in_progress, locks structure, sets tournament live), `result` (pick winnerId, advance), `undo` (safe revert if no downstream match played); DELETE reset bracket (CASCADE). Public bracket (`/api/tournaments/[slug]/bracket` + tournament page) only shows `in_progress`/`completed` brackets — drafts stay private. |
 
 ---
 
