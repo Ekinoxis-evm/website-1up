@@ -20,13 +20,14 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 
 ## Infrastructure Access — use these proactively
 
-You (Claude) have **live access to the three platforms that run this project**. Use them directly to diagnose, fix, and verify — do not ask the user to do things you can do yourself.
+You (Claude) have **live access to the four platforms that run this project**. Use them directly to diagnose, fix, and verify — do not ask the user to do things you can do yourself.
 
 | Platform | How to access | What it's for |
 |----------|--------------|---------------|
-| **Supabase** | MCP `mcp__plugin_supabase_supabase__*` | Project `1uptower` = `kwqfpkvalspuvyiszrfh`. Run migrations (`apply_migration`), queries (`execute_sql`), check logs/advisors. See **Database Migrations** below. |
+| **Supabase** | MCP `mcp__plugin_supabase_supabase__*` (OAuth — re-auth per session via `__authenticate`, then complete via `/mcp`) | Project `1uptower` = `kwqfpkvalspuvyiszrfh`. Run migrations (`apply_migration`), queries (`execute_sql`), check logs/advisors. See **Database Migrations** below. |
 | **Vercel** | MCP `mcp__claude_ai_Vercel__*` **and** the `vercel` CLI (installed, repo linked) | Project `website-1up` = `prj_hNsodgd6Gh4eToJub3zUKnG6m7ND`, team `team_jxTNRBmimeErr5ULGBepXlL0` (slug `ekinoxis-team`). Inspect deployments, build logs, runtime logs; manage env vars (`vercel env ls/add/pull`). |
 | **Cloudflare** | MCP `mcp__plugin_cloudflare_cloudflare-api__*` (OAuth — re-auth per session via `__authenticate`) | Account `3347a58a0885b5e3c040d1f9fb408c4e`. General CF API. **Caveat:** the MCP OAuth scope excludes Stream — for Stream API calls use `CF_STREAM_API_TOKEN` from `.env.local` directly via `curl`/`fetch`. |
+| **GitHub** | MCP `mcp__github__*` (OAuth — auth via `/mcp` slash command; `mcp__github__authenticate` from code returns "incompatible auth server, run /mcp"). Plain `git` always works for branch / commit / push. `gh` CLI is **not installed** — install with `brew install gh` if you need PR creation from the terminal. | Repo `Ekinoxis-evm/website-1up`. Default branch `main`. PRs (list/create/merge), issues, releases, repo metadata. For branch cleanup use plain git (`git push origin --delete <branch>`); for PR workflows use the GitHub MCP tools once authed. |
 
 **Critical practice — env vars are NOT auto-synced.** `.env.local` is local-only; Vercel has its own env var store. When something works locally but fails in production, **first check `vercel env ls production`** for missing/stale keys before touching code. (This exact gap — `CF_STREAM_*` vars absent on Vercel — caused the v2.27.1 production outage.)
 
