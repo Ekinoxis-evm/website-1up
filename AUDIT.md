@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.5 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.6 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -22,8 +22,13 @@ public web, user portal, admin panel, database, payments, security.
 > **2026-05-22 patch · quick wins — `fix/audit-quick-wins-h6-h10-h11-h13`:** five 🟠 Highs
 > closed in 2.29.5 — H-6 (bank-account masking + per-id endpoint), H-10 (/perfil server
 > redirect), H-11 (sitemap tournament slugs), H-12 remainder (AdminCoursesClient delete),
-> H-13 (revalidatePath gaps in 3 admin routes). **Only H-7 (schema un-versioned) remains
-> open across all 13 Highs.**
+> H-13 (revalidatePath gaps in 3 admin routes).
+>
+> **2026-05-22 patch · H-7 — `fix/audit-h7-schema-baseline`:** the full live `public`
+> schema (34 tables, 67 constraints, 19 indexes, 4 functions, 5 triggers, 25 policies,
+> 1 view, 13 enums, 5 extensions) is committed to
+> `supabase/migrations/00000000000000_baseline.sql` — fully idempotent, ~1100 lines.
+> Plus `supabase/config.toml` for local-stack reproducibility. **All 13 Highs closed.**
 
 > **2026-05-22 patch — `fix/tournament-flow-and-critical-audit`:** all 3 🔴 Critical
 > findings (C-1, C-2, C-3) are fixed in 2.29.1. Tournament flow tightened end-to-end —
@@ -49,7 +54,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 | Severity | Count | Status | Theme |
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
-| 🟠 High | 13 | **12 fixed (2.29.2 → 2.29.5)** · 1 open (H-7) | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · ~~no rate limiting~~ · ~~no on-chain verify on token approval~~ · ~~`verifyPassTransfer` no confirmation depth~~ · ~~webhook HMAC manifest~~ · ~~bank account exposure~~ · ~~`/perfil` redirect~~ · ~~sitemap tournament slugs~~ · ~~`res.ok` checks~~ · ~~`revalidatePath` gaps~~ · schema un-versioned (only one left) |
+| 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
 | 🟡 Medium | ~22 | 2 fixed in 2.29.1 | input validation · revalidatePath gaps (tournaments fixed) · 1px-divider violations · error-handling gaps (registrations PATCH fixed) |
 | 🔵 Low / Info | many | open | see per-area sections |
 
@@ -107,7 +112,7 @@ active in production — but the code is live.*
 | ~~H-4~~ ✅ | ~~**No rate limiting** anywhere~~ — **fixed in 2.29.3**: 5 endpoints now behind Upstash Ratelimit sliding-window limits via `src/lib/rateLimit.ts` (anon-strict 5/min/IP, anon-read 30/min/IP, auth-mutate 20/min/user). Ships safe-by-default. | `src/lib/rateLimit.ts` |
 | ~~H-5~~ ✅ | ~~`@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"`~~ — **fixed in 2.29.2** (pinned to `3.18.0` / `1.32.5`) | `package.json` |
 | ~~H-6~~ ✅ | ~~Full bank account numbers + holder document exposed to **every** authenticated user~~ — **fixed in 2.29.4**: bulk list now masks `account_number` to last 4 and drops `holder_document`; per-id route returns full record under the auth-mutate rate-limit bucket | `api/bank-accounts/route.ts` + new `api/bank-accounts/[id]/route.ts` |
-| H-7 | Entire schema un-versioned — `supabase/migrations/` has **one** file; no baseline DDL, no `config.toml`; the DB cannot be rebuilt from the repo | `supabase/migrations/` |
+| ~~H-7~~ ✅ | ~~Entire schema un-versioned~~ — **fixed in 2.29.6**: full schema (34 tables / 67 constraints / 19 indexes / 4 functions / 5 triggers / 25 policies / 1 view / 13 enums / 5 extensions) committed as `supabase/migrations/00000000000000_baseline.sql`; `supabase/config.toml` added | `supabase/migrations/` |
 | ~~H-8~~ ✅ | ~~No confirmation-depth / reorg check in `verifyPassTransfer`; `value >= expectedWei` silently accepts overpayment~~ — **fixed in 2.29.4** (exact-amount equality + `MIN_CONFIRMATIONS = 3` on Base mainnet; `confirmations_pending` is a retryable code distinct from `amount_mismatch`) | `src/lib/passVerifier.ts:28-54` |
 | ~~H-9~~ ✅ | ~~Webhook HMAC manifest is non-standard (`ts.dataId`) — omits `x-request-id`, no `ts` freshness check → signature replayable~~ — **fixed in 2.29.4** (manifest is now `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, ±10 min replay window, fails closed when secret is unset in every environment) | `src/lib/mercadopago.ts:96-133` |
 | ~~H-10~~ ✅ | ~~`/perfil` renders a full auth UI instead of redirecting~~ — **fixed in 2.29.5** (server-side `permanentRedirect` to `app.1upesports.org` in production, `noindex` meta added) | `app/(main)/perfil/page.tsx` |
@@ -211,7 +216,7 @@ tokens). `verifyToken` doesn't assert the `appId` claim (defense-in-depth).
 5. ~~**H-2** — switch the 5 admin pages to `supabaseAdmin`~~ ✅ **Done in 2.29.2**.
 6. ~~**H-4** — add IP rate limiting~~ ✅ **Done in 2.29.3** (Upstash Ratelimit, 5 endpoints).
 7. ~~**H-3 / H-8 / H-9** — server-side on-chain verification for token approvals; confirmation depth; correct HMAC manifest + fail-closed.~~ ✅ **Done in 2.29.4** (new `src/lib/tokenTransferVerifier.ts`; `verifyPassTransfer` exact-amount + 3-block depth; MP webhook `id;request-id;ts` + ±10 min replay window + fail-closed).
-8. **H-7** — commit a schema baseline migration; authorize the Supabase MCP and run `get_advisors`. *Started in 2.29.1: `register_for_tournament` is now committed in `supabase/migrations/`; `get_advisors` ran clean for the change. Remaining: dump every other live function/table/policy as a baseline migration.*
+8. ~~**H-7** — commit a schema baseline migration~~ ✅ **Done in 2.29.6** — `supabase/migrations/00000000000000_baseline.sql` + `supabase/config.toml`. Two pre-existing advisor warnings (`function_search_path_mutable` on `set_updated_at`, `anon_security_definer_function_executable` on `report_match_result`) closed in the same pass.
 9. **H-6, H-10 → H-13** and the Medium items per area.
 10. ~~CHANGELOG patch entry for the `2026-05-22` tournaments-GET fix~~ ✅ **Done in 2.29.1**.
 

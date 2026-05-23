@@ -5,6 +5,54 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.6] — 2026-05-22
+
+### Security
+
+- **H-7 · Schema is now versioned in the repo.** Audit's last 🟠 High. The full live
+  `public` schema is captured in `supabase/migrations/00000000000000_baseline.sql`
+  (~1100 lines, fully idempotent). The DB can now be rebuilt from the repo:
+
+  | Section | Count |
+  |---|---|
+  | Extensions | 5 |
+  | Enum types | 13 |
+  | Tables | 34 |
+  | Constraints (UNIQUE / CHECK / FK) | 67 |
+  | Non-constraint indexes | 19 |
+  | Functions | 4 |
+  | Triggers | 5 |
+  | Views | 1 (`hall_of_fame`) |
+  | RLS-enabled tables | 34 |
+  | Policies | 25 |
+
+  Every statement is wrapped for re-runnability — `CREATE EXTENSION IF NOT EXISTS`,
+  `CREATE TABLE IF NOT EXISTS` (with `SERIAL`/`BIGSERIAL` so Postgres auto-creates the
+  sequence), `DO $$ … EXCEPTION WHEN duplicate_object THEN NULL; END $$` around every
+  `ADD CONSTRAINT`, `CREATE OR REPLACE FUNCTION`, `DROP POLICY IF EXISTS … CREATE POLICY …`,
+  `DROP TRIGGER IF EXISTS … CREATE TRIGGER …`. Re-running the baseline on the live DB is
+  a true no-op; running it on a fresh DB produces the live state.
+
+  Two small advisor warnings closed in the process:
+  - `function_search_path_mutable` — added `SET search_path TO 'public'` on `set_updated_at`.
+  - `anon_security_definer_function_executable` (for `report_match_result`) — `REVOKE
+    EXECUTE … FROM PUBLIC, anon, authenticated` added for all four `SECURITY DEFINER`
+    functions. Service-role calls (the only way the app uses these) are unaffected.
+
+- **`supabase/config.toml` added.** Minimal local-stack config so `supabase start` brings
+  up a Postgres + Auth + Studio + Storage replica that matches production.
+
+Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 pass).
+Spot-checked the three most-likely-to-fail patterns (enum `DO` block, constraint EXCEPTION
+handler, policy `DROP`/`CREATE` round-trip) against the live DB — all idempotent.
+
+### Audit status
+
+This closes the last 🟠 High. The audit is now: **3/3 Critical + 13/13 High closed.**
+Remaining: ~20 🟡 Medium + 🔵 Low/Info items.
+
+---
+
 ## [2.29.5] — 2026-05-22
 
 ### Security

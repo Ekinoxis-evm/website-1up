@@ -1,0 +1,58 @@
+# Minimal Supabase local config. Enables `supabase start` to bring up a
+# local stack that matches the production schema captured in
+# migrations/00000000000000_baseline.sql.
+#
+# Production project: `1uptower` = kwqfpkvalspuvyiszrfh — see CLAUDE.md.
+# This file does NOT carry secrets; keys come from .env.local.
+
+project_id = "1uptower"
+
+[api]
+enabled = true
+port    = 54321
+schemas = ["public", "storage"]
+max_rows = 1000
+
+[db]
+port               = 54322
+major_version      = 15
+shadow_port        = 54320
+
+[studio]
+enabled = true
+port    = 54323
+
+[inbucket]
+enabled = true
+port    = 54324
+
+[storage]
+enabled         = true
+file_size_limit = "50MiB"
+
+[storage.buckets.images]
+public           = true
+file_size_limit  = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+
+[storage.buckets.comprobantes]
+public           = false
+file_size_limit  = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "application/pdf"]
+
+[storage.buckets.course-docs]
+public           = false
+file_size_limit  = "25MiB"
+
+[auth]
+enabled                  = true
+site_url                 = "http://localhost:3000"
+additional_redirect_urls = ["http://app.localhost:3000", "http://admin.localhost:3000"]
+jwt_expiry               = 3600
+enable_signup            = false   # Privy owns auth in production
+
+[realtime]
+enabled = false
+
+[edge_runtime]
+enabled = false
