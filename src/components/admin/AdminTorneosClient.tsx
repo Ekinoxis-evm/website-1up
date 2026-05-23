@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import QRCode from "react-qr-code";
 import { ImageUpload } from "@/components/admin/ImageUpload";
@@ -75,7 +76,8 @@ function firstPrizeSummary(prizes: TournamentPrize[]): string {
 }
 
 export function AdminTorneosClient({ tournaments, games }: Props) {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const { getAccessToken } = usePrivy();
   const [open, setOpen]       = useState(false);
   const [editing, setEditing] = useState<TournamentWithGame | null>(null);
@@ -113,6 +115,19 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
     });
     setOpen(true);
   }
+
+  // Deep-link from the cockpit: `?edit=<tournamentId>` auto-opens the edit modal
+  // and then strips the param so a refresh doesn't reopen it indefinitely.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId) return;
+    const target = tournaments.find((t) => String(t.id) === editId);
+    if (target) {
+      openEdit(target);
+      router.replace("/admin/torneos");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, tournaments]);
 
   async function handleSave() {
     if (!form.name) { setSaveError("El nombre es requerido."); return; }
@@ -264,6 +279,15 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2 justify-end">
+                    {t.slug && (
+                      <Link
+                        href={`/admin/torneos/${t.slug}/manage`}
+                        className="p-1.5 bg-primary-container/10 hover:bg-primary-container/30 text-primary-container transition-colors"
+                        title="Gestionar (panel unificado)"
+                      >
+                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
+                      </Link>
+                    )}
                     <button onClick={() => openEdit(t)} className="p-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors" title="Editar">
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>

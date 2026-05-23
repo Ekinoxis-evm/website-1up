@@ -5,6 +5,71 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.33.0] — 2026-05-23
+
+### Added — Unified admin tournament cockpit `/admin/torneos/[slug]/manage` (PR C)
+
+Single management page per tournament. Replaces the "open three tabs to manage
+one tournament" pattern with one cockpit that owns the actions and shows the
+state of every concern at a glance: identity, participants, bracket, podium.
+Existing standalone admin pages (`/admin/tournament-registrations`,
+`/admin/tournament-brackets`, `/admin/tournament-results`) stay intact as the
+deep-edit targets — the cockpit orchestrates them, doesn't replace them.
+
+- **New route** `/admin/torneos/[slug]/manage`
+  - Server Component (`page.tsx`): parallel-loads tournament + 3 registration
+    counts (total / registered / attended) + bracket row + tournament_results
+    with linked user avatars. Routes to 404 on unknown slug.
+  - Client component (`AdminTournamentCockpit.tsx`): ~520 lines, four-card
+    grid below a sticky header + lifecycle banner.
+
+- **Header toolbar** — every cross-cutting action lives here, one click away:
+  | Action | What it does |
+  |---|---|
+  | Pública | Opens `/torneos/[slug]` in a new tab |
+  | TV | Opens `/torneos/[slug]/tv` (route lands in PR D; the link is wired now) |
+  | QR | In-place modal showing the check-in QR (hidden when tournament is `completed`) |
+  | Editar | Deep-links `/admin/torneos?edit=<id>` — list page auto-opens its edit modal then strips the query param |
+  | Cancelar | In-place confirm + `PUT /api/admin/tournaments { cancelTournament: true }` (hidden when completed) |
+  | Eliminar | In-place confirm with cascade preview (count of registrations / prizes / results) + `DELETE` |
+
+- **Lifecycle banner** — same 1/2/3/4 stages as the bracket admin
+  (Inscripciones / Borrador / En curso / Finalizado). Past stages render
+  in tertiary; current in primary; future in muted outline. Single source of
+  truth for "where is this tournament right now".
+
+- **Four cards**:
+  | Card | Inline preview | Deep link |
+  |---|---|---|
+  | Información | slug, sponsor, estado, visible, descripción | `/admin/torneos?edit=<id>` |
+  | Participantes | inscritos / asistieron / cancelaron / capacidad | `/admin/tournament-registrations?tournamentId=<id>` + QR shortcut |
+  | Bracket | formato, participantes, estado | `/admin/tournament-brackets` |
+  | Premios y resultados | cada premio configurado con su podio actual (avatar + nombre + estado de entrega del premio) | `/admin/tournament-results?tournamentId=<id>` |
+
+- **Cockpit launcher** — `AdminTorneosClient` (tournament list) gains a new
+  filled-dashboard icon button per row that links to the cockpit. The
+  existing edit / QR / cancel / delete buttons stay (still useful for
+  bulk operations from the list).
+
+- **Edit modal deep-link** — `AdminTorneosClient` now reads `?edit=<id>` on
+  mount and auto-opens its edit modal for that tournament, then strips the
+  param via `router.replace`. The cockpit's "Editar configuración completa"
+  CTA uses this; safe to refresh after dismiss without reopening.
+
+Deferred to PR D:
+- Embedding the bracket UI directly inside the cockpit (the existing
+  `AdminTournamentBracketsClient` is the per-tournament editor; refactoring
+  it to be a single-tournament component is a real lift). The cockpit's
+  Bracket card links to the standalone admin page for now — same destination,
+  one click away.
+- The `TV` toolbar button targets `/torneos/[slug]/tv` which doesn't exist
+  yet; it'll work the moment PR D ships.
+
+Build clean (`/admin/torneos/[slug]/manage` registered, 115/115 pages),
+114/114 tests pass.
+
+---
+
 ## [2.32.0] — 2026-05-23
 
 ### Added — Auto-podium from bracket completion (PR B)
