@@ -5,6 +5,60 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.4] — 2026-05-22
+
+### Security
+
+Three more 🟠 High findings from the 2026-05-22 audit (`AUDIT.md` → H-3, H-8, H-9) closed.
+The payments layer now verifies every on-chain transfer server-side before flipping money-moving
+orders to a terminal state, and the MercadoPago webhook uses MP's documented HMAC manifest with
+a replay window.
+
+- **H-3 · Token-order approval now verifies the payout on-chain before persisting `approved`.**
+  `/api/admin/token-orders` PATCH used to trust the admin-typed `txHash` and write
+  `approved_tx_hash` without any check. A new `src/lib/tokenTransferVerifier.ts` re-runs the
+  receipt through Base RPC and rejects the approval unless: the tx exists with
+  `status: success`, contains a `Transfer` log on `ONE_UP_TOKEN.address` from the configured
+  treasury (`pass_config.recipient_address`) to the order's stored `wallet_address` (the
+  server-derived verified wallet from C-1), with `value >= token_amount`, and at least
+  `MIN_CONFIRMATIONS` (3) confirmations. The route also tightens the txHash regex and
+  validates the wallet/amount before going on-chain. A failure returns HTTP 422 with the
+  precise failure code (`not_found`, `failed`, `no_transfer`, `amount_too_low`,
+  `confirmations_pending`, `rpc_error`).
+- **H-8 · `verifyPassTransfer` now requires exact amount + minimum confirmation depth.**
+  `src/lib/passVerifier.ts` previously accepted any transfer where `value >= expectedWei` and
+  trusted any non-reverted receipt. Two changes: (1) `value === expectedWei` (overpayment is
+  no longer silently accepted — pass purchases pay an exact configured price); (2) the receipt
+  must have at least `MIN_CONFIRMATIONS = 3` confirmations vs. the current head block before
+  it is trusted (reorg safety on Base mainnet). The result type now carries a discriminated
+  `code` so callers can distinguish `confirmations_pending` (retryable) from
+  `amount_mismatch` (terminal). Pass-order and course-order token paths inherit the fix
+  automatically — they already surface `result.reason` to the user.
+- **H-9 · MercadoPago webhook signature now uses MP's canonical `id;request-id;ts` manifest +
+  fails closed everywhere.** `src/lib/mercadopago.ts` previously signed against `ts.dataId`
+  (a non-standard manifest that omitted `x-request-id`) and had no `ts` freshness check, so a
+  replayed signature was accepted indefinitely. It also silently bypassed verification outside
+  production when the secret was unset (the original audit's "fail closed" note). Fixed:
+  - Manifest is now `id:<data.id>;request-id:<x-request-id>;ts:<ts>;` (MP's documented format)
+  - `ts` outside ±10 minutes of `now` is rejected as `stale_timestamp`
+  - When `MERCADOPAGO_WEBHOOK_SECRET` is unset the helper rejects with `missing_secret` in
+    every environment — there is no silent dev bypass. The route returns 500 in that case so
+    the misconfiguration is loud.
+  - The route prefers `data.id` from the URL `?id=` query (what MP actually signs) and falls
+    back to the body for resilience.
+
+  Return type changed from `boolean` to a discriminated `VerifyWebhookSignatureResult` so the
+  route can log the exact rejection reason (`bad_signature`, `stale_timestamp`,
+  `missing_secret`, etc.).
+
+  **New test files:** `src/__tests__/lib/passVerifier.test.ts` (8 tests),
+  `src/__tests__/lib/tokenTransferVerifier.test.ts` (7 tests). The MercadoPago test suite was
+  rewritten against the new manifest with 14 tests (was 8). Test count: 77 → 98.
+
+  Verified: `npm run build` (118 routes, zero TS errors), `npm run test:run` (98/98 pass).
+
+---
+
 ## [2.29.3] — 2026-05-22
 
 ### Security

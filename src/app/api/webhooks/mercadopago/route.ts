@@ -29,13 +29,28 @@ interface MpWebhookPayload {
 export async function POST(req: NextRequest) {
   const body = await req.json() as MpWebhookPayload;
 
-  // ── Signature verification ─────────────────────────────────────
+  // ── Signature verification (H-9: canonical manifest + replay window) ──
   const signature = req.headers.get("x-signature");
-  const dataId = body.data?.id ?? "";
+  const requestId = req.headers.get("x-request-id");
+  // MP also passes `data.id` on the URL as `?id=` — prefer that when present
+  // (it is what MP signs against), fall back to the body for resilience.
+  const urlDataId = new URL(req.url).searchParams.get("id") ?? "";
+  const dataId = urlDataId || body.data?.id || "";
 
-  if (!verifyWebhookSignature(signature, dataId)) {
-    console.warn("[MP Webhook] Invalid signature — rejecting");
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  const verify = verifyWebhookSignature(signature, requestId, dataId);
+  if (!verify.ok) {
+    if (verify.code === "missing_secret") {
+      console.error("[MP Webhook] MERCADOPAGO_WEBHOOK_SECRET is not configured");
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 500 },
+      );
+    }
+    console.warn(`[MP Webhook] Rejecting signature: ${verify.code} — ${verify.reason}`);
+    return NextResponse.json(
+      { error: "Invalid signature", code: verify.code },
+      { status: 401 },
+    );
   }
 
   // Only handle payment notifications

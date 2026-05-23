@@ -1,5 +1,6 @@
 import { publicClient, ONE_UP_TOKEN } from "@/lib/viem";
 import { parseUnits, decodeEventLog } from "viem";
+import { MIN_CONFIRMATIONS } from "@/lib/passVerifier";
 
 const TRANSFER_EVENT_ABI = [
   {
@@ -13,31 +14,48 @@ const TRANSFER_EVENT_ABI = [
   },
 ] as const;
 
-/**
- * Minimum confirmation depth before an on-chain $1UP transfer is considered
- * reorg-safe. Base mainnet has ~2s blocks; 3 blocks ≈ 6s. H-8 audit fix.
- */
-export const MIN_CONFIRMATIONS = BigInt(3);
-
-export type VerifyResult =
-  | { ok: true;  blockNumber: bigint; paidAt: Date }
+export type TokenTransferVerifyResult =
+  | {
+      ok: true;
+      blockNumber: bigint;
+      confirmations: bigint;
+      paidAt: Date;
+      valueWei: bigint;
+    }
   | {
       ok: false;
       reason: string;
-      code?:
+      code:
         | "not_found"
         | "failed"
         | "no_transfer"
-        | "amount_mismatch"
-        | "confirmations_pending";
+        | "amount_too_low"
+        | "confirmations_pending"
+        | "rpc_error";
     };
 
-export async function verifyPassTransfer(
+/**
+ * Server-side verification of a $1UP transfer on Base mainnet. Used by the
+ * admin token-order approval path (H-3 audit fix) to confirm that the admin
+ * actually paid the user before flipping the order to `approved`.
+ *
+ * Rules:
+ *   1. The tx must exist and have receipt.status === "success".
+ *   2. It must contain a `Transfer` log on `ONE_UP_TOKEN.address` whose
+ *      `from`/`to` match `expectedFrom`/`expectedTo` (case-insensitive).
+ *   3. `value` MUST be >= `minAmountTokens` parsed at the token's decimals.
+ *      Overpayment is accepted on this path because token-order amounts are
+ *      computed from `cop_amount / exchange_rate_cop` and the admin's wallet
+ *      may round up — but never less than what the user paid for.
+ *   4. The tx must have at least `MIN_CONFIRMATIONS` confirmations (reorg
+ *      safety).
+ */
+export async function verifyTokenTransfer(
   txHash: `0x${string}`,
   expectedFrom: string,
   expectedTo: string,
-  expectedTokenAmount: number,
-): Promise<VerifyResult> {
+  minAmountTokens: number,
+): Promise<TokenTransferVerifyResult> {
   let receipt;
   try {
     receipt = await publicClient.getTransactionReceipt({ hash: txHash });
@@ -64,7 +82,7 @@ export async function verifyPassTransfer(
     return {
       ok: false,
       reason: "No se pudo verificar la profundidad de confirmación. Intenta de nuevo.",
-      code: "confirmations_pending",
+      code: "rpc_error",
     };
   }
   const confirmations = currentBlock >= receipt.blockNumber
@@ -78,9 +96,8 @@ export async function verifyPassTransfer(
     };
   }
 
-  const expectedWei = parseUnits(expectedTokenAmount.toString(), ONE_UP_TOKEN.decimals);
-
-  let amountMismatch = false;
+  const minWei = parseUnits(minAmountTokens.toString(), ONE_UP_TOKEN.decimals);
+  let underpayment = false;
 
   for (const log of receipt.logs) {
     if (log.address.toLowerCase() !== ONE_UP_TOKEN.address.toLowerCase()) continue;
@@ -93,34 +110,34 @@ export async function verifyPassTransfer(
       ) {
         continue;
       }
-      // H-8: exact amount match — overpayment is no longer silently accepted.
-      // Underpayment was already rejected by the old `>=` check.
-      if (value !== expectedWei) {
-        amountMismatch = true;
+      if (value < minWei) {
+        underpayment = true;
         continue;
       }
       const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
       return {
         ok: true,
         blockNumber: receipt.blockNumber,
+        confirmations,
         paidAt: new Date(Number(block.timestamp) * 1000),
+        valueWei: value,
       };
     } catch {
       continue;
     }
   }
 
-  if (amountMismatch) {
+  if (underpayment) {
     return {
       ok: false,
-      reason: "El monto transferido no coincide con el precio configurado. Contacta a soporte.",
-      code: "amount_mismatch",
+      reason: "El monto transferido es menor al de la orden.",
+      code: "amount_too_low",
     };
   }
 
   return {
     ok: false,
-    reason: "No se encontró la transferencia de $1UP en la transacción.",
+    reason: "No se encontró la transferencia de $1UP entre las wallets esperadas.",
     code: "no_transfer",
   };
 }
