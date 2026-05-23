@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { signStreamToken } from "@/lib/stream";
-import { rateLimitByIp, limiters } from "@/lib/rateLimit";
+import { rateLimitByIp, getClientIp, limiters } from "@/lib/rateLimit";
 
 // Public — anyone can preview a course intro video on /academia/[courseId].
 // CF Stream token is 1h-scoped to the single intro video UID and the video has
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const token = await signStreamToken(course.intro_video_uid);
+  // M-A6.3: bind the JWT to the caller's IP via CF Stream `accessRules`.
+  const token = await signStreamToken(course.intro_video_uid, { clientIp: getClientIp(req) });
   return NextResponse.json({ token });
 }

@@ -11,14 +11,31 @@ export function streamEmbedUrl(token: string) {
   return `https://customer-${CUSTOMER_CODE}.cloudflarestream.com/${token}/iframe`;
 }
 
-export async function signStreamToken(videoUid: string): Promise<string> {
+// M-A6.3: optional `clientIp` ties the token to a specific source IP via CF
+// Stream's `accessRules` ("ip.src" allow + "any" block). Without it the JWT
+// was a 1-hour shareable bearer — anyone who got the URL out of the iframe
+// could stream. With it, the token only plays from the IP that minted it.
+// The mobile-network-IP-change trade-off is acceptable (token expires in 1h
+// anyway; a refresh re-mints from the new IP).
+type SignOpts = { clientIp?: string };
+
+export async function signStreamToken(videoUid: string, opts: SignOpts = {}): Promise<string> {
   const pem = Buffer.from(PEM_B64, "base64").toString("utf-8");
   // Cloudflare's signing key is PKCS#1 ("BEGIN RSA PRIVATE KEY"); createPrivateKey
   // auto-detects PKCS#1 vs PKCS#8, unlike jose's importPKCS8 which rejects PKCS#1.
   const privateKey = createPrivateKey(pem);
+
+  const payload: Record<string, unknown> = { kid: KEY_ID };
+  if (opts.clientIp && opts.clientIp !== "unknown") {
+    payload.accessRules = [
+      { type: "ip.src",      ip: [`${opts.clientIp}/32`], action: "allow" },
+      { type: "any",                                       action: "block" },
+    ];
+  }
+
   // Cloudflare requires `kid` in the JWT payload (not only the header) to
   // resolve the signing key — without it the token is rejected with 401.
-  return new SignJWT({ kid: KEY_ID })
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: "RS256", kid: KEY_ID })
     .setSubject(videoUid)
     .setExpirationTime("1h")

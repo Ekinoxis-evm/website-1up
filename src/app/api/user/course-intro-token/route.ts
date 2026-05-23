@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/privy";
 import { supabaseAdmin } from "@/lib/supabase";
 import { signStreamToken } from "@/lib/stream";
+import { getClientIp } from "@/lib/rateLimit";
 
 // Any authenticated user can view intro videos — no enrollment required.
 export async function POST(req: NextRequest) {
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
 
   if (!course?.intro_video_uid) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const token = await signStreamToken(course.intro_video_uid);
+  // M-A6.3: bind the JWT to the caller's IP via CF Stream `accessRules`.
+  const token = await signStreamToken(course.intro_video_uid, { clientIp: getClientIp(req) });
   return NextResponse.json({ token });
 }
