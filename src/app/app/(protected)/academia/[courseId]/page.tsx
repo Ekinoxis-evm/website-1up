@@ -52,13 +52,39 @@ export default async function AppCoursePage({ params }: Props) {
     .eq("is_published", true)
     .order("sort_order");
 
+  // M-A2.4: was three `any[]` blocks with eslint-disable. Now structurally typed
+  // to exactly the columns the queries select, so downstream consumers can rely
+  // on the shape without `any` propagation.
+  type SessionRow = {
+    id:               number;
+    module_id:        number;
+    title:            string;
+    description:      string | null;
+    duration_minutes: number | null;
+    video_uid:        string | null;
+    is_published:     boolean;
+    sort_order:       number;
+  };
+  type LinkRow = {
+    id:         number;
+    session_id: number;
+    label:      string;
+    url:        string;
+    sort_order: number;
+  };
+  type DocRow = {
+    id:         number;
+    session_id: number;
+    label:      string;
+    mime_type:  string;
+    size_bytes: number;
+    sort_order: number;
+  };
+
   const moduleIds = (modules ?? []).map(m => m.id);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let sessions: any[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let links: any[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let docs: any[] = [];
+  let sessions: SessionRow[] = [];
+  let links:    LinkRow[]    = [];
+  let docs:     DocRow[]     = [];
 
   if (moduleIds.length > 0) {
     const { data: sessData } = await supabaseAdmin
@@ -67,9 +93,9 @@ export default async function AppCoursePage({ params }: Props) {
       .in("module_id", moduleIds)
       .eq("is_published", true)
       .order("sort_order");
-    sessions = sessData ?? [];
+    sessions = (sessData ?? []) as SessionRow[];
 
-    const sessionIds = (sessions as { id: number }[]).map(s => s.id);
+    const sessionIds = sessions.map(s => s.id);
     if (sessionIds.length > 0) {
       const [lRes, dRes] = await Promise.all([
         supabaseAdmin
@@ -83,8 +109,8 @@ export default async function AppCoursePage({ params }: Props) {
           .in("session_id", sessionIds)
           .order("sort_order"),
       ]);
-      links = lRes.data ?? [];
-      docs = dRes.data ?? [];
+      links = (lRes.data ?? []) as LinkRow[];
+      docs  = (dRes.data ?? []) as DocRow[];
     }
   }
 
