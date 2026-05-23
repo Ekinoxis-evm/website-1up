@@ -5,6 +5,43 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.4] — 2026-05-23
+
+### Fixed — Upstash env var name fallback
+
+When you add the Vercel Marketplace → Upstash for Redis integration, Vercel appends
+its own KV-style suffix to whatever prefix you choose. With the canonical prefix
+`UPSTASH_REDIS_REST` you actually get:
+
+```
+UPSTASH_REDIS_REST_KV_REST_API_URL
+UPSTASH_REDIS_REST_KV_REST_API_TOKEN
+UPSTASH_REDIS_REST_KV_REST_API_READ_ONLY_TOKEN
+UPSTASH_REDIS_REST_KV_URL
+UPSTASH_REDIS_REST_REDIS_URL
+```
+
+…not the shorter `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` that
+`Redis.fromEnv()` and the code in `src/lib/rateLimit.ts` originally read.
+
+`src/lib/rateLimit.ts` now accepts both name forms via nullish-coalesce:
+
+```ts
+const URL   = process.env.UPSTASH_REDIS_REST_URL   ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_URL;
+const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN;
+```
+
+`CLAUDE.md`'s environment-variable table updated to document the dual naming.
+
+This deploy is also what flips rate limiting from "wired but inert" to **live
+in production** — the Vercel Marketplace adds env vars at the project level,
+but they only reach the runtime via a fresh deploy. Merging this PR builds
+against the now-present credentials and the limits start enforcing.
+
+Verified: `npm run build` clean, `npm run test:run` 100/100.
+
+---
+
 ## [2.30.3] — 2026-05-23
 
 ### Fixed — OG images at 1200×630 (replacing the 512² square)

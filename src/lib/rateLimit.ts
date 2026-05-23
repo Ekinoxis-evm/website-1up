@@ -19,8 +19,14 @@ import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const URL   = process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel's Upstash Marketplace integration appends its own KV-style suffixes to
+// whatever prefix you pick, so with the recommended prefix `UPSTASH_REDIS_REST`
+// the live env vars come out as `UPSTASH_REDIS_REST_KV_REST_API_URL` /
+// `UPSTASH_REDIS_REST_KV_REST_API_TOKEN`. We accept both names — the canonical
+// short ones first (`Redis.fromEnv()`-compatible if someone sets them manually),
+// then the Vercel-generated long ones.
+const URL   = process.env.UPSTASH_REDIS_REST_URL   ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_URL;
+const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN;
 
 const redis: Redis | null = URL && TOKEN ? new Redis({ url: URL, token: TOKEN }) : null;
 

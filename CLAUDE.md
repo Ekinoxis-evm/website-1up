@@ -291,8 +291,8 @@ npm run lint       # ESLint
 | `CF_STREAM_KEY_ID` | From one-time `POST /accounts/{id}/stream/keys` — RS256 signing key ID |
 | `CF_STREAM_PEM` | Base64-encoded RSA private key from same signing key response — never regenerate (invalidates all issued tokens) |
 | `NEXT_PUBLIC_CF_CUSTOMER_CODE` | From CF Stream video playback URL: `customer-{CODE}.cloudflarestream.com` |
-| `UPSTASH_REDIS_REST_URL` | Vercel Marketplace → Upstash → "Add to Project". Drives `src/lib/rateLimit.ts`. **When unset, all rate limiters are pass-through** — code ships safely without it, but H-4 is unenforced until provisioned. |
-| `UPSTASH_REDIS_REST_TOKEN` | Same source as `UPSTASH_REDIS_REST_URL`. |
+| `UPSTASH_REDIS_REST_URL` *(or `UPSTASH_REDIS_REST_KV_REST_API_URL`)* | Vercel Marketplace → Upstash → "Add to Project". Drives `src/lib/rateLimit.ts`. Vercel auto-generates the longer `_KV_REST_API_URL` form; the code falls back to it. **When unset, all rate limiters are pass-through** — code ships safely without it, but H-4 is unenforced until provisioned. |
+| `UPSTASH_REDIS_REST_TOKEN` *(or `UPSTASH_REDIS_REST_KV_REST_API_TOKEN`)* | Same source as the URL above; same dual-name handling. |
 
 > `BLOB_READ_WRITE_TOKEN` is **not needed** — image storage migrated to Supabase Storage.
 
