@@ -17,10 +17,11 @@
 // the documented contract).
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
+import { encodeFunctionData, parseUnits } from "viem";
 import { Avatar } from "@/components/ui/Avatar";
+import { publicClient, ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import type { TournamentPrize, TournamentResult } from "@/types/database.types";
 
 export type ResultRow = TournamentResult & {
@@ -80,6 +81,8 @@ export function AdminTournamentResultsPanel({
   tournamentId, tournamentName, prizes, results, candidates, onChange,
 }: Props) {
   const { getAccessToken } = usePrivy();
+  const { sendTransaction } = useSendTransaction();
+  const { wallets } = useWallets();
   const router = useRouter();
 
   const [busy, setBusy]   = useState<number | null>(null);
@@ -92,10 +95,98 @@ export function AdminTournamentResultsPanel({
   const [comprobanteUrl, setComprobanteUrl] = useState("");
   // search inside the assign picker
   const [pickerQuery, setPickerQuery]     = useState("");
+  // On-chain delivery: per-result winner wallet cache + send-state machine.
+  const [walletFor, setWalletFor] = useState<Record<number, string | null>>({});
+  const [sendStep,  setSendStep]  = useState<"idle" | "loading-wallet" | "sending" | "waiting">("idle");
 
   async function authHeaders() {
     const token = await getAccessToken();
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  }
+
+  // Lazy-fetch the winner's embedded wallet so we know where to send the prize.
+  async function loadWallet(resultId: number, userProfileId: number): Promise<string | null> {
+    if (walletFor[resultId] !== undefined) return walletFor[resultId];
+    const token = await getAccessToken();
+    const res = await fetch(
+      `/api/admin/tournament-results?walletFor=${userProfileId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) { setWalletFor((p) => ({ ...p, [resultId]: null })); return null; }
+    const data: { wallet: string | null } = await res.json();
+    setWalletFor((p) => ({ ...p, [resultId]: data.wallet }));
+    return data.wallet;
+  }
+
+  // Sponsored on-chain $1UP transfer from the admin's connected wallet to the
+  // winner's embedded wallet. Captures the tx hash, waits for confirmation,
+  // then PATCHes the result to `sent` with the hash.
+  async function sendPrizeOnChain(result: ResultRow, prize: TournamentPrize) {
+    if (!prize.amount_tokens || Number(prize.amount_tokens) <= 0) {
+      setError("Este premio no tiene monto en $1UP configurado."); return;
+    }
+    const adminAddr = wallets[0]?.address;
+    if (!adminAddr) {
+      setError("Conecta una wallet de administrador antes de enviar el premio."); return;
+    }
+    setBusy(result.id); setError(null);
+
+    setSendStep("loading-wallet");
+    const wallet = await loadWallet(result.id, result.user_profile_id);
+    if (!wallet) {
+      setError("El ganador no tiene wallet registrada — usa entrega manual.");
+      setSendStep("idle"); setBusy(null); return;
+    }
+
+    setSendStep("sending");
+    let hash: string;
+    try {
+      const data = encodeFunctionData({
+        abi: ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args: [
+          wallet as `0x${string}`,
+          parseUnits(String(prize.amount_tokens), ONE_UP_TOKEN.decimals),
+        ],
+      });
+      const tx = await sendTransaction(
+        // value: BigInt(0) is mandatory — Privy's bundler classifies the tx as
+        // a sponsored EIP-7702 op only when value is explicit. Same pattern as
+        // BuyPassWizard / CourseCheckoutWizard / WalletTab. See CLAUDE.md.
+        { to: ONE_UP_TOKEN.address, value: BigInt(0), data, chainId: 8453 },
+        { address: adminAddr, sponsor: true },
+      );
+      hash = tx.hash;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al enviar la transacción.");
+      setSendStep("idle"); setBusy(null); return;
+    }
+
+    setSendStep("waiting");
+    try {
+      await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}`, timeout: 120_000 });
+    } catch {
+      setError(`Transacción enviada pero la confirmación tardó demasiado. Hash: ${hash}`);
+      setSendStep("idle"); setBusy(null); return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/tournament-results", {
+        method: "PATCH",
+        headers: await authHeaders(),
+        body: JSON.stringify({ id: result.id, prizeStatus: "sent", prizeTxHash: hash }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error ?? "Error al registrar la entrega.");
+        return;
+      }
+      setOpenSentFor(null);
+      router.refresh();
+      onChange?.();
+    } finally {
+      setSendStep("idle"); setBusy(null);
+    }
   }
 
   // The user expects each position to be visible even if no row exists. Pre-fill
@@ -310,15 +401,9 @@ export function AdminTournamentResultsPanel({
       </div>
 
       <p className="font-body text-xs text-outline">
-        Cuando termina el bracket, las posiciones se llenan automáticamente desde el cuadro
-        (audit-podium). Aquí puedes sobreescribir manualmente cualquier posición o registrar
-        la entrega de los premios.{" "}
-        <Link
-          href={`/admin/tournament-results?tournamentId=${tournamentId}`}
-          className="text-secondary hover:underline"
-        >
-          Ver vista detallada
-        </Link>
+        Cuando termina el bracket, las posiciones se llenan automáticamente desde el cuadro.
+        Aquí puedes sobreescribir cualquier posición y registrar la entrega de los premios —
+        para premios en $1UP puedes pagar on-chain desde tu wallet con un solo click.
       </p>
 
       {/* ── Assign winner picker ─────────────────────────────────────── */}
@@ -361,59 +446,98 @@ export function AdminTournamentResultsPanel({
       )}
 
       {/* ── Mark sent modal ──────────────────────────────────────────── */}
-      {openSentFor !== null && (
-        <Modal onClose={() => setOpenSentFor(null)}>
-          <h3 className="font-headline font-black text-xl uppercase tracking-tighter mb-1">
-            REGISTRAR <span className="text-primary-container">ENTREGA</span>
-          </h3>
-          <p className="font-body text-xs text-outline mb-4">
-            Sube el comprobante (transferencia bancaria) o pega el hash de transacción ($1UP on-chain).
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
-                Tx hash <span className="text-outline/50 normal-case font-normal">(opcional)</span>
-              </label>
-              <input
-                value={txHash}
-                onChange={e => setTxHash(e.target.value)}
-                placeholder="0x…"
-                className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-xs border-none focus:outline-none placeholder:text-outline/40"
-              />
-            </div>
-            <div>
-              <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
-                URL del comprobante <span className="text-outline/50 normal-case font-normal">(opcional)</span>
-              </label>
-              <input
-                value={comprobanteUrl}
-                onChange={e => setComprobanteUrl(e.target.value)}
-                placeholder="https://…"
-                className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none placeholder:text-outline/40"
-              />
-            </div>
-            <p className="font-body text-[11px] text-outline">
-              Necesitas al menos uno de los dos para marcar como entregado.
+      {openSentFor !== null && (() => {
+        const targetResult = results.find(r => r.id === openSentFor);
+        const targetPrize  = targetResult ? prizes.find(p => p.position === targetResult.position) : undefined;
+        const hasTokenPrize = !!targetPrize && (targetPrize.prize_type === "tokens" || targetPrize.prize_type === "both") && !!targetPrize.amount_tokens;
+        const sendBusy = sendStep !== "idle";
+        const sendLabel =
+          sendStep === "loading-wallet" ? "BUSCANDO WALLET…" :
+          sendStep === "sending"        ? "FIRMA EN TU WALLET…" :
+          sendStep === "waiting"        ? "ESPERANDO CONFIRMACIÓN…" :
+                                          `ENVIAR ${targetPrize?.amount_tokens ? Number(targetPrize.amount_tokens).toLocaleString("es-CO") : ""} $1UP`;
+        return (
+          <Modal onClose={() => { if (!sendBusy) setOpenSentFor(null); }}>
+            <h3 className="font-headline font-black text-xl uppercase tracking-tighter mb-1">
+              REGISTRAR <span className="text-primary-container">ENTREGA</span>
+            </h3>
+            <p className="font-body text-xs text-outline mb-4">
+              Paga el premio on-chain desde tu wallet, o registra una entrega manual (transferencia bancaria / tx ya enviada).
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => markSent(openSentFor)}
-                disabled={busy === openSentFor || (!txHash && !comprobanteUrl)}
-                className="flex-1 bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tight disabled:opacity-40"
-              >
-                {busy === openSentFor ? "GUARDANDO…" : "MARCAR ENTREGADO"}
-              </button>
-              <button
-                onClick={() => setOpenSentFor(null)}
-                disabled={busy === openSentFor}
-                className="px-4 bg-surface-container-high text-on-surface font-headline font-black uppercase disabled:opacity-40"
-              >
-                CANCELAR
-              </button>
+
+            {/* On-chain path — only if the prize includes a $1UP amount */}
+            {hasTokenPrize && targetResult && targetPrize && (
+              <div className="bg-surface-container-high p-4 mb-4">
+                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-2">
+                  Pago automático on-chain
+                </p>
+                <p className="font-body text-xs text-outline mb-3">
+                  Enviarás <strong className="text-on-surface">{Number(targetPrize.amount_tokens).toLocaleString("es-CO")} $1UP</strong> a la wallet del ganador desde tu wallet conectada. La transacción usa gas patrocinado.
+                </p>
+                <button
+                  onClick={() => sendPrizeOnChain(targetResult, targetPrize)}
+                  disabled={sendBusy || wallets.length === 0}
+                  className="w-full bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tight disabled:opacity-40"
+                >
+                  {sendLabel}
+                </button>
+                {wallets.length === 0 && (
+                  <p className="font-body text-[10px] text-error mt-2">
+                    No tienes una wallet conectada. Conéctala desde el panel de wallet del admin.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-2">
+              Registro manual
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+                  Tx hash <span className="text-outline/50 normal-case font-normal">(opcional)</span>
+                </label>
+                <input
+                  value={txHash}
+                  onChange={e => setTxHash(e.target.value)}
+                  placeholder="0x…"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-xs border-none focus:outline-none placeholder:text-outline/40"
+                />
+              </div>
+              <div>
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+                  URL del comprobante <span className="text-outline/50 normal-case font-normal">(opcional)</span>
+                </label>
+                <input
+                  value={comprobanteUrl}
+                  onChange={e => setComprobanteUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none placeholder:text-outline/40"
+                />
+              </div>
+              <p className="font-body text-[11px] text-outline">
+                Necesitas al menos uno de los dos para registrar manualmente.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => markSent(openSentFor)}
+                  disabled={busy === openSentFor || sendBusy || (!txHash && !comprobanteUrl)}
+                  className="flex-1 bg-surface-container-high text-on-surface font-headline font-black py-3 uppercase tracking-tight disabled:opacity-40"
+                >
+                  {busy === openSentFor && !sendBusy ? "GUARDANDO…" : "REGISTRAR MANUAL"}
+                </button>
+                <button
+                  onClick={() => setOpenSentFor(null)}
+                  disabled={busy === openSentFor || sendBusy}
+                  className="px-4 bg-surface-container-high text-on-surface font-headline font-black uppercase disabled:opacity-40"
+                >
+                  CERRAR
+                </button>
+              </div>
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

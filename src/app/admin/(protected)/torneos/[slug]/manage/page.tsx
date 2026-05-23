@@ -37,6 +37,7 @@ export default async function AdminTournamentManagePage({
     { data: registrations },
     { data: bracket },
     { data: results },
+    { data: games },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -53,6 +54,8 @@ export default async function AdminTournamentManagePage({
       .select("*, user_profiles(nombre, apellidos, username, avatar_url)")
       .eq("tournament_id", tournament.id)
       .order("position"),
+    // Needed by the inline-editable Info tab's game selector.
+    supabaseAdmin.from("games").select("id, name").order("name"),
   ]);
 
   return (
@@ -61,6 +64,7 @@ export default async function AdminTournamentManagePage({
       registrations={registrations ?? []}
       bracket={bracket ?? null}
       results={results ?? []}
+      games={games ?? []}
     />
   );
 }

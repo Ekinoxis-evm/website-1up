@@ -261,8 +261,7 @@ npm run dev
 | `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
-| `/admin/tournament-brackets` | Bracket management — select tournament → seed bracket from registered participants → enter match scores round by round. Supports double and single elimination. |
-| `/admin/tournament-results` | Podium results — select tournament → assign 1°/2°/3° from registered players → save points (10/5/3 default, custom override) |
+| `/admin/torneos/[slug]/manage` | **Per-tournament cockpit (v2.36.0).** Single page with stats strip, 4-step phase stepper (Inscripciones → Borrador → En curso → Finalizado, driven by bracket lifecycle), Pública/TV/QR/Share/Cancelar/Eliminar toolbar, and 4 tabs: **Información** (inline-editable form), **Inscripciones** (status mgmt + CSV), **Bracket** (seeding, start, record winners, undo), **Premios** (podium + on-chain $1UP delivery with one click, or manual tx-hash/comprobante). Replaces the prior standalone `/admin/tournament-brackets` and `/admin/tournament-results` pages — both deleted in 2.36.0. |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
 | `/admin/social-links` | Social link URLs per platform — footer icons (instagram, tiktok, kick, youtube, x, twitch) + community invite links (discord, whatsapp — shown in CommunitySection, filtered from footer) |

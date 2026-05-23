@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+// Tournament directory page — slim list view.
+//
+// Per-tournament management (edit info, cancel, delete, manage bracket,
+// register podium winners, send prizes on-chain) all live inside the
+// cockpit at /admin/torneos/{slug}/manage.
+//
+// This page is just the directory + a name-only quick-create that
+// redirects into the cockpit so admins fill in everything inline.
+
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import QRCode from "react-qr-code";
-import { ImageUpload } from "@/components/admin/ImageUpload";
-import { AdminTorneoPrizesEditor, type PrizeFormRow } from "@/components/admin/AdminTorneoPrizesEditor";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
@@ -21,43 +28,9 @@ interface Props {
   games:       Pick<Game, "id" | "name">[];
 }
 
-type FormState = {
-  name: string; gameId: string; date: string;
-  maxParticipants: string; status: "upcoming" | "live" | "completed";
-  locationType: "presencial" | "online" | "mixto"; imageUrl: string;
-  description: string; isActive: boolean; isRegistrationOpen: boolean;
-  sortOrder: number; prizes: PrizeFormRow[];
-  sponsorName: string; sponsorWebsiteUrl: string; sponsorLogoUrl: string;
-};
-
-const EMPTY: FormState = {
-  name: "", gameId: "", date: "", maxParticipants: "",
-  status: "upcoming", locationType: "presencial", imageUrl: "",
-  description: "", isActive: true, isRegistrationOpen: false, sortOrder: 0, prizes: [],
-  sponsorName: "", sponsorWebsiteUrl: "", sponsorLogoUrl: "",
-};
-
 const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" };
 const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary", completed: "text-outline" };
 const LOC_LABELS    = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
-
-// Colombia is always UTC-5 (no DST). Formats a stored UTC ISO string for datetime-local input.
-function toColombiaInput(utcIso: string): string {
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "America/Bogota",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  }).format(new Date(utcIso)).replace(" ", "T");
-}
-
-function prizeToFormRow(p: TournamentPrize): PrizeFormRow {
-  return {
-    position:     p.position as 1 | 2 | 3,
-    prizeType:    p.prize_type as "cop" | "tokens" | "both",
-    amountTokens: p.amount_tokens ? String(p.amount_tokens) : "",
-    amountCop:    p.amount_cop    ? String(p.amount_cop)    : "",
-  };
-}
 
 function firstPrizeSummary(prizes: TournamentPrize[]): string {
   const first = prizes.find((p) => p.position === 1);
@@ -76,143 +49,48 @@ function firstPrizeSummary(prizes: TournamentPrize[]): string {
 }
 
 export function AdminTorneosClient({ tournaments, games }: Props) {
-  const router       = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter();
   const { getAccessToken } = usePrivy();
-  const [open, setOpen]       = useState(false);
-  const [editing, setEditing] = useState<TournamentWithGame | null>(null);
-  const [form, setForm]       = useState<FormState>(EMPTY);
-  const [loading, setLoading] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+
   const [qrTournament, setQrTournament] = useState<{ id: number; slug: string | null; name: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
-  const [cancelConfirm, setCancelConfirm] = useState<{ tournament: TournamentWithGame; registrationCount: number | null } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [createOpen, setCreateOpen]     = useState(false);
+  const [newName, setNewName]           = useState("");
+  const [newGameId, setNewGameId]       = useState("");
+  const [creating, setCreating]         = useState(false);
+  const [createError, setCreateError]   = useState<string | null>(null);
 
-  async function authHeaders() {
-    const token = await getAccessToken();
-    return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-  }
-
-  function openEdit(t: TournamentWithGame) {
-    setEditing(t);
-    setForm({
-      name:               t.name,
-      gameId:             t.game_id ? String(t.game_id) : "",
-      date:               t.date ? toColombiaInput(t.date) : "",
-      maxParticipants:    t.max_participants ? String(t.max_participants) : "",
-      status:             t.status as "upcoming" | "live" | "completed",
-      locationType:       t.location_type as "presencial" | "online" | "mixto",
-      imageUrl:           t.image_url ?? "",
-      description:        t.description ?? "",
-      isActive:           t.is_active,
-      isRegistrationOpen: t.is_registration_open,
-      sortOrder:          t.sort_order,
-      prizes:             [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position).map(prizeToFormRow),
-      sponsorName:        t.sponsor_name ?? "",
-      sponsorWebsiteUrl:  t.sponsor_website_url ?? "",
-      sponsorLogoUrl:     t.sponsor_logo_url ?? "",
-    });
-    setOpen(true);
-  }
-
-  // Deep-link from the cockpit: `?edit=<tournamentId>` auto-opens the edit modal
-  // and then strips the param so a refresh doesn't reopen it indefinitely.
-  useEffect(() => {
-    const editId = searchParams.get("edit");
-    if (!editId) return;
-    const target = tournaments.find((t) => String(t.id) === editId);
-    if (target) {
-      openEdit(target);
-      router.replace("/admin/torneos");
+  // Name-only quick-create — POST a stub tournament then jump straight to
+  // the cockpit where the admin fills in the rest inline. Mirrors the
+  // /admin/courses/new pattern documented in CLAUDE.md.
+  async function handleCreate() {
+    if (!newName.trim()) { setCreateError("El nombre es requerido."); return; }
+    setCreating(true); setCreateError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/admin/tournaments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name:   newName.trim(),
+          gameId: newGameId || null,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCreateError(err.error ?? "No se pudo crear el torneo.");
+        return;
+      }
+      const data: { slug: string | null; id: number } = await res.json();
+      if (data.slug) {
+        router.push(`/admin/torneos/${data.slug}/manage`);
+      } else {
+        // Defensive fallback — slug is normally always set by the API.
+        router.refresh();
+        setCreateOpen(false);
+      }
+    } finally {
+      setCreating(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, tournaments]);
-
-  async function handleSave() {
-    if (!form.name) { setSaveError("El nombre es requerido."); return; }
-    setLoading(true); setSaveError(null);
-    const method = editing ? "PUT" : "POST";
-    const body   = {
-      ...form,
-      // datetime-local gives "YYYY-MM-DDTHH:mm" — append Colombia offset so PostgreSQL stores correct UTC
-      date: form.date ? `${form.date}:00-05:00` : null,
-      ...(editing ? { id: editing.id } : {}),
-    };
-    const res = await fetch("/api/admin/tournaments", {
-      method, headers: await authHeaders(), body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      setSaveError(err.error ?? "Error al guardar. Intenta de nuevo.");
-      setLoading(false); return;
-    }
-    setOpen(false); setLoading(false); router.refresh();
-  }
-
-  async function fetchRegistrationCount(tournamentId: number): Promise<number | null> {
-    const token = await getAccessToken();
-    const res = await fetch(`/api/admin/tournament-registrations?tournamentId=${tournamentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    const data: { status: string }[] = await res.json();
-    return data.filter((r) => r.status === "registered").length;
-  }
-
-  async function openDeleteConfirm(t: TournamentWithGame) {
-    setDeleteConfirm({ tournament: t, registrationCount: null });
-    const count = await fetchRegistrationCount(t.id);
-    setDeleteConfirm((prev) => prev && prev.tournament.id === t.id ? { ...prev, registrationCount: count } : prev);
-  }
-
-  async function openCancelConfirm(t: TournamentWithGame) {
-    setCancelConfirm({ tournament: t, registrationCount: null });
-    const count = await fetchRegistrationCount(t.id);
-    setCancelConfirm((prev) => prev && prev.tournament.id === t.id ? { ...prev, registrationCount: count } : prev);
-  }
-
-  async function confirmDelete() {
-    if (!deleteConfirm) return;
-    setActionLoading(true);
-    await fetch("/api/admin/tournaments", {
-      method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id: deleteConfirm.tournament.id }),
-    });
-    setActionLoading(false);
-    setDeleteConfirm(null);
-    router.refresh();
-  }
-
-  async function confirmCancel() {
-    if (!cancelConfirm) return;
-    setActionLoading(true);
-    const t = cancelConfirm.tournament;
-    await fetch("/api/admin/tournaments", {
-      method: "PUT",
-      headers: await authHeaders(),
-      body: JSON.stringify({
-        id:                 t.id,
-        name:               t.name,
-        gameId:             t.game_id,
-        date:               t.date,
-        maxParticipants:    t.max_participants,
-        status:             "completed",
-        locationType:       t.location_type,
-        imageUrl:           t.image_url,
-        description:        t.description,
-        isActive:           t.is_active,
-        isRegistrationOpen: false,
-        sortOrder:          t.sort_order,
-        cancelTournament:   true,
-      }),
-    });
-    setActionLoading(false);
-    setCancelConfirm(null);
-    router.refresh();
-  }
-
-  function f<K extends keyof FormState>(k: K, v: FormState[K]) {
-    setForm((prev) => ({ ...prev, [k]: v }));
   }
 
   return (
@@ -224,11 +102,11 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
           </h1>
           <div className="h-1 w-16 bg-primary-container mt-2" />
           <p className="font-body text-sm text-outline mt-2">
-            Gestiona los torneos del ecosistema 1UP.
+            Gestiona los torneos del ecosistema 1UP. Edita, cancela y entrega premios desde el panel de cada torneo.
           </p>
         </div>
         <button
-          onClick={() => { setEditing(null); setForm(EMPTY); setOpen(true); }}
+          onClick={() => { setNewName(""); setNewGameId(""); setCreateError(null); setCreateOpen(true); }}
           className="bg-primary-container text-white font-headline font-black text-sm px-6 py-3 skew-fix hover:neo-shadow-pink transition-all"
         >
           <span className="block skew-content">+ NUEVO TORNEO</span>
@@ -283,14 +161,11 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                       <Link
                         href={`/admin/torneos/${t.slug}/manage`}
                         className="p-1.5 bg-primary-container/10 hover:bg-primary-container/30 text-primary-container transition-colors"
-                        title="Gestionar (panel unificado)"
+                        title="Gestionar (info, inscripciones, bracket, premios)"
                       >
                         <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
                       </Link>
                     )}
-                    <button onClick={() => openEdit(t)} className="p-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors" title="Editar">
-                      <span className="material-symbols-outlined text-sm">edit</span>
-                    </button>
                     {t.status !== "completed" && (
                       <button
                         onClick={() => setQrTournament({ id: t.id, slug: t.slug ?? null, name: t.name })}
@@ -300,18 +175,6 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                         <span className="material-symbols-outlined text-sm">qr_code</span>
                       </button>
                     )}
-                    {t.status !== "completed" && (
-                      <button
-                        onClick={() => openCancelConfirm(t)}
-                        className="p-1.5 bg-surface-container-high hover:bg-secondary/20 hover:text-secondary transition-colors"
-                        title="Cancelar torneo"
-                      >
-                        <span className="material-symbols-outlined text-sm">block</span>
-                      </button>
-                    )}
-                    <button onClick={() => openDeleteConfirm(t)} className="p-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error transition-colors" title="Eliminar">
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -328,265 +191,62 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
         </table>
       </div>
 
-      {/* Modal */}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
-          <div className="bg-surface-container w-full max-w-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setOpen(false)} className="absolute top-4 right-4 text-outline hover:text-on-surface">
+      {/* Quick-create modal */}
+      {createOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
+          onClick={() => !creating && setCreateOpen(false)}
+        >
+          <div
+            className="bg-surface-container w-full max-w-md p-8 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+              className="absolute top-4 right-4 text-outline hover:text-on-surface disabled:opacity-40"
+            >
               <span className="material-symbols-outlined">close</span>
             </button>
 
-            <h2 className="font-headline font-black text-2xl uppercase tracking-tighter mb-6">
-              {editing ? "EDITAR" : "NUEVO"} <span className="text-primary-container">TORNEO</span>
+            <h2 className="font-headline font-black text-2xl uppercase tracking-tighter mb-2">
+              NUEVO <span className="text-primary-container">TORNEO</span>
             </h2>
+            <p className="font-body text-sm text-outline mb-6">
+              Empieza con un nombre. Al guardar te llevamos al panel del torneo donde editas todo lo demás.
+            </p>
 
             <div className="space-y-4">
-              {/* Image */}
               <div>
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-2">
-                  Imagen
-                </label>
-                <ImageUpload
-                  currentUrl={form.imageUrl || null}
-                  folder="tournaments"
-                  entityId={editing?.id}
-                  onUploaded={(url) => f("imageUrl", url)}
-                  getAccessToken={getAccessToken}
-                  aspectRatio="video"
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Nombre *</label>
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ej: Copa 1UP — Valorant S1"
+                  autoFocus
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
                 />
               </div>
-
-              {/* Name */}
               <div>
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Nombre *</label>
-                <input value={form.name} onChange={(e) => f("name", e.target.value)}
-                  placeholder="Ej: Copa 1UP — Valorant S1"
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Juego (opcional)</label>
+                <select
+                  value={newGameId}
+                  onChange={(e) => setNewGameId(e.target.value)}
+                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
+                >
+                  <option value="">— Asignar después —</option>
+                  {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
               </div>
 
-              {/* Game + Status row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Juego</label>
-                  <select value={form.gameId} onChange={(e) => f("gameId", e.target.value)}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none">
-                    <option value="">— Sin juego —</option>
-                    {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Estado</label>
-                  <div className="w-full bg-surface-container-lowest p-3 flex items-center justify-between">
-                    <span className={`font-headline font-bold text-xs uppercase tracking-widest ${STATUS_COLORS[form.status]}`}>
-                      {STATUS_LABELS[form.status]}
-                    </span>
-                    <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline/60">
-                      Automático
-                    </span>
-                  </div>
-                  <p className="font-body text-[11px] text-outline mt-1 leading-snug">
-                    El estado lo controla el bracket: <span className="text-on-surface">Iniciar Torneo</span> en
-                    <span className="text-on-surface"> Brackets</span> lo pone En vivo; el último ganador lo cierra como Finalizado.
-                  </p>
-                </div>
-              </div>
+              {createError && <p className="font-body text-sm text-error">{createError}</p>}
 
-              {/* Date + Location row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha y hora</label>
-                  <input type="datetime-local" value={form.date} onChange={(e) => f("date", e.target.value)}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Modalidad</label>
-                  <select value={form.locationType} onChange={(e) => f("locationType", e.target.value as FormState["locationType"])}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none">
-                    <option value="presencial">Presencial</option>
-                    <option value="online">Online</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Max participants */}
-              <div className="w-1/2 pr-2">
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Máx. participantes</label>
-                <input type="number" value={form.maxParticipants} onChange={(e) => f("maxParticipants", e.target.value)}
-                  placeholder="Ej: 32"
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
-              </div>
-
-              {/* Prizes editor */}
-              <AdminTorneoPrizesEditor
-                value={form.prizes}
-                onChange={(prizes) => f("prizes", prizes)}
-              />
-
-              {/* Description */}
-              <div>
-                <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Descripción</label>
-                <textarea value={form.description} onChange={(e) => f("description", e.target.value)}
-                  rows={3} placeholder="Detalles del torneo..."
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none" />
-              </div>
-
-              {/* Sponsor */}
-              <div className="bg-surface-container-high p-4 space-y-3">
-                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
-                  Patrocinador <span className="font-normal normal-case">(opcional)</span>
-                </p>
-                <input value={form.sponsorName} onChange={(e) => f("sponsorName", e.target.value)}
-                  placeholder="Nombre del patrocinador"
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
-                <input value={form.sponsorWebsiteUrl} onChange={(e) => f("sponsorWebsiteUrl", e.target.value)}
-                  placeholder="https://sitio-del-sponsor.com"
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none" />
-                <input value={form.sponsorLogoUrl} onChange={(e) => f("sponsorLogoUrl", e.target.value)}
-                  placeholder="URL del logo (o usa Aliados para subir uno)"
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none" />
-              </div>
-
-              {/* Sort + toggles row */}
-              <div className="flex gap-6 items-center">
-                <div className="w-24">
-                  <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Orden</label>
-                  <input type="number" value={form.sortOrder} onChange={(e) => f("sortOrder", parseInt(e.target.value) || 0)}
-                    className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none" />
-                </div>
-                <label className="flex items-center gap-2 cursor-pointer self-end pb-3">
-                  <input type="checkbox" checked={form.isRegistrationOpen} onChange={(e) => f("isRegistrationOpen", e.target.checked)} className="w-4 h-4 accent-primary-container" />
-                  <span className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Registro abierto</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer self-end pb-3">
-                  <input type="checkbox" checked={form.isActive} onChange={(e) => f("isActive", e.target.checked)} className="w-4 h-4 accent-primary-container" />
-                  <span className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Activo</span>
-                </label>
-              </div>
-
-              {saveError && <p className="font-body text-sm text-error">{saveError}</p>}
-
-              <button onClick={handleSave} disabled={loading}
-                className="w-full bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40 hover:neo-shadow-pink transition-all">
-                {loading ? "GUARDANDO…" : "GUARDAR"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete confirmation */}
-      {deleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
-          onClick={() => !actionLoading && setDeleteConfirm(null)}
-        >
-          <div
-            className="bg-surface-container w-full max-w-md p-8 relative border-4 border-error"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-error">warning</span>
-              ELIMINAR TORNEO
-            </h2>
-            <p className="font-headline font-bold text-sm text-on-surface truncate mb-4">
-              {deleteConfirm.tournament.name}
-            </p>
-
-            <div className="bg-error/10 border border-error/30 p-4 mb-6">
-              <p className="font-body text-sm text-on-surface">
-                {deleteConfirm.registrationCount === null ? (
-                  <span className="text-outline">Verificando inscripciones...</span>
-                ) : deleteConfirm.registrationCount === 0 ? (
-                  "Este torneo no tiene inscripciones activas."
-                ) : (
-                  <>
-                    Este torneo tiene{" "}
-                    <span className="font-headline font-black text-error">
-                      {deleteConfirm.registrationCount} inscripcion{deleteConfirm.registrationCount === 1 ? "" : "es"}
-                    </span>{" "}
-                    que también serán eliminadas permanentemente.
-                  </>
-                )}
-              </p>
-              <p className="font-body text-xs text-outline mt-2">
-                Esta acción no se puede deshacer. Considera <span className="text-secondary">CANCELAR TORNEO</span> si quieres preservar el historial.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
-                disabled={actionLoading}
-                className="flex-1 bg-surface-container-highest text-on-surface font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+                className="w-full bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40 hover:neo-shadow-pink transition-all"
               >
-                CANCELAR
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={actionLoading || deleteConfirm.registrationCount === null}
-                className="flex-1 bg-error text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
-              >
-                {actionLoading ? "ELIMINANDO..." : "ELIMINAR"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cancel tournament confirmation */}
-      {cancelConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
-          onClick={() => !actionLoading && setCancelConfirm(null)}
-        >
-          <div
-            className="bg-surface-container w-full max-w-md p-8 relative border-4 border-secondary"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-headline font-black text-xl uppercase tracking-tighter mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary">block</span>
-              CANCELAR TORNEO
-            </h2>
-            <p className="font-headline font-bold text-sm text-on-surface truncate mb-4">
-              {cancelConfirm.tournament.name}
-            </p>
-
-            <div className="bg-secondary/10 border border-secondary/30 p-4 mb-6">
-              <p className="font-body text-sm text-on-surface">
-                {cancelConfirm.registrationCount === null ? (
-                  <span className="text-outline">Verificando inscripciones...</span>
-                ) : cancelConfirm.registrationCount === 0 ? (
-                  "El torneo se marcará como finalizado y el registro quedará cerrado."
-                ) : (
-                  <>
-                    Se cancelarán{" "}
-                    <span className="font-headline font-black text-secondary">
-                      {cancelConfirm.registrationCount} inscripcion{cancelConfirm.registrationCount === 1 ? "" : "es"}
-                    </span>{" "}
-                    activas. El torneo y su historial se conservan.
-                  </>
-                )}
-              </p>
-              <p className="font-body text-xs text-outline mt-2">
-                Los datos no se eliminan. Esta acción no se puede deshacer.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setCancelConfirm(null)}
-                disabled={actionLoading}
-                className="flex-1 bg-surface-container-highest text-on-surface font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
-              >
-                VOLVER
-              </button>
-              <button
-                onClick={confirmCancel}
-                disabled={actionLoading || cancelConfirm.registrationCount === null}
-                className="flex-1 bg-secondary text-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40"
-              >
-                {actionLoading ? "CANCELANDO..." : "CONFIRMAR CANCELACIÓN"}
+                {creating ? "CREANDO…" : "CREAR Y EDITAR"}
               </button>
             </div>
           </div>

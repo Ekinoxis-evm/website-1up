@@ -9,15 +9,28 @@
 
 ## RESUMEN EJECUTIVO
 
-| | |
-|--|--|
-| **Scope contractual EKX-2026-005** | ✅ 100% entregado |
-| **Funcionalidades adicionales (fuera del scope)** | ~486h ejecutadas, todas en producción |
-| **Auditoría interna integral** | ✅ 41 hallazgos identificados, 41 cerrados |
-| **Estado del proyecto** | Estable — solo MercadoPago automático queda pendiente (bloqueo externo del cliente) |
-| **Valor contractual EKX-2026-005** | $20.000.000 COP |
-| **Valor adiciones fuera de scope** | $72.900.000 COP (~486h × $150.000 COP/h) |
-| **TOTAL PROYECTO al 23/05/2026** | **$92.900.000 COP** |
+**Estado:** Scope contractual EKX-2026-005 entregado al 100%. Plataforma estable en producción en los 3 subdominios. Único pendiente externo: activación de MercadoPago Colombia.
+
+**Trabajo total entregado:** 534 horas equivalentes a **$100.100.000 COP**. De este total, **$46.950.000 COP** se entregan sin costo al cliente (cortesía + scope original ampliado).
+
+### Cifras de cierre
+
+| | COP | Horas |
+|---|---:|---:|
+| 🅰️ **Contrato base EKX-2026-005** *(firmado 8/4/2026)* | **$20.000.000** | — |
+| 🅱️ **Cobro adicional fuera de scope** *(este documento)* | **$33.150.000** | 221h |
+| **TOTAL FACTURABLE** | **$53.150.000** | **221h** |
+| | | |
+| 🔵 Incluido en scope original *(no se cobra)* | $18.450.000 | 123h |
+| 🟡 Cortesía Ekinoxis *(no se cobra)* | $28.500.000 | 190h |
+| **Valor real del trabajo entregado** | **$100.100.000** | **534h** |
+
+### Hitos clave
+
+- ✅ Scope contractual EKX-2026-005 cubierto al 100% en producción
+- ✅ Auditoría integral interna: **41/41 hallazgos cerrados** (entregada como cortesía)
+- ✅ 3 subdominios activos: `1upesports.org`, `app.1upesports.org`, `admin.1upesports.org`
+- ⏳ MercadoPago automático: bloqueo externo — pendiente alta del procesador con MercadoPago Colombia
 
 ---
 
@@ -126,133 +139,226 @@ Los siguientes ítems aparecían en la Cuenta de Cobro como **"PLANNED — arch 
 
 ---
 
-## PARTE 1 — FUNCIONALIDADES ADICIONALES FUERA DE SCOPE
+## PARTE 1 — TRABAJO ENTREGADO FUERA DEL SCOPE INICIAL
 
-Todas las funcionalidades listadas a continuación **NO formaban parte de la Cuenta de Cobro EKX-2026-005** firmada el 8 de abril. Fueron desarrolladas a tarifa $150.000 COP/hora según lo establecido en Parte 4 ("Mejoras futuras / Future Enhancements") del contrato base.
+Las 30 entregas listadas a continuación se ejecutaron durante el ciclo de desarrollo. Tras revisión conjunta del scope, las clasificamos en **3 categorías** para diferenciar lo cobrable de lo que pertenece al compromiso original o se entrega como cortesía:
 
-### 1.1 Compra OTC de tokens $1UP (transferencia bancaria → token on-chain)
-Sistema de compra de $1UP por transferencia bancaria. El usuario sube comprobante, el admin aprueba y los tokens se envían on-chain automáticamente con gas sponsorship. Emails transaccionales en cada etapa.
-**20h → $3.000.000 COP**
+| Categoría | Significado | Tarifa |
+|---|---|---|
+| 🟢 **ADICIONAL** | Trabajo nuevo fuera del scope original EKX-2026-005 | $150.000 COP/h — **se cobra** |
+| 🔵 **INCLUIDO** | Funcionalidad que pertenece al scope del contrato base firmado el 8 de abril | Ya cubierta por el $20.000.000 COP del contrato — **no se cobra extra** |
+| 🟡 **CORTESÍA** | Mejoras y endurecimiento ejecutados por iniciativa de Ekinoxis | **No se cobra** — se documenta para transparencia |
 
-### 1.2 Compra del 1UP Pass por transferencia bancaria
-Ruta alternativa sin tokens. Usuario sube comprobante, admin aprueba, pass se activa con fecha de vencimiento calculada y apilamiento automático sobre passes activos.
-**16h → $2.400.000 COP**
+Las entregas se agrupan por **módulo del producto**. Los números 1.X se conservan como referencia cronológica.
 
-### 1.3 Onboarding + sistema de referidos
-Wizard obligatorio: nombre, @username, documento, barrio, fecha nacimiento (≥14 años), juegos, código de referido, habeas data Ley 1581. Admin de códigos con límite de usos.
-**18h → $2.700.000 COP**
+### Resumen por módulo
 
-### 1.4 Gas Sponsorship extendido (más allá del básico)
-Patrocinio EIP-7702 en Base mainnet para envíos de wallet, compra de pass, y aprobación OTC desde admin. Incluye verificación de TEE activo, configuración del paymaster, y manejo de fallback.
-**6h → $900.000 COP**
+| Módulo | 🟢 Adicional | 🔵 Incluido | 🟡 Cortesía | Total entregado |
+|---|---:|---:|---:|---:|
+| 1.A — Torneos & Brackets | $19.500.000 | $0 | $0 | $19.500.000 |
+| 1.B — Academia / Cursos | $1.200.000 | $10.350.000 | $0 | $11.550.000 |
+| 1.C — 1UP Pass | $1.200.000 | $4.200.000 | $0 | $5.400.000 |
+| 1.D — Wallet & Tokens (on-chain) | $0 | $3.900.000 | $0 | $3.900.000 |
+| 1.E — Onboarding & Identidad | $5.700.000 | $0 | $0 | $5.700.000 |
+| 1.F — Web pública & UX | $1.650.000 | $0 | $1.650.000 | $3.300.000 |
+| 1.G — Panel Admin (operación) | $600.000 | $0 | $1.500.000 | $2.100.000 |
+| 1.H — Plataforma & Comunicaciones | $3.300.000 | $0 | $3.600.000 | $6.900.000 |
+| 1.I — Calidad & Seguridad | $0 | $0 | $5.400.000 | $5.400.000 |
+| **TOTAL PARTE 1** | **$33.150.000** | **$18.450.000** | **$12.150.000** | **$63.750.000** |
+| **Horas equivalentes** | **221h** | **123h** | **81h** | **425h** |
 
-### 1.5 Verificación de afiliación a aliados
-Sistema generalizado de verificación (Comfenalco, Comfandi, universidades) para descuentos automáticos. Stub funcional listo para credenciales de cada aliado.
-**8h → $1.200.000 COP**
+---
 
-### 1.6 Sistema completo de torneos (v2.6.0 – v2.13.0)
-Módulo de torneos construido desde cero — página `/torneos`, admin CRUD (premios por posición, capacidad, lugar), torneos internacionales, inscripción con email + `.ics`, filtros mes/juego, detalle `/torneos/[slug]`, Hall of Fame (10/5/3 puntos), historial del equipo, check-in QR.
+### 1.A — TORNEOS & BRACKETS — 🟢 ADICIONAL $19.500.000 COP (130h)
+
+Construcción completa del módulo competitivo: inscripciones, calendario, premios, brackets visuales, página de detalle pública. **Todo el bloque es adicional** — el módulo de torneos no estaba en el scope EKX-2026-005.
+
+#### 🟢 1.6 Sistema completo de torneos (v2.6.0 – v2.13.0)
+Módulo construido desde cero — página `/torneos`, admin CRUD (premios por posición, capacidad, lugar), torneos internacionales, inscripción con email + `.ics`, filtros mes/juego, detalle `/torneos/[slug]`, Hall of Fame (10/5/3 puntos), historial del equipo, check-in QR.
 **78h → $11.700.000 COP**
 
-### 1.7 Auditoría de seguridad inicial (pre-deploy)
-Revisión de endpoints y flujos de pago antes del primer despliegue. Tres vulnerabilidades corregidas pre-producción.
-**4h → $600.000 COP**
-
-### 1.8 Mejoras post-entrega — PWA + SEO + navegación (v2.10.1 – v2.12.0)
-Torneos en navegación, Marketplace con CTA, PWA instalable + ícono + offline, admin móvil con menú deslizable, SEO completo (metadata + OG + JSON-LD + sitemap + robots).
-**20h → $3.000.000 COP**
-
-### 1.9 Mejoras de la app (v2.13.0)
-"Mis Torneos" con estados, ajustes unificados (Identidad + Seguridad).
-**6h → $900.000 COP**
-
-### 1.10 Restructura de navegación y UX (v2.14.0)
-Home enriquecido (AcademiaSection + TorneosSection con CTA), "Nuestro Ecosistema" reemplaza TalentPipeline, redirects sin 404, modal de login inline en inscripciones, logout admin.
-**18h → $2.700.000 COP**
-
-### 1.11 Infraestructura y seguridad base
-Multi-subdominio, autenticación de admins, invalidación de caché, política Ley 1581, dominio canónico.
-**8h → $1.200.000 COP**
-
-### 1.12 Inscripciones con calendario (.ics + modal) — v2.14.2
+#### 🟢 1.12 Inscripciones con calendario (.ics + modal) — v2.14.2
 Email enriquecido con adjunto `.ics` nativo + modal post-inscripción con CTA Google Calendar.
 **4h → $600.000 COP**
 
-### 1.13 1UP Pass — calendar UI, estado DB, cron nocturno — v2.15.0
-Panel del pass rediseñado, 12 meses con cobertura coloreada, columna `pass_status` con trigger automático, cron `04:00 UTC` que cambia `active → expired`.
-**12h → $1.800.000 COP**
-
-### 1.14 Entrega de premios + cancelación + confirmación de eliminación — v2.16.0
+#### 🟢 1.14 Entrega de premios + cancelación + confirmación de eliminación — v2.16.0
 Panel por torneo (envío on-chain $1UP con gas sponsorship + waitForReceipt, comprobante COP), flujo de cancel + modal de confirmación con conteo de inscritos activos.
 **16h → $2.400.000 COP**
 
-### 1.15 CommunitySection Discord / WhatsApp — v2.17.0
-Sección de comunidad dinámica desde `social_links`, filtrado automático del footer.
-**4h → $600.000 COP**
-
-### 1.16 Admin sidebar colapsible + consolidación aliados/banner — v2.19.0
-5 grupos colapsibles con scroll, migración `brand_logos → aliados` (eliminación de tabla), tabs Banner + API.
-**8h → $1.200.000 COP**
-
-### 1.17 Ocho plantillas de email transaccional — v2.20.0
-`sendTokenOrderApproved/Rejected`, `sendPassBankApproved/Rejected`, `sendCourseOrderPlaced/Confirmed/Approved/Rejected`. Conectadas a admin endpoints.
-**12h → $1.800.000 COP**
-
-### 1.18 Checkout de cursos (token + banco) — v2.20.0
-`CourseCheckoutWizard` con 3 métodos, API `/api/user/course-orders`, lógica de descuentos, revisión admin de pendientes.
-**12h → $1.800.000 COP**
-
-### 1.19 Slugs de torneos, sponsors, wallet del tesoro — v2.21.0
+#### 🟢 1.19 Slugs de torneos, sponsors, wallet del tesoro — v2.21.0
 URLs descriptivas `/torneos/copa-valorant` con fallback por ID, UNIQUE constraint con dedup, sponsor en cards y detalle, wallet del tesoro centralizada.
 **8h → $1.200.000 COP**
 
-### 1.20 Suite de pruebas Vitest — v2.22.0
-52 tests en 7 archivos (utils, points, discount, admin guards, HMAC webhooks, Comfenalco, Privy).
-**12h → $1.800.000 COP**
-
-### 1.21 Auditoría RLS completa + bucket privado — v2.22.1 / v2.22.2
-RLS en las 27 tablas, escalada de privilegios cerrada, columnas sensibles protegidas, RPCs revoked, bucket `comprobantes` privatizado con signed URLs, `hall_of_fame` SECURITY INVOKER.
-**20h → $3.000.000 COP**
-
-### 1.22 Reconstrucción de tablas admin — v2.22.2
-`AdminEnrollmentsClient`, `AdminPrivyUsersClient`, `AdminUserProfilesClient` convertidos de cards a `<table>` profesionales con filtros y paneles inline.
-**6h → $900.000 COP**
-
-### 1.23 Cloudflare Stream + jerarquía de cursos — v2.23.0 / v2.24.0
-Integración Cloudflare Stream completa + tablas `course_modules` / `course_sessions` / `course_session_links` / `course_session_documents`, editor admin con DnD, panel de sesión con upload, bucket privado `course-docs`, página `/app/academia/[courseId]` con currículo gated.
-**52h → $7.800.000 COP**
-
-### 1.24 Pass admin grant + `started_at` + tabla profesional — v2.25.0
-Retroactividad de `started_at`, `granted_by`, backfill histórico, buscador inline, pestaña "Admin Grant", `AdminPassOrdersClient` como tabla profesional.
-**8h → $1.200.000 COP**
-
-### 1.25 Sistema de brackets de torneos — v2.26.0
+#### 🟢 1.25 Sistema de brackets de torneos — v2.26.0
 Motor de brackets para single y double elimination, generación automática con BYEs a mejores semillas, algoritmo cross-pairing en losers, inserción 2-fases, avance automático, registro de resultados, visualización pública con `@g-loot/react-tournament-brackets`.
 **16h → $2.400.000 COP**
 
-### 1.26 Páginas públicas de preview de cursos — v2.27.0
-`/academia/[courseId]` pública con video intro reproducible (CF Stream token público), temario con candado para no-inscritos, OG metadata por curso. Habilita SEO + sharing.
-**8h → $1.200.000 COP**
-
-### 1.27 Fix de subida de videos Cloudflare Stream — v2.27.1
-Resolución de bug producción: variables `CF_STREAM_*` faltantes en Vercel + método HTTP incorrecto (POST multipart en lugar de PUT).
-**2h → $300.000 COP**
-
-### 1.28 Captura de identidad Privy en BD + ficha unificada de jugador — v2.28.0
-Sync de wallet_address, auth_provider, linked_accounts, privy_created_at en `user_profiles`. Ficha completa de jugador en admin con registrations + enrollments + orders + results. Gate de onboarding en inscripción a torneos.
-**12h → $1.800.000 COP**
-
-### 1.29 Fix de firma de tokens Cloudflare Stream — v2.28.1
-PKCS#1 vs PKCS#8 key detection, `kid` en payload, fix de `setNotBefore`. Sin esto los videos de academia nunca habrían reproducido.
-**3h → $450.000 COP**
-
-### 1.30 Rediseño de flujo de brackets + página de detalle — v2.29.0
+#### 🟢 1.30 Rediseño de flujo de brackets + página de detalle — v2.29.0
 Brackets como flujo `borrador → iniciar → en curso`, picker de participantes con shuffle/reorder, locks post-start, rediseño de detalle de torneo con podio + sponsor + bracket público.
 **8h → $1.200.000 COP**
 
 ---
 
-## PARTE 2 — AUDITORÍA INTEGRAL DE SEGURIDAD (22-23 mayo)
+### 1.B — ACADEMIA / CURSOS — Total entregado $11.550.000 (77h)
+
+Plataforma de cursos completa: video gated, jerarquía módulos→sesiones, checkout multi-método, preview público.
+
+**🟢 Adicional: $1.200.000 (8h)** &nbsp;|&nbsp; **🔵 Incluido en scope original: $10.350.000 (69h)**
+
+#### 🔵 1.18 Checkout de cursos (token + banco) — v2.20.0 [INCLUIDO]
+`CourseCheckoutWizard` con 3 métodos, API `/api/user/course-orders`, lógica de descuentos, revisión admin de pendientes. Pertenece al alcance original de la Academia (PARTE 1.1 contractual: `/academia`).
+**12h → $1.800.000 COP — sin cobro adicional**
+
+#### 🔵 1.23 Cloudflare Stream + jerarquía de cursos — v2.23.0 / v2.24.0 [INCLUIDO]
+Integración Cloudflare Stream completa + tablas `course_modules` / `course_sessions` / `course_session_links` / `course_session_documents`, editor admin con DnD, panel de sesión con upload, bucket privado `course-docs`, página `/app/academia/[courseId]` con currículo gated. CF Stream estaba listado como "PLANNED" en EKX-2026-005 PARTE 4 — se considera parte del compromiso.
+**52h → $7.800.000 COP — sin cobro adicional**
+
+#### 🟢 1.26 Páginas públicas de preview de cursos — v2.27.0 [ADICIONAL]
+`/academia/[courseId]` pública con video intro reproducible (CF Stream token público), temario con candado para no-inscritos, OG metadata por curso. Habilita SEO + sharing. **No estaba en el scope original** — se construyó para mejorar conversión y SEO.
+**8h → $1.200.000 COP**
+
+#### 🔵 1.27 Fix de subida de videos Cloudflare Stream — v2.27.1 [INCLUIDO]
+Resolución de bug producción: variables `CF_STREAM_*` faltantes en Vercel + método HTTP incorrecto. Bug operacional dentro del módulo de academia.
+**2h → $300.000 COP — sin cobro adicional**
+
+#### 🔵 1.29 Fix de firma de tokens Cloudflare Stream — v2.28.1 [INCLUIDO]
+PKCS#1 vs PKCS#8 key detection, `kid` en payload, fix de `setNotBefore`. Fix crítico para que los videos reproducieran.
+**3h → $450.000 COP — sin cobro adicional**
+
+---
+
+### 1.C — 1UP PASS — Total entregado $5.400.000 (36h)
+
+Ciclo de vida del pass: compra alternativa por banco, calendario de cobertura, cron de expiración, admin grant retroactivo.
+
+**🟢 Adicional: $1.200.000 (8h)** &nbsp;|&nbsp; **🔵 Incluido en scope original: $4.200.000 (28h)**
+
+#### 🔵 1.2 Compra del 1UP Pass por transferencia bancaria [INCLUIDO]
+Ruta alternativa sin tokens. Usuario sube comprobante, admin aprueba, pass se activa con fecha de vencimiento calculada y apilamiento automático sobre passes activos. Pertenece al módulo `/app/pass` del contrato original (PARTE 1.2).
+**16h → $2.400.000 COP — sin cobro adicional**
+
+#### 🔵 1.13 1UP Pass — calendar UI, estado DB, cron nocturno — v2.15.0 [INCLUIDO]
+Panel del pass rediseñado, 12 meses con cobertura coloreada, columna `pass_status` con trigger automático, cron `04:00 UTC` que cambia `active → expired`. Funcionalidad esencial del módulo Pass.
+**12h → $1.800.000 COP — sin cobro adicional**
+
+#### 🟢 1.24 Pass admin grant + `started_at` + tabla profesional — v2.25.0 [ADICIONAL]
+Retroactividad de `started_at`, `granted_by`, backfill histórico, buscador inline, pestaña "Admin Grant", `AdminPassOrdersClient` como tabla profesional. Funcionalidad operativa no contemplada en el contrato base.
+**8h → $1.200.000 COP**
+
+---
+
+### 1.D — WALLET & TOKENS (ON-CHAIN) — 🔵 INCLUIDO EN SCOPE ORIGINAL $3.900.000 (26h)
+
+Compra de $1UP por banco con envío on-chain automatizado, y patrocinio de gas EIP-7702 extendido. **Todo el bloque queda incluido en el scope original** — corresponde al módulo `/app` (Wallet) y a la funcionalidad core "Gas Sponsorship" del contrato base. No se factura como adicional.
+
+#### 🔵 1.1 Compra OTC de tokens $1UP (transferencia bancaria → token on-chain) [INCLUIDO]
+Sistema de compra de $1UP por transferencia bancaria. El usuario sube comprobante, el admin aprueba y los tokens se envían on-chain automáticamente con gas sponsorship. Emails transaccionales en cada etapa.
+**20h → $3.000.000 COP — sin cobro adicional**
+
+#### 🔵 1.4 Gas Sponsorship extendido (más allá del básico) [INCLUIDO]
+Patrocinio EIP-7702 en Base mainnet para envíos de wallet, compra de pass, y aprobación OTC desde admin. Incluye verificación de TEE activo, configuración del paymaster, y manejo de fallback.
+**6h → $900.000 COP — sin cobro adicional**
+
+---
+
+### 1.E — ONBOARDING & IDENTIDAD — 🟢 ADICIONAL $5.700.000 (38h)
+
+Captura de identidad del jugador (wizard obligatorio, sync con Privy, verificación de aliados) y ficha unificada para el admin. **Todo el bloque es adicional** — el wizard obligatorio + sistema de referidos + verificación de aliados no estaban en el scope EKX-2026-005.
+
+#### 🟢 1.3 Onboarding + sistema de referidos
+Wizard obligatorio: nombre, @username, documento, barrio, fecha nacimiento (≥14 años), juegos, código de referido, habeas data Ley 1581. Admin de códigos con límite de usos.
+**18h → $2.700.000 COP**
+
+#### 🟢 1.5 Verificación de afiliación a aliados
+Sistema generalizado de verificación (Comfenalco, Comfandi, universidades) para descuentos automáticos. Stub funcional listo para credenciales de cada aliado.
+**8h → $1.200.000 COP**
+
+#### 🟢 1.28 Captura de identidad Privy en BD + ficha unificada de jugador — v2.28.0
+Sync de wallet_address, auth_provider, linked_accounts, privy_created_at en `user_profiles`. Ficha completa de jugador en admin con registrations + enrollments + orders + results. Gate de onboarding en inscripción a torneos.
+**12h → $1.800.000 COP**
+
+---
+
+### 1.F — WEB PÚBLICA & UX — Total entregado $3.300.000 (22h)
+
+Restructura post-entrega del home y del marketing site, secciones dinámicas, redirects, modal de login inline.
+
+**🟢 Adicional negociado: $1.650.000 (11h, 50%)** &nbsp;|&nbsp; **🟡 Cortesía: $1.650.000 (11h)**
+
+> Por acuerdo comercial, el bloque se factura al **50%**. La mitad restante se asume como cortesía.
+
+#### 🟢🟡 1.10 Restructura de navegación y UX (v2.14.0)
+Home enriquecido (AcademiaSection + TorneosSection con CTA), "Nuestro Ecosistema" reemplaza TalentPipeline, redirects sin 404, modal de login inline en inscripciones, logout admin.
+**18h → $2.700.000 COP** *(facturado al 50% → $1.350.000)*
+
+#### 🟢🟡 1.15 CommunitySection Discord / WhatsApp — v2.17.0
+Sección de comunidad dinámica desde `social_links`, filtrado automático del footer.
+**4h → $600.000 COP** *(facturado al 50% → $300.000)*
+
+---
+
+### 1.G — PANEL ADMIN (OPERACIÓN) — Total entregado $2.100.000 (14h)
+
+Mejoras transversales del panel admin: sidebar colapsible, consolidación de tablas legacy, conversión a tablas profesionales.
+
+**🟢 Adicional: $600.000 (4h — banner aliados)** &nbsp;|&nbsp; **🟡 Cortesía: $1.500.000 (10h — sidebar + tablas)**
+
+#### 🟢🟡 1.16 Admin sidebar colapsible + consolidación aliados/banner — v2.19.0
+5 grupos colapsibles con scroll, migración `brand_logos → aliados` (eliminación de tabla), tabs Banner + API. Se factura sólo la mitad correspondiente al **banner del home (4h, $600.000)**. El sidebar colapsible (4h, $600.000) se entrega como mejora.
+**8h → $1.200.000 COP** *(facturado: $600.000)*
+
+#### 🟡 1.22 Reconstrucción de tablas admin — v2.22.2 [CORTESÍA]
+`AdminEnrollmentsClient`, `AdminPrivyUsersClient`, `AdminUserProfilesClient` convertidos de cards a `<table>` profesionales con filtros y paneles inline. Mejora interna de UX administrativa — no se cobra.
+**6h → $900.000 COP — sin cobro**
+
+---
+
+### 1.H — PLATAFORMA & COMUNICACIONES — Total entregado $6.900.000 (46h)
+
+Capas transversales: PWA, SEO, infraestructura multi-subdominio, emails transaccionales.
+
+**🟢 Adicional: $3.300.000 (22h — SEO + emails)** &nbsp;|&nbsp; **🟡 Cortesía: $3.600.000 (24h — PWA/nav + app + infra)**
+
+#### 🟢🟡 1.8 Mejoras post-entrega — PWA + SEO + navegación (v2.10.1 – v2.12.0)
+Torneos en navegación, Marketplace con CTA, PWA instalable + ícono + offline, admin móvil con menú deslizable, SEO completo (metadata + OG + JSON-LD + sitemap + robots). Se factura sólo la porción **SEO (10h, $1.500.000)**. PWA + navegación móvil (10h, $1.500.000) se entrega como mejora.
+**20h → $3.000.000 COP** *(facturado: $1.500.000)*
+
+#### 🟡 1.9 Mejoras de la app (v2.13.0) [CORTESÍA]
+"Mis Torneos" con estados, ajustes unificados (Identidad + Seguridad). Mejoras menores entregadas sin cargo.
+**6h → $900.000 COP — sin cobro**
+
+#### 🟡 1.11 Infraestructura y seguridad base [CORTESÍA]
+Multi-subdominio, autenticación de admins, invalidación de caché, política Ley 1581, dominio canónico. Trabajo de plataforma absorbido como cortesía.
+**8h → $1.200.000 COP — sin cobro**
+
+#### 🟢 1.17 Ocho plantillas de email transaccional — v2.20.0 [ADICIONAL]
+`sendTokenOrderApproved/Rejected`, `sendPassBankApproved/Rejected`, `sendCourseOrderPlaced/Confirmed/Approved/Rejected`. Conectadas a admin endpoints. **No estaban en el scope original.**
+**12h → $1.800.000 COP**
+
+---
+
+### 1.I — CALIDAD & SEGURIDAD — 🟡 CORTESÍA $5.400.000 (36h)
+
+Auditorías pre y post-deploy, suite de pruebas Vitest, hardening de RLS y privatización del bucket de comprobantes. **Todo el bloque se entrega como cortesía** — Ekinoxis asume el costo. Se documenta para transparencia del trabajo realizado.
+
+#### 🟡 1.7 Auditoría de seguridad inicial (pre-deploy) [CORTESÍA]
+Revisión de endpoints y flujos de pago antes del primer despliegue. Tres vulnerabilidades corregidas pre-producción.
+**4h → $600.000 COP — sin cobro**
+
+#### 🟡 1.20 Suite de pruebas Vitest — v2.22.0 [CORTESÍA]
+52 tests en 7 archivos (utils, points, discount, admin guards, HMAC webhooks, Comfenalco, Privy).
+**12h → $1.800.000 COP — sin cobro**
+
+#### 🟡 1.21 Auditoría RLS completa + bucket privado — v2.22.1 / v2.22.2 [CORTESÍA]
+RLS en las 27 tablas, escalada de privilegios cerrada, columnas sensibles protegidas, RPCs revoked, bucket `comprobantes` privatizado con signed URLs, `hall_of_fame` SECURITY INVOKER.
+**20h → $3.000.000 COP — sin cobro**
+
+---
+
+## PARTE 2 — AUDITORÍA INTEGRAL DE SEGURIDAD (22-23 mayo) — 🟡 CORTESÍA
+
+> **🟡 ESTA SECCIÓN COMPLETA SE ENTREGA COMO CORTESÍA — NO SE COBRA.**
+> Las 109 horas de auditoría y hardening que se documentan a continuación equivalen a **$16.350.000 COP** que Ekinoxis asume internamente. Se incluyen en este documento para transparencia del trabajo realizado y como evidencia del nivel de robustez con que se entrega la plataforma.
 
 Auditoría comisionada internamente. 6 agentes especializados (web, portal, admin, database, payments, security) analizaron las 3 superficies + capas transversales. **41 hallazgos identificados, 41 cerrados.**
 
@@ -312,7 +418,7 @@ Auditoría comisionada internamente. 6 agentes especializados (web, portal, admi
 
 ## PARTE 3 — RESUMEN FINANCIERO
 
-### 3.1 Scope contractual (EKX-2026-005)
+### 3.1 Contrato base EKX-2026-005 (firmado el 8 de abril, 2026)
 
 | Concepto | Valor |
 |---|---:|
@@ -320,55 +426,50 @@ Auditoría comisionada internamente. 6 agentes especializados (web, portal, admi
 | App BETA + Smart Contracts | $5.000.000 COP |
 | **Subtotal contractual** | **$20.000.000 COP** |
 
-### 3.2 Funcionalidades adicionales (PARTE 1)
+> El contrato base se mantiene en su valor original. Los dos pagos pactados ($10M + $10M) se conservan conforme a EKX-2026-005 PARTE 6.
 
-| # | Entrega | Hrs | COP |
+### 3.2 Cobro adicional por módulo
+
+Sólo se factura aquí el trabajo clasificado como 🟢 **ADICIONAL** en la PARTE 1.
+
+| Módulo | Ítems facturados | Hrs | COP |
 |---|---|---:|---:|
-| 1.1 | OTC tokens $1UP | 20h | $3.000.000 |
-| 1.2 | Pass por banco | 16h | $2.400.000 |
-| 1.3 | Onboarding + referidos | 18h | $2.700.000 |
-| 1.4 | Gas sponsorship extendido | 6h | $900.000 |
-| 1.5 | Verificación de aliados | 8h | $1.200.000 |
-| 1.6 | Sistema de torneos | 78h | $11.700.000 |
-| 1.7 | Auditoría inicial pre-deploy | 4h | $600.000 |
-| 1.8 | PWA + SEO + nav | 20h | $3.000.000 |
-| 1.9 | Mejoras app | 6h | $900.000 |
-| 1.10 | Restructura nav y UX | 18h | $2.700.000 |
-| 1.11 | Infraestructura + seguridad base | 8h | $1.200.000 |
-| 1.12 | Calendario .ics + modal | 4h | $600.000 |
-| 1.13 | Pass calendar + cron | 12h | $1.800.000 |
-| 1.14 | Entrega de premios | 16h | $2.400.000 |
-| 1.15 | CommunitySection | 4h | $600.000 |
-| 1.16 | Sidebar admin + aliados banner | 8h | $1.200.000 |
-| 1.17 | 8 emails transaccionales | 12h | $1.800.000 |
-| 1.18 | Checkout de cursos | 12h | $1.800.000 |
-| 1.19 | Slugs + sponsors + wallet tesoro | 8h | $1.200.000 |
-| 1.20 | Suite Vitest (52 tests) | 12h | $1.800.000 |
-| 1.21 | Auditoría RLS + bucket privado | 20h | $3.000.000 |
-| 1.22 | Tablas admin profesionales | 6h | $900.000 |
-| 1.23 | Cloudflare Stream + jerarquía cursos | 52h | $7.800.000 |
-| 1.24 | Pass admin grant + started_at | 8h | $1.200.000 |
-| 1.25 | Sistema de brackets | 16h | $2.400.000 |
-| 1.26 | Páginas preview de cursos | 8h | $1.200.000 |
-| 1.27 | Fix subida CF Stream | 2h | $300.000 |
-| 1.28 | Privy capture + ficha jugador | 12h | $1.800.000 |
-| 1.29 | Fix firma CF Stream | 3h | $450.000 |
-| 1.30 | Rediseño brackets + detalle torneo | 8h | $1.200.000 |
-| **Subtotal sec. 1** | | **425h** | **$63.750.000** |
+| 1.A — Torneos & Brackets | 1.6, 1.12, 1.14, 1.19, 1.25, 1.30 | 130h | $19.500.000 |
+| 1.B — Academia / Cursos | 1.26 (preview público) | 8h | $1.200.000 |
+| 1.C — 1UP Pass | 1.24 (admin grant) | 8h | $1.200.000 |
+| 1.D — Wallet & Tokens | — *(todo incluido en scope original)* | 0h | $0 |
+| 1.E — Onboarding & Identidad | 1.3, 1.5, 1.28 | 38h | $5.700.000 |
+| 1.F — Web pública & UX | 1.10, 1.15 *(facturado al 50%)* | 11h | $1.650.000 |
+| 1.G — Panel Admin | 1.16 banner home *(parcial)* | 4h | $600.000 |
+| 1.H — Plataforma & Comunicaciones | 1.8 SEO *(parcial)* + 1.17 emails | 22h | $3.300.000 |
+| 1.I — Calidad & Seguridad | — *(todo entregado como cortesía)* | 0h | $0 |
+| **TOTAL ADICIONAL A COBRAR** | | **221h** | **$33.150.000** |
 
-### 3.3 Auditoría integral de seguridad (PARTE 2)
+### 3.3 Trabajo incluido en el scope original (no se cobra extra)
 
-| # | Entrega | Hrs | COP |
+Funcionalidades inicialmente listadas como adicionales que, tras revisión, corresponden al alcance ya cubierto por el contrato base de $20.000.000 COP.
+
+| Módulo | Ítems incluidos | Hrs | COP equivalente |
 |---|---|---:|---:|
-| 2.1 | Critical (C-1 + C-2 + C-3) + tournament protocol | 18h | $2.700.000 |
-| 2.2 | High (10 hallazgos en 5 versiones) | 50h | $7.500.000 |
-| 2.3 | Medium (22 hallazgos en 5 versiones) | 24h | $3.600.000 |
-| 2.4 | Follow-ups (next/image + ISR + toast + OG 1200×630) | 14h | $2.100.000 |
-| 2.5 | Activación rate limiting | 1h | $150.000 |
-| 2.6 | Sync de docs | 2h | $300.000 |
-| **Subtotal sec. 2** | | **109h** | **$16.350.000** |
+| 1.B — Academia / Cursos | 1.18, 1.23, 1.27, 1.29 | 69h | $10.350.000 |
+| 1.C — 1UP Pass | 1.2, 1.13 | 28h | $4.200.000 |
+| 1.D — Wallet & Tokens | 1.1, 1.4 | 26h | $3.900.000 |
+| **TOTAL INCLUIDO** | | **123h** | **$18.450.000** |
 
-### 3.4 Otros / sostenimiento
+### 3.4 Cortesía — trabajo entregado sin costo
+
+Auditorías, mejoras y endurecimientos absorbidos por Ekinoxis. Se documenta para transparencia.
+
+| Bloque | Detalle | Hrs | COP equivalente |
+|---|---|---:|---:|
+| 1.F — Web pública & UX | Mitad no facturada (acuerdo 50%) | 11h | $1.650.000 |
+| 1.G — Panel Admin | Sidebar colapsible + tablas admin profesionales | 10h | $1.500.000 |
+| 1.H — Plataforma | PWA + nav móvil + mejoras app + infra | 24h | $3.600.000 |
+| 1.I — Calidad & Seguridad | Auditoría inicial + Vitest + RLS + bucket privado | 36h | $5.400.000 |
+| PARTE 2 — Auditoría integral 22-23 mayo | 41 hallazgos cerrados + follow-ups + rate limit + docs | 109h | $16.350.000 |
+| **TOTAL CORTESÍA** | | **190h** | **$28.500.000** |
+
+### 3.5 Otros / sostenimiento
 
 | Servicio | COP |
 |---|---:|
@@ -376,28 +477,57 @@ Auditoría comisionada internamente. 6 agentes especializados (web, portal, admi
 | Renovación dominio (anual, pendiente) | $40.000 |
 | Email `hola@1upesports.org` (anual, pendiente — puede ser adquirido directo por 1UP) | $280.000 |
 
-### 3.5 TOTAL CONSOLIDADO
+### 3.6 Resumen ejecutivo financiero
 
 | Concepto | Hrs | COP |
 |---|---:|---:|
-| EKX-2026-005 — scope contractual | — | $20.000.000 |
-| PARTE 1 — adiciones fuera de scope | 425h | $63.750.000 |
-| PARTE 2 — auditoría integral | 109h | $16.350.000 |
-| **TOTAL AL 23/05/2026** | **534h** | **$100.100.000** |
+| **A.** Contrato base EKX-2026-005 *(ya firmado)* | — | **$20.000.000** |
+| **B.** Cobro adicional fuera de scope *(este documento)* | 221h | **$33.150.000** |
+| **TOTAL A FACTURAR** | **221h** | **$53.150.000** |
+| — Trabajo incluido en scope original *(no se cobra)* | 123h | *$18.450.000* |
+| — Cortesía Ekinoxis *(no se cobra)* | 190h | *$28.500.000* |
+| **Valor real del trabajo entregado** | **534h** | ***$100.100.000*** |
 
-> _Tarifa aplicada a las adiciones: $150.000 COP/hora — según EKX-2026-005 Parte 4 ("Mejoras futuras / Future Enhancements")._
+> **Tarifa aplicada:** $150.000 COP/hora — según EKX-2026-005 PARTE 4 ("Mejoras futuras / Future Enhancements").
+>
+> **Diferencia entregada al cliente sin costo:** $46.950.000 COP (313h equivalentes), correspondientes a funcionalidades del scope original ampliadas + auditoría integral de seguridad + mejoras de plataforma.
 
 ---
 
 ## PARTE 4 — ESTADO DE PAGOS
 
+### 4.1 Contrato base EKX-2026-005
+
 | Pago | Valor | Fecha contractual | Estado |
 |------|-----:|----------|--------|
-| Primer pago (EKX-2026-005) | $10.000.000 COP | Antes del 15 mayo 2026 | _Por confirmar_ |
-| Segundo pago (EKX-2026-005) | $10.000.000 COP | Antes del 15 junio 2026 | _Por confirmar_ |
-| Adiciones PARTE 1 | $63.750.000 COP | Por acordar | _Pendiente_ |
-| Adiciones PARTE 2 (auditoría) | $16.350.000 COP | Por acordar | _Pendiente_ |
-| Renovación dominio | $40.000 COP | Anual | _Pendiente_ |
+| Primer pago | $10.000.000 COP | Antes del 15 mayo 2026 | _Por confirmar_ |
+| Segundo pago | $10.000.000 COP | Antes del 15 junio 2026 | _Por confirmar_ |
+| **Subtotal contrato base** | **$20.000.000 COP** | | |
+
+### 4.2 Cobro adicional fuera de scope (este documento)
+
+| Concepto | Valor | Estado |
+|------|-----:|--------|
+| Cobro adicional (221h × $150.000) — desglose en sec. 3.2 | $33.150.000 COP | _Por acordar_ |
+| **Subtotal adicional** | **$33.150.000 COP** | |
+
+### 4.3 Sostenimiento
+
+| Concepto | Valor | Estado |
+|------|-----:|--------|
+| Renovación dominio `1upesports.org` (anual) | $40.000 COP | _Pendiente_ |
+| Email `hola@1upesports.org` (anual, opcional) | $280.000 COP | _Pendiente_ |
+
+### 4.4 Total comprometido a la fecha
+
+| Concepto | COP |
+|---|---:|
+| Contrato base (4.1) | $20.000.000 |
+| Adicional fuera de scope (4.2) | $33.150.000 |
+| **TOTAL FACTURABLE** | **$53.150.000** |
+| Cortesía entregada sin costo | *$28.500.000* |
+| Incluido en scope original *(ya cubierto)* | *$18.450.000* |
+| **Valor real del trabajo entregado** | ***$100.100.000*** |
 
 ---
 
