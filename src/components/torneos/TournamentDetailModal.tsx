@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { PrizePodium } from "./PrizeBadge";
 import { RegisterButton } from "./RegisterButton";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
@@ -40,8 +41,7 @@ export function TournamentDetailModal({ tournament: t, onClose, isRegistered = f
         {/* Cover */}
         <div className="relative aspect-video bg-surface-container-high overflow-hidden">
           {t.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
+            <Image src={t.image_url} alt={t.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="material-symbols-outlined text-6xl text-outline/20" style={{ fontVariationSettings: "'FILL' 1" }}>

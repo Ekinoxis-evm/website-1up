@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
@@ -137,9 +138,8 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
             {course.intro_video_uid ? (
               <IntroPlayer courseId={course.id} />
             ) : course.image_url ? (
-              <div className="aspect-video bg-surface-container overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={course.image_url} alt={course.name} className="w-full h-full object-cover" />
+              <div className="relative aspect-video bg-surface-container overflow-hidden">
+                <Image src={course.image_url} alt={course.name} fill sizes="(max-width: 1024px) 100vw, 66vw" className="object-cover" priority />
               </div>
             ) : (
               <div className="aspect-video bg-surface-container flex items-center justify-center">
@@ -161,9 +161,8 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
         <div className="lg:col-span-2 bg-surface-container p-6 flex flex-col gap-4">
           {/* Cover image (shown here when the hero slot is taken by the video) */}
           {course.intro_video_uid && course.image_url && (
-            <div className="aspect-video bg-surface overflow-hidden -mt-6 -mx-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={course.image_url} alt={course.name} className="w-full h-full object-cover" />
+            <div className="relative aspect-video bg-surface overflow-hidden -mt-6 -mx-6">
+              <Image src={course.image_url} alt={course.name} fill sizes="(max-width: 1024px) 100vw, 33vw" className="object-cover" />
             </div>
           )}
           <div>
@@ -181,8 +180,7 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
           {masterName && (
             <div className="flex items-center gap-3 bg-surface px-3 py-2">
               {masterPhoto && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={masterPhoto} alt={masterName} className="w-8 h-8 object-cover rounded-full shrink-0" />
+                <Image src={masterPhoto} alt={masterName} width={32} height={32} className="w-8 h-8 object-cover rounded-full shrink-0" />
               )}
               <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-widest text-outline font-headline font-bold">Master</p>

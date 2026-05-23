@@ -5,6 +5,55 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.0] — 2026-05-23
+
+### Performance — `next/image` migration on public content
+
+All content-image `<img>` tags in the public-facing components migrated to `next/image`
+`<Image>`. Next.js now generates AVIF/WebP variants, serves responsive `srcset` per
+viewport, and lazy-loads off-screen images automatically. Expected impact: smaller image
+payload (often -40 to -60% on first-page bytes), better LCP, fewer CLS layout-shifts.
+
+| Component | Image purpose |
+|---|---|
+| `team/PlayerCard.tsx` | Player photos + social icons |
+| `masters/MasterCard.tsx` | Master photos + social icons |
+| `academia/CourseCatalog.tsx` | Course covers + master avatars in filter |
+| `academia/CoursePreview.tsx` | Course hero + sidebar cover + master avatar |
+| `tower/FloorBreakdown.tsx` | Floor images |
+| `tower/EquipmentHighlight.tsx` | Hardware highlight image |
+| `home/BrandsBanner.tsx` | Aliados / sponsors marquee logos |
+| `home/GamesGallery.tsx` | Category covers (incl. Unsplash fallbacks) |
+| `home/CommunitySection.tsx` | Discord / WhatsApp icons |
+| `torneos/IntlTournamentCard.tsx` | International tournament covers |
+| `torneos/TorneosClient.tsx` | Tournament covers + sponsor logos |
+| `torneos/TournamentDetailModal.tsx` | Tournament cover |
+
+Sizing strategy: container-fitted covers use `fill` + responsive `sizes`; fixed-size
+icons/avatars use explicit `width`/`height`. Visual output is byte-for-byte equivalent —
+class names preserved.
+
+The single remaining `<img>` in `academia/CourseCheckoutWizard.tsx` is a base64 `FileReader`
+preview of the user-uploaded comprobante before submit. `next/image` can't load
+`data:` URLs at that resolution; kept as a plain `<img>` with the eslint disable preserved.
+
+### Config
+
+- `next.config.ts` adds `images.unsplash.com` to `remotePatterns` (used by
+  `GamesGallery` static fallbacks). The existing `**.supabase.co` and
+  `lh3.googleusercontent.com` entries are unchanged.
+
+Verified: `npm run build` (zero errors, all routes regenerated),
+`npm run test:run` (100/100 pass).
+
+### Deferred follow-ups still open
+
+- OG image regen at 1200×630 (asset work, not code)
+- ISR / `revalidate` strategy per page
+- Admin failure-UX consistency (shared toast component)
+
+---
+
 ## [2.29.11] — 2026-05-23
 
 ### Security (audit Mediums — Payments batch)

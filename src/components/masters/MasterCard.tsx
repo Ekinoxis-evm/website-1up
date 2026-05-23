@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Master } from "@/types/database.types";
 import { SOCIAL_ICON } from "@/lib/socialIcons";
 
@@ -29,13 +30,14 @@ export function MasterCard({ master, courses }: Props) {
   return (
     <div className="bg-surface-container border-b-4 border-primary-container flex flex-col">
       {/* Photo */}
-      <div className="aspect-square bg-surface-container-high w-full overflow-hidden">
+      <div className="aspect-square bg-surface-container-high w-full overflow-hidden relative">
         {master.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={master.photo_url}
             alt={master.name}
-            className="w-full h-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -129,8 +131,7 @@ export function MasterCard({ master, courses }: Props) {
                 aria-label={platform}
                 className="hover:scale-110 transition-transform opacity-70 hover:opacity-100"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={SOCIAL_ICON[platform]} alt={platform} className="w-5 h-5 object-contain" />
+                <Image src={SOCIAL_ICON[platform]} alt={platform} width={20} height={20} className="object-contain" />
               </a>
             ) : null
           )}

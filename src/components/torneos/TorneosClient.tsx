@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { PrizeBadge } from "./PrizeBadge";
 import { RegisterButton } from "./RegisterButton";
@@ -49,8 +50,7 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
       {/* Cover — links to detail page */}
       <Link href={`/torneos/${t.slug ?? t.id}`} className="relative aspect-video bg-surface-container-high overflow-hidden block">
         {t.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
+          <Image src={t.image_url} alt={t.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="material-symbols-outlined text-5xl text-outline/20" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -105,8 +105,7 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
         {t.sponsor_name && (
           <div className="flex items-center gap-2 bg-surface-container-high px-3 py-2">
             {t.sponsor_logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-5 w-auto object-contain shrink-0" />
+              <Image src={t.sponsor_logo_url} alt={t.sponsor_name} width={80} height={20} className="h-5 w-auto object-contain shrink-0" />
             )}
             <span className="font-headline text-[10px] uppercase tracking-widest text-outline">Patrocinado por</span>
             <span className="font-headline font-black text-[10px] uppercase text-on-surface">{t.sponsor_name}</span>

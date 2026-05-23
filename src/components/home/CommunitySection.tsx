@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { SOCIAL_ICON, COMMUNITY_PLATFORMS } from "@/lib/socialIcons";
 
@@ -54,10 +55,11 @@ export async function CommunitySection() {
               rel="noopener noreferrer"
               className="group flex items-start gap-4 p-6 bg-surface-container hover:bg-surface-container-high transition-colors border-l-4 border-tertiary"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={SOCIAL_ICON[link.platform]}
                 alt={meta.label}
+                width={40}
+                height={40}
                 className="w-10 h-10 object-contain shrink-0"
               />
               <div className="flex flex-col gap-1">
