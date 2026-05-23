@@ -19,9 +19,19 @@ export function AdminCoursesClient({ courses }: Props) {
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
   }
 
+  // H-12: surface delete failures instead of silently succeeding.
   async function handleDeleteCourse(id: number) {
     if (!confirm("¿Eliminar este curso?")) return;
-    await fetch("/api/admin/courses", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id }) });
+    const res = await fetch("/api/admin/courses", {
+      method:  "DELETE",
+      headers: await authHeaders(),
+      body:    JSON.stringify({ id }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(`No se pudo eliminar el curso: ${data.error ?? "Error desconocido."}`);
+      return;
+    }
     router.refresh();
   }
 

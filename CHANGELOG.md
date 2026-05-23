@@ -5,6 +5,54 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.5] — 2026-05-22
+
+### Security
+
+- **H-6 · Bank account numbers + holder documents no longer exposed in bulk.**
+  `GET /api/bank-accounts` previously returned `account_number` and `holder_document` in
+  full to every authenticated user — a fraud-reconnaissance vector. The list response is
+  now **masked**: `account_number_masked` shows only the last 4 digits and
+  `holder_document` is dropped from the list entirely. A new endpoint
+  `GET /api/bank-accounts/[id]` returns the full record on-demand for a single account,
+  rate-limited under the `authMutate` bucket (20/min/user). The three checkout wizards
+  (`BuyPassBankWizard`, `BuyTokensWizard`, `CourseCheckoutWizard`) now fetch the masked
+  list, then call the per-id endpoint when a user selects a bank — net 1-2 calls per legit
+  checkout, while an attacker walking ids gets throttled.
+
+### Changed
+
+- **H-10 · `/perfil` is now a server-side redirect to `app.1upesports.org`.** The previous
+  page rendered a stale auth UI duplicating the `(protected)` shell; per `CLAUDE.md`, the
+  authenticated experience lives at the app subdomain only. Replaced with a `permanentRedirect`
+  in production (`308` — search engines drop the old URL) / `redirect` in dev (`307`).
+  Page now also has `robots: { index: false, follow: false }` so it stops appearing in the
+  index while the 308 propagates.
+- **H-11 · `sitemap.ts` now includes every public tournament detail page.** Each active
+  tournament's `/torneos/{slug}` is added with a `lastModified` from the tournament date,
+  `priority` derived from status (live 0.9 / upcoming 0.8 / completed 0.5), and
+  `changeFrequency` of `daily` (active) or `yearly` (completed).
+- **H-12 · `AdminCoursesClient` delete now surfaces failures.** The `handleDeleteCourse`
+  call previously did not check `res.ok`, so a 4xx/5xx looked successful in the UI.
+  Closes the remaining half of H-12 (the registrations PATCH half landed in 2.29.1).
+- **H-13 · Missing `revalidatePath` filled in on three admin routes.**
+  - `POST` / `DELETE /api/admin/users` → `revalidatePath("/admin/users")`.
+  - `POST` / `PUT` / `DELETE /api/admin/course-session-links` and
+    `POST` / `DELETE /api/admin/course-session-documents` →
+    `revalidatePath("/admin/courses")` + `revalidatePath("/app/academia/[courseId]", "page")`
+    so enrolled-user curriculum pages refresh too.
+
+### Tooling
+
+- **`vitest.config.ts`** now excludes `.claude/worktrees/**` from the test sweep — running
+  the suite from the main worktree no longer double-counts tests from concurrent agent
+  worktrees.
+- **`.gitignore`** adds `.claude/worktrees/` so agent scratch space never lands in commits.
+
+Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (77/77 pass).
+
+---
+
 ## [2.29.4] — 2026-05-22
 
 ### Security

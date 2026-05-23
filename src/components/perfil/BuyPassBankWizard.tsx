@@ -2,6 +2,17 @@
 
 import { useState, useRef } from "react";
 
+// H-6: list response is now masked. The picker uses BankListItem, the per-id
+// fetch (for the selected account) returns BankAccount.
+type BankListItem = {
+  id:                    number;
+  bank_name:             string;
+  account_type:          string | null;
+  account_number_masked: string | null;
+  holder_name:           string;
+  sort_order:            number;
+};
+
 type BankAccount = {
   id: number;
   bank_name: string;
@@ -23,8 +34,9 @@ interface Props {
 
 export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, getAccessToken, onClose, onSuccess }: Props) {
   const [step, setStep]                       = useState(1);
-  const [bankAccounts, setBankAccounts]       = useState<BankAccount[]>([]);
+  const [bankAccounts, setBankAccounts]       = useState<BankListItem[]>([]);
   const [selectedBank, setSelectedBank]       = useState<BankAccount | null>(null);
+  const [bankLoading, setBankLoading]         = useState(false);
   const [copiedField, setCopiedField]         = useState<string | null>(null);
   const [comprobantePath, setComprobantePath] = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
@@ -45,13 +57,26 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
     setTimeout(() => setCopiedField(null), 2000);
   }
 
+  // H-6: load the masked list, then auto-fetch the full record for the first bank.
   async function goToStep2() {
     const res = await fetch("/api/bank-accounts", { headers: await authHeader() });
     if (!res.ok) return;
-    const data = await res.json() as BankAccount[];
+    const data = await res.json() as BankListItem[];
     setBankAccounts(data);
-    setSelectedBank(data[0] ?? null);
+    if (data[0]) await loadBankAccount(data[0].id);
     setStep(2);
+  }
+
+  async function loadBankAccount(id: number) {
+    setBankLoading(true);
+    try {
+      const res = await fetch(`/api/bank-accounts/${id}`, { headers: await authHeader() });
+      if (!res.ok) { setSelectedBank(null); return; }
+      const full = await res.json() as BankAccount;
+      setSelectedBank(full);
+    } finally {
+      setBankLoading(false);
+    }
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -190,14 +215,15 @@ export function BuyPassBankWizard({ priceToken, durationDays, walletAddress, get
                     {bankAccounts.map((b) => (
                       <button
                         key={b.id}
-                        onClick={() => setSelectedBank(b)}
-                        className={`p-3 text-left font-body text-sm border-2 transition-colors ${
+                        onClick={() => loadBankAccount(b.id)}
+                        disabled={bankLoading}
+                        className={`p-3 text-left font-body text-sm border-2 transition-colors disabled:opacity-50 ${
                           selectedBank?.id === b.id
                             ? "border-primary-container bg-primary-container/10"
                             : "border-surface-container-high"
                         }`}
                       >
-                        <span className="font-headline font-bold">{b.bank_name}</span>{" — "}{b.account_number}
+                        <span className="font-headline font-bold">{b.bank_name}</span>{" — "}{b.account_number_masked}
                       </button>
                     ))}
                   </div>

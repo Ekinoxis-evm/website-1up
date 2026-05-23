@@ -7,6 +7,16 @@ import { publicClient, ONE_UP_TOKEN, ERC20_TRANSFER_ABI } from "@/lib/viem";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
 
+// H-6: list response is masked; full record fetched per id on selection.
+type BankListItem = {
+  id:                    number;
+  bank_name:             string;
+  account_type:          string | null;
+  account_number_masked: string | null;
+  holder_name:           string;
+  sort_order:            number;
+};
+
 type BankAccount = {
   id: number;
   bank_name: string;
@@ -44,8 +54,9 @@ export function CourseCheckoutWizard({
   const [txHash, setTxHash] = useState("");
 
   // Bank state
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankListItem[]>([]);
   const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
+  const [bankLoading, setBankLoading]   = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [comprobantePath, setComprobantePath] = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
@@ -146,12 +157,24 @@ export function CourseCheckoutWizard({
         setPhase("error");
         return;
       }
-      const data = await res.json() as BankAccount[];
+      const data = await res.json() as BankListItem[];
       setBankAccounts(data);
-      setSelectedBank(data[0] ?? null);
+      if (data[0]) await loadBankAccount(data[0].id);
     } catch {
       setErrorMsg("No se pudieron cargar las cuentas bancarias.");
       setPhase("error");
+    }
+  }
+
+  // H-6: full account record is fetched only after a user selects a bank.
+  async function loadBankAccount(id: number) {
+    setBankLoading(true);
+    try {
+      const res = await fetch(`/api/bank-accounts/${id}`, { headers: await authHeaders() });
+      if (!res.ok) { setSelectedBank(null); return; }
+      setSelectedBank(await res.json() as BankAccount);
+    } finally {
+      setBankLoading(false);
     }
   }
 
@@ -332,8 +355,9 @@ export function CourseCheckoutWizard({
                 {bankAccounts.map((bank) => (
                   <button
                     key={bank.id}
-                    onClick={() => setSelectedBank(bank)}
-                    className={`w-full text-left p-4 transition-colors ${
+                    onClick={() => loadBankAccount(bank.id)}
+                    disabled={bankLoading}
+                    className={`w-full text-left p-4 transition-colors disabled:opacity-50 ${
                       selectedBank?.id === bank.id
                         ? "bg-tertiary/10 border-2 border-tertiary"
                         : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
@@ -349,8 +373,8 @@ export function CourseCheckoutWizard({
                             </span>
                           )}
                         </div>
-                        <p className="font-mono text-xs text-on-surface/60 mt-1">{bank.account_number}</p>
-                        <p className="font-body text-[10px] text-on-surface/40 mt-0.5">{bank.holder_name}{bank.holder_document ? ` · ${bank.holder_document}` : ""}</p>
+                        <p className="font-mono text-xs text-on-surface/60 mt-1">{bank.account_number_masked}</p>
+                        <p className="font-body text-[10px] text-on-surface/40 mt-0.5">{bank.holder_name}</p>
                       </div>
                       <div className={`w-4 h-4 border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedBank?.id === bank.id ? "border-tertiary" : "border-on-surface/20"}`}>
                         {selectedBank?.id === bank.id && <div className="w-2 h-2 bg-tertiary" />}

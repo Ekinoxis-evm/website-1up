@@ -2,6 +2,16 @@
 
 import { useState, useRef } from "react";
 
+// H-6: list is masked; selected account fetched separately per id.
+type BankListItem = {
+  id:                    number;
+  bank_name:             string;
+  account_type:          string | null;
+  account_number_masked: string | null;
+  holder_name:           string;
+  sort_order:            number;
+};
+
 type BankAccount = {
   id: number;
   bank_name: string;
@@ -27,8 +37,9 @@ const RATE = 1000;
 export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Props) {
   const [step, setStep]             = useState(1);
   const [copAmount, setCopAmount]   = useState("");
-  const [bankAccounts, setBankAccounts]   = useState<BankAccount[]>([]);
+  const [bankAccounts, setBankAccounts]   = useState<BankListItem[]>([]);
   const [selectedBank, setSelectedBank]   = useState<BankAccount | null>(null);
+  const [bankLoading, setBankLoading]     = useState(false);
   const [copiedField, setCopiedField]     = useState<string | null>(null);
   const [comprobantePath, setComprobantePath]   = useState<string | null>(null);
   const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
@@ -49,13 +60,25 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
     return { Authorization: `Bearer ${token}` };
   }
 
+  // H-6: load the masked list, then fetch the full record for the first bank.
   async function goToStep2() {
     const res = await fetch("/api/bank-accounts", { headers: await authHeader() });
     if (!res.ok) return;
-    const data = await res.json() as BankAccount[];
+    const data = await res.json() as BankListItem[];
     setBankAccounts(data);
-    setSelectedBank(data[0] ?? null);
+    if (data[0]) await loadBankAccount(data[0].id);
     setStep(2);
+  }
+
+  async function loadBankAccount(id: number) {
+    setBankLoading(true);
+    try {
+      const res = await fetch(`/api/bank-accounts/${id}`, { headers: await authHeader() });
+      if (!res.ok) { setSelectedBank(null); return; }
+      setSelectedBank(await res.json() as BankAccount);
+    } finally {
+      setBankLoading(false);
+    }
   }
 
   function copyField(key: string, value: string) {
@@ -233,8 +256,9 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
                 {bankAccounts.map((bank) => (
                   <button
                     key={bank.id}
-                    onClick={() => setSelectedBank(bank)}
-                    className={`w-full text-left p-4 transition-colors ${
+                    onClick={() => loadBankAccount(bank.id)}
+                    disabled={bankLoading}
+                    className={`w-full text-left p-4 transition-colors disabled:opacity-50 ${
                       selectedBank?.id === bank.id
                         ? "bg-tertiary/10 border-2 border-tertiary"
                         : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
@@ -251,21 +275,9 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="font-mono text-xs text-on-surface/60">{bank.account_number}</span>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); copyField("sel-" + bank.id, bank.account_number); }}
-                            className="text-on-surface/30 hover:text-tertiary transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-xs">
-                              {copiedField === "sel-" + bank.id ? "check" : "content_copy"}
-                            </span>
-                          </button>
+                          <span className="font-mono text-xs text-on-surface/60">{bank.account_number_masked}</span>
                         </div>
-                        <p className="font-body text-[10px] text-on-surface/40 mt-0.5">{bank.holder_name}{bank.holder_document ? ` · ${bank.holder_document}` : ""}</p>
-                        {bank.instructions && (
-                          <p className="font-body text-xs text-secondary/70 mt-1 italic">{bank.instructions}</p>
-                        )}
+                        <p className="font-body text-[10px] text-on-surface/40 mt-0.5">{bank.holder_name}</p>
                       </div>
                       <div className={`w-4 h-4 border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedBank?.id === bank.id ? "border-tertiary" : "border-on-surface/20"}`}>
                         {selectedBank?.id === bank.id && <div className="w-2 h-2 bg-tertiary" />}
