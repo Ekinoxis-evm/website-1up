@@ -129,7 +129,10 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Hall of fame on `/team` reads from `tournament_results` — when a result
+  // changes (points / position / prize status) the public hall needs a refresh.
   revalidatePath("/torneos");
+  revalidatePath("/team");
   revalidatePath("/admin/tournament-results");
   return NextResponse.json(data);
 }

@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.8 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.9 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -55,7 +55,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
 | 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
-| 🟡 Medium | ~22 | **11 fixed (through 2.29.8)** | Web batch (1px dividers · route map · checkin noindex · placeholder WhatsApp · Rule 3) · Portal batch (age-floor · `Bearer null` · `value: BigInt(0)` · `any[]` types) · tournament-flow revalidatePath gaps · registrations PATCH res.ok · still open: input validation · OG images · `next/image` migration · ISR strategy · admin UX consistency · payments TOCTOU · comprobante MIME · CF JWT accessRules · more |
+| 🟡 Medium | ~22 | **15 fixed (through 2.29.9)** | Web (1px dividers · route map · checkin noindex · placeholder WhatsApp · Rule 3) · Portal (age-floor · `Bearer null` · `value: BigInt(0)` · `any[]` types) · Admin (revalidate gaps · dead pass-bank-orders redirect · orphan academia-content · 3 modal-header dividers) · tournament-flow revalidate gaps · registrations PATCH res.ok · **still open:** input validation · OG images · `next/image` migration · ISR strategy · admin failure-UX consistency · payments TOCTOU · comprobante MIME · CF JWT accessRules · more |
 | 🔵 Low / Info | many | open | see per-area sections |
 
 > **Correction to the workspace `../AUDIT.md`:** the deeper database dive found
@@ -168,12 +168,17 @@ token and short-circuit to the empty state. ~~`BuyPassWizard`/`CourseCheckoutWiz
 **Auth layout is correct** — `admin/(protected)/layout.tsx` enforces `isAdmin` server-side
 before any child renders. No client component imports `supabaseAdmin` (no service-role leak).
 
-**Findings:** H-2 (5 pages on the anon client — the top fix here), H-12 (missing `res.ok`
-checks), H-13 (missing `revalidatePath`). `revalidatePath` gaps: tournaments/brackets routes
-don't revalidate `/` or `/torneos/[slug]`; `tournament-results` DELETE omits `/team`;
-`pass-orders` revalidates the dead `pass-bank-orders` redirect stub. Inconsistent failure UX
-— inline `setSaveError` vs `alert()` vs nothing. `/admin/academia-content` is an orphan page
-(reachable by URL, not in the sidebar). Several modal-header 1px-divider violations.
+**Findings:** ~~H-2~~ ✅ 2.29.2. ~~H-12~~ ✅ 2.29.1 + 2.29.5. ~~H-13~~ ✅ 2.29.5.
+~~`revalidatePath` gaps: tournaments/brackets routes don't revalidate `/` or
+`/torneos/[slug]`~~ ✅ tournaments + brackets revalidate `/torneos/[slug]` since 2.29.1.
+~~`tournament-results` `PATCH` omits `/team`~~ ✅ 2.29.9. ~~`pass-orders` revalidates the
+dead `pass-bank-orders` redirect stub~~ ✅ 2.29.9 — all 3 call sites + the admin email link
+now target `/admin/pass-orders`; the redirect stub itself is deleted. ~~`/admin/academia-content`
+is an orphan page~~ ✅ 2.29.9 — page + client + API route all removed (data table is
+DEPRECATED; legacy reader on `/app/academia` still works). ~~Several modal-header 1px-divider
+violations~~ ✅ 2.29.9 — `AdminReferralCodesClient`, `Admin1PassClient`, `AdminCourseEditor`
+all converted to background-tone shifts. **Open:** inconsistent failure UX (inline
+`setSaveError` vs `alert()` vs nothing) — deferred for a shared-toast-component PR.
 
 ## Area 4 · Database — Supabase *(owner: database-maintainer)*
 

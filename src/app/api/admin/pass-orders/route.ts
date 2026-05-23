@@ -156,7 +156,7 @@ export async function PATCH(req: NextRequest) {
         }).catch(() => null);
       }
 
-      revalidatePath("/admin/pass-bank-orders");
+      revalidatePath("/admin/pass-orders");
       revalidatePath("/app/pass");
       return NextResponse.json(data);
     }
@@ -205,7 +205,7 @@ export async function PATCH(req: NextRequest) {
       }).catch(() => null);
     }
 
-    revalidatePath("/admin/pass-bank-orders");
+    revalidatePath("/admin/pass-orders");
     revalidatePath("/app/pass");
     return NextResponse.json(data);
   }
