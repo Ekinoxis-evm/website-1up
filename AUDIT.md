@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.4 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.5 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -8,9 +8,8 @@ public web, user portal, admin panel, database, payments, security.
 > 2.29.2.
 >
 > **2026-05-22 patch · H-4 — `fix/audit-h4-rate-limiting`:** rate limiting added on the 5
-> most abuse-prone endpoints (recruitment, course-intro-token, referral-codes/validate,
-> pass-orders POST, course-orders POST) — `src/lib/rateLimit.ts` + Upstash Ratelimit. Ships
-> safe-by-default; activates as soon as Upstash env vars are provisioned.
+> most abuse-prone endpoints — `src/lib/rateLimit.ts` + Upstash Ratelimit. Ships
+> safe-by-default. Closed in 2.29.3.
 >
 > **2026-05-22 patch · H-3 / H-8 / H-9 — `fix/audit-h3-h8-h9-payments`:** payments-layer
 > hardening closed in 2.29.4. Token-order approval now verifies the payout on-chain via
@@ -18,7 +17,13 @@ public web, user portal, admin panel, database, payments, security.
 > `verifyPassTransfer` now requires an exact-amount match and at least 3 Base-mainnet
 > confirmations (H-8). The MercadoPago webhook uses MP's documented `id;request-id;ts` HMAC
 > manifest with a ±10-min replay window and fails closed when the secret is unset, including
-> in development (H-9). 21 new unit tests, total 77 → 98. 6 of 13 Highs remain.
+> in development (H-9). 21 new unit tests.
+>
+> **2026-05-22 patch · quick wins — `fix/audit-quick-wins-h6-h10-h11-h13`:** five 🟠 Highs
+> closed in 2.29.5 — H-6 (bank-account masking + per-id endpoint), H-10 (/perfil server
+> redirect), H-11 (sitemap tournament slugs), H-12 remainder (AdminCoursesClient delete),
+> H-13 (revalidatePath gaps in 3 admin routes). **Only H-7 (schema un-versioned) remains
+> open across all 13 Highs.**
 
 > **2026-05-22 patch — `fix/tournament-flow-and-critical-audit`:** all 3 🔴 Critical
 > findings (C-1, C-2, C-3) are fixed in 2.29.1. Tournament flow tightened end-to-end —
@@ -44,7 +49,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 | Severity | Count | Status | Theme |
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
-| 🟠 High | 13 | **7 fixed in 2.29.2 + 2.29.3 + 2.29.4** · 6 open | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · ~~no rate limiting~~ · ~~no on-chain verify on token approval~~ · ~~`verifyPassTransfer` no confirmation depth~~ · ~~webhook HMAC manifest~~ · schema un-versioned · bank-account exposure · more |
+| 🟠 High | 13 | **12 fixed (2.29.2 → 2.29.5)** · 1 open (H-7) | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · ~~no rate limiting~~ · ~~no on-chain verify on token approval~~ · ~~`verifyPassTransfer` no confirmation depth~~ · ~~webhook HMAC manifest~~ · ~~bank account exposure~~ · ~~`/perfil` redirect~~ · ~~sitemap tournament slugs~~ · ~~`res.ok` checks~~ · ~~`revalidatePath` gaps~~ · schema un-versioned (only one left) |
 | 🟡 Medium | ~22 | 2 fixed in 2.29.1 | input validation · revalidatePath gaps (tournaments fixed) · 1px-divider violations · error-handling gaps (registrations PATCH fixed) |
 | 🔵 Low / Info | many | open | see per-area sections |
 
@@ -101,14 +106,14 @@ active in production — but the code is live.*
 | ~~H-3~~ ✅ | ~~Token-order **approval performs no on-chain verification** — `approved_tx_hash` is admin-typed and unvalidated~~ — **fixed in 2.29.4** (new `src/lib/tokenTransferVerifier.ts` re-runs the receipt before flipping to `approved`; rejects unless treasury → order wallet, value ≥ token_amount, and ≥3 confirmations) | `api/admin/token-orders/route.ts:72-99` |
 | ~~H-4~~ ✅ | ~~**No rate limiting** anywhere~~ — **fixed in 2.29.3**: 5 endpoints now behind Upstash Ratelimit sliding-window limits via `src/lib/rateLimit.ts` (anon-strict 5/min/IP, anon-read 30/min/IP, auth-mutate 20/min/user). Ships safe-by-default. | `src/lib/rateLimit.ts` |
 | ~~H-5~~ ✅ | ~~`@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"`~~ — **fixed in 2.29.2** (pinned to `3.18.0` / `1.32.5`) | `package.json` |
-| H-6 | Full bank account numbers + holder document exposed to **every** authenticated user | `api/bank-accounts/route.ts:9-14` |
+| ~~H-6~~ ✅ | ~~Full bank account numbers + holder document exposed to **every** authenticated user~~ — **fixed in 2.29.4**: bulk list now masks `account_number` to last 4 and drops `holder_document`; per-id route returns full record under the auth-mutate rate-limit bucket | `api/bank-accounts/route.ts` + new `api/bank-accounts/[id]/route.ts` |
 | H-7 | Entire schema un-versioned — `supabase/migrations/` has **one** file; no baseline DDL, no `config.toml`; the DB cannot be rebuilt from the repo | `supabase/migrations/` |
 | ~~H-8~~ ✅ | ~~No confirmation-depth / reorg check in `verifyPassTransfer`; `value >= expectedWei` silently accepts overpayment~~ — **fixed in 2.29.4** (exact-amount equality + `MIN_CONFIRMATIONS = 3` on Base mainnet; `confirmations_pending` is a retryable code distinct from `amount_mismatch`) | `src/lib/passVerifier.ts:28-54` |
 | ~~H-9~~ ✅ | ~~Webhook HMAC manifest is non-standard (`ts.dataId`) — omits `x-request-id`, no `ts` freshness check → signature replayable~~ — **fixed in 2.29.4** (manifest is now `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, ±10 min replay window, fails closed when secret is unset in every environment) | `src/lib/mercadopago.ts:96-133` |
-| H-10 | `/perfil` renders a full auth UI instead of redirecting (CLAUDE.md says "redirects to app subdomain") — stale duplicate of the `(protected)` shell | `app/(main)/perfil/page.tsx`, `ProfilePage.tsx` |
-| H-11 | `sitemap.ts` omits all `/torneos/[slug]` tournament detail pages | `src/app/sitemap.ts` |
-| H-12 | No `res.ok` check after delete/PATCH — failed operations look successful to the operator | `AdminCoursesClient.tsx:24`, `AdminTournamentRegistrationsClient.tsx:46` |
-| H-13 | Missing `revalidatePath` — `users`, `course-session-links`, `course-session-documents` routes mutate without revalidating | those 3 `api/admin/*` routes |
+| ~~H-10~~ ✅ | ~~`/perfil` renders a full auth UI instead of redirecting~~ — **fixed in 2.29.5** (server-side `permanentRedirect` to `app.1upesports.org` in production, `noindex` meta added) | `app/(main)/perfil/page.tsx` |
+| ~~H-11~~ ✅ | ~~`sitemap.ts` omits all `/torneos/[slug]` tournament detail pages~~ — **fixed in 2.29.5** (slugs added with status-derived priority/changeFreq) | `src/app/sitemap.ts` |
+| ~~H-12~~ ✅ | ~~No `res.ok` check after delete/PATCH~~ — **fixed in 2.29.1** (registrations PATCH) + **2.29.5** (`AdminCoursesClient` delete) | both files |
+| ~~H-13~~ ✅ | ~~Missing `revalidatePath`~~ — **fixed in 2.29.5** on `users`, `course-session-links`, `course-session-documents` routes | those 3 `api/admin/*` routes |
 
 ---
 

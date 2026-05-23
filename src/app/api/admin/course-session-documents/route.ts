@@ -3,11 +3,19 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { deleteCourseDoc } from "@/lib/courseDocs";
+import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return false;
   return await isAdmin(await resolveUserEmail(claims.userId));
+}
+
+// H-13: documents feed the enrolled-user curriculum page. Revalidate both
+// surfaces on every mutation.
+function revalidateCoursesAfterDocMutation() {
+  revalidatePath("/admin/courses");
+  revalidatePath("/app/academia/[courseId]", "page");
 }
 
 export async function POST(req: NextRequest) {
@@ -23,6 +31,7 @@ export async function POST(req: NextRequest) {
     uploaded_by:  body.uploadedBy ?? null,
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidateCoursesAfterDocMutation();
   return NextResponse.json(data);
 }
 
@@ -36,5 +45,6 @@ export async function DELETE(req: NextRequest) {
     .single();
   if (doc?.storage_path) await deleteCourseDoc(doc.storage_path);
   await supabaseAdmin.from("course_session_documents").delete().eq("id", id);
+  revalidateCoursesAfterDocMutation();
   return NextResponse.json({ ok: true });
 }

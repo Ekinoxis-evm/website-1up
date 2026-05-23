@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin, isEnvAdmin } from "@/lib/admin";
+import { revalidatePath } from "next/cache";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  revalidatePath("/admin/users");
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -62,5 +64,6 @@ export async function DELETE(req: NextRequest) {
 
   const { error } = await supabaseAdmin.from("admin_users").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/admin/users");
   return NextResponse.json({ ok: true });
 }
