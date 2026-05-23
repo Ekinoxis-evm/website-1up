@@ -6,6 +6,10 @@ export const metadata = { title: "Beneficios — 1UP App" };
 
 export default async function AppBeneficiosPage() {
   const [{ data: aliados }, { data: rules }] = await Promise.all([
+    // H-1: explicit column list — never `select("*")`. `api_url` is read here
+    // ONLY to compute the `hasPendingApi` boolean below; it is never put into the
+    // `cards` array, so it never reaches the client. `api_key`, `nit`, `email`
+    // stay out of the select entirely.
     supabase
       .from("aliados")
       .select("id, name, logo_url, api_url")

@@ -1,7 +1,11 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.1 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.2 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
+
+> **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
+> (H-1 aliados key leak, H-5 `@privy-io` pinning, H-2 anon-client admin pages) closed in
+> 2.29.2. 10 of 13 Highs remain.
 
 > **2026-05-22 patch — `fix/tournament-flow-and-critical-audit`:** all 3 🔴 Critical
 > findings (C-1, C-2, C-3) are fixed in 2.29.1. Tournament flow tightened end-to-end —
@@ -27,7 +31,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 | Severity | Count | Status | Theme |
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
-| 🟠 High | 13 | open | anon-client admin pages · `aliados` key leak · no rate limiting · `@privy-io` unpinned · no on-chain verify on token approval · schema un-versioned · more |
+| 🟠 High | 13 | **3 fixed in 2.29.2** · 10 open | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · no rate limiting · no on-chain verify on token approval · schema un-versioned · more |
 | 🟡 Medium | ~22 | 2 fixed in 2.29.1 | input validation · revalidatePath gaps (tournaments fixed) · 1px-divider violations · error-handling gaps (registrations PATCH fixed) |
 | 🔵 Low / Info | many | open | see per-area sections |
 
@@ -79,11 +83,11 @@ active in production — but the code is live.*
 
 | # | Finding | Location |
 |---|---|---|
-| H-1 | `select("*")` on `aliados` from the **anon** client ships partner `api_key`/`api_url` to every visitor's browser | `app/(main)/page.tsx` + `api/admin/aliados` |
-| H-2 | 5 admin pages use the anon `supabase` client — silently hide `is_active=false` rows from the operator (violates CLAUDE.md L170) | `admin/(protected)/{players,competitions,games,floors,discounts}/page.tsx` |
+| ~~H-1~~ ✅ | ~~`select("*")` on `aliados` from the **anon** client ships partner `api_key`/`api_url` to every visitor's browser~~ — **fixed in 2.29.2** (explicit column list + tightened `BrandsBanner` props type) | `app/(main)/page.tsx` |
+| ~~H-2~~ ✅ | ~~5 admin pages use the anon `supabase` client~~ — **fixed in 2.29.2** (all 5 switched to `supabaseAdmin`) | `admin/(protected)/{players,competitions,games,floors,discounts}/page.tsx` |
 | H-3 | Token-order **approval performs no on-chain verification** — `approved_tx_hash` is admin-typed and unvalidated | `api/admin/token-orders/route.ts:72-99` |
 | H-4 | **No rate limiting** anywhere — public `recruitment`, `course-intro-token` signing oracle, referral-code enumeration, on-chain verify endpoints | app-wide; `src/proxy.ts` |
-| H-5 | `@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"` — non-reproducible builds, auto-adopts a compromised release of the auth backbone | `package.json` |
+| ~~H-5~~ ✅ | ~~`@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"`~~ — **fixed in 2.29.2** (pinned to `3.18.0` / `1.32.5`) | `package.json` |
 | H-6 | Full bank account numbers + holder document exposed to **every** authenticated user | `api/bank-accounts/route.ts:9-14` |
 | H-7 | Entire schema un-versioned — `supabase/migrations/` has **one** file; no baseline DDL, no `config.toml`; the DB cannot be rebuilt from the repo | `supabase/migrations/` |
 | H-8 | No confirmation-depth / reorg check in `verifyPassTransfer`; `value >= expectedWei` silently accepts overpayment | `src/lib/passVerifier.ts:28-54` |
@@ -183,10 +187,10 @@ tokens). `verifyToken` doesn't assert the `appId` claim (defense-in-depth).
 
 1. ~~**C-1 / C-2**~~ ✅ **Done in 2.29.1** — credited wallet derived from `user_profiles.wallet_address` via `src/lib/verifiedWallet.ts` across all three order POSTs; `verifyPassTransfer.expectedFrom` pinned to the same verified value.
 2. ~~**C-3**~~ ✅ **Done in 2.29.1** — webhook now has an allowed-transition map + `mp_payment_id` dedupe (`src/lib/mpWebhookDecision.ts`).
-3. **H-1** — explicit column lists on every `aliados` read; never `select("*")` on it. **← next**
-4. **H-5** — pin `@privy-io/*` to exact versions.
-5. **H-2** — switch the 5 admin pages to `supabaseAdmin`.
-6. **H-4** — add IP rate limiting (Upstash / Vercel WAF) to public POST + on-chain endpoints.
+3. ~~**H-1** — explicit column lists on every `aliados` read~~ ✅ **Done in 2.29.2**.
+4. ~~**H-5** — pin `@privy-io/*` to exact versions~~ ✅ **Done in 2.29.2**.
+5. ~~**H-2** — switch the 5 admin pages to `supabaseAdmin`~~ ✅ **Done in 2.29.2**.
+6. **H-4** — add IP rate limiting (Upstash / Vercel WAF) to public POST + on-chain endpoints. **← next**
 7. **H-3 / H-8 / H-9** — server-side on-chain verification for token approvals; confirmation depth; correct HMAC manifest + fail-closed.
 8. **H-7** — commit a schema baseline migration; authorize the Supabase MCP and run `get_advisors`. *Started in 2.29.1: `register_for_tournament` is now committed in `supabase/migrations/`; `get_advisors` ran clean for the change. Remaining: dump every other live function/table/policy as a baseline migration.*
 9. **H-6, H-10 → H-13** and the Medium items per area.
