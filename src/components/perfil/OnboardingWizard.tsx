@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/ui/Avatar";
 
 type Game = { id: number; name: string };
 
@@ -52,7 +53,11 @@ const STEPS = [
   { label: "Tus juegos",  icon: "sports_esports"    },
   { label: "Referido",    icon: "confirmation_number" },
   { label: "Consentimiento", icon: "verified_user"  },
+  { label: "Foto de perfil", icon: "photo_camera"   },
 ] as const;
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 interface Props { games: Game[] }
 
@@ -91,6 +96,12 @@ export function OnboardingWizard({ games }: Props) {
   // Step 6
   const [privacyConsent, setPrivacyConsent] = useState(false);
 
+  // Step 7 — avatar (optional, skippable)
+  const [avatarFile, setAvatarFile]       = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError]     = useState<string | null>(null);
+  const avatarInputRef                    = useRef<HTMLInputElement>(null);
+
   // Submit
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -109,6 +120,11 @@ export function OnboardingWizard({ games }: Props) {
     if (date > minAge) return "Debes tener al menos 14 años";
     return null;
   })();
+
+  // Free the blob URL the preview is holding when the wizard unmounts.
+  useEffect(() => {
+    return () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview); };
+  }, [avatarPreview]);
 
   // Live referral code check
   useEffect(() => {
@@ -149,6 +165,29 @@ export function OnboardingWizard({ games }: Props) {
   const step5Valid = codeStatus !== "invalid" && codeStatus !== "checking";
   const step6Valid = privacyConsent;
 
+  function pickAvatar(file: File) {
+    setAvatarError(null);
+    if (!AVATAR_MIME.has(file.type)) {
+      setAvatarError("Solo JPG, PNG o WebP.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError("Archivo demasiado grande (máx 5 MB).");
+      return;
+    }
+    setAvatarFile(file);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
+  function clearAvatar() {
+    setAvatarFile(null);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(null);
+    setAvatarError(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  }
+
   async function handleSubmit() {
     if (!step5Valid) return;
     setSubmitting(true);
@@ -178,6 +217,22 @@ export function OnboardingWizard({ games }: Props) {
         setSubmitting(false);
         return;
       }
+
+      // Avatar upload runs after onboarding so the profile row is guaranteed.
+      // Failures are non-blocking — the user proceeds to /app either way, and
+      // can re-upload from the Identidad tab anytime.
+      if (avatarFile) {
+        try {
+          const form = new FormData();
+          form.append("file", avatarFile);
+          await fetch("/api/user/avatar", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: form,
+          });
+        } catch { /* non-fatal */ }
+      }
+
       router.replace("/app");
     } catch {
       setSubmitError("Error de red. Intenta de nuevo.");
@@ -580,6 +635,81 @@ export function OnboardingWizard({ games }: Props) {
             </span>
           </label>
 
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setStep(7)}
+              disabled={!step6Valid}
+              className="flex-1 bg-primary-container text-white font-headline font-black py-4 uppercase tracking-tighter disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              SIGUIENTE <span className="material-symbols-outlined">arrow_forward</span>
+            </button>
+            <button onClick={() => setStep(5)} className="px-6 bg-surface-container font-headline font-black uppercase">
+              ATRÁS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 7: Foto de perfil (opcional) ── */}
+      {step === 7 && (
+        <div>
+          <h1 className="font-headline font-black text-4xl uppercase tracking-tighter mb-1">
+            Tu<br /><span className="text-primary-container">foto de perfil</span>
+          </h1>
+          <div className="h-1 w-16 bg-primary-container mb-4" />
+          <p className="font-body text-sm text-outline mb-6">
+            Cómo te van a ver los demás jugadores. Es opcional — puedes agregarla después en tus ajustes.
+          </p>
+
+          <div className="flex items-center gap-6 mb-6">
+            <Avatar
+              src={avatarPreview}
+              name={[nombre, apellidos].filter(Boolean).join(" ") || username || null}
+              size="2xl"
+              square
+            />
+            <div className="flex-1">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) pickAvatar(f);
+                }}
+                className="hidden"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={submitting}
+                  className="bg-primary-container text-white font-headline font-black px-4 py-2 text-xs uppercase tracking-tight disabled:opacity-40 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">photo_camera</span>
+                  {avatarFile ? "CAMBIAR" : "ELEGIR FOTO"}
+                </button>
+                {avatarFile && (
+                  <button
+                    type="button"
+                    onClick={clearAvatar}
+                    disabled={submitting}
+                    className="bg-surface-container-high text-on-surface font-headline font-black px-4 py-2 text-xs uppercase tracking-tight disabled:opacity-40 flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                    QUITAR
+                  </button>
+                )}
+              </div>
+              <p className="font-body text-xs text-outline/60 mt-2">
+                JPG, PNG o WebP. Máx 5 MB. Cuadrada se ve mejor.
+              </p>
+              {avatarError && (
+                <p className="font-headline text-xs text-error mt-1 uppercase tracking-tight">{avatarError}</p>
+              )}
+            </div>
+          </div>
+
           {submitError && (
             <p className="font-body text-sm text-error mt-4 bg-error/10 p-3">{submitError}</p>
           )}
@@ -587,7 +717,7 @@ export function OnboardingWizard({ games }: Props) {
           <div className="flex gap-3 mt-8">
             <button
               onClick={handleSubmit}
-              disabled={submitting || !step6Valid}
+              disabled={submitting}
               className="flex-1 bg-primary-container text-white font-headline font-black py-4 uppercase tracking-tighter disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {submitting ? (
@@ -595,14 +725,23 @@ export function OnboardingWizard({ games }: Props) {
                   <span className="material-symbols-outlined animate-spin text-lg">refresh</span>
                   GUARDANDO…
                 </>
+              ) : avatarFile ? (
+                <>
+                  <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+                  SUBIR Y ENTRAR
+                </>
               ) : (
                 <>
                   <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
-                  ENTRAR AL 1UP
+                  SALTAR Y ENTRAR
                 </>
               )}
             </button>
-            <button onClick={() => setStep(5)} className="px-6 bg-surface-container font-headline font-black uppercase">
+            <button
+              onClick={() => setStep(6)}
+              disabled={submitting}
+              className="px-6 bg-surface-container font-headline font-black uppercase disabled:opacity-40"
+            >
               ATRÁS
             </button>
           </div>

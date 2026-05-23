@@ -5,6 +5,35 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.31.1] — 2026-05-23
+
+### Added — Avatar step in onboarding wizard (PR A.5, fast-follow to PR A)
+
+New 7th step at the end of the onboarding wizard: pick a profile photo (optional,
+skippable). Appears after the privacy-consent step so the consent UX stays intact;
+the submit button moves from step 6 to step 7. Position chosen for minimum
+refactor risk — no existing step numbers shift.
+
+- **STEPS** array gains `{ label: "Foto de perfil", icon: "photo_camera" }` as
+  the 7th entry. Progress bar grows from 6 segments to 7.
+- **Picker UI** — file input (JPEG / PNG / WebP, ≤ 5 MB enforced client-side
+  before submit too), 2xl preview through `<Avatar />`, "Cambiar" / "Quitar"
+  controls. Inline error if the file is too large or wrong type.
+- **Submit flow** — `/api/user/onboarding` still runs first (creates the profile
+  row → `onboarding_completed_at`). If a file was picked, the avatar then
+  uploads via `POST /api/user/avatar` AFTER onboarding succeeds (profile row is
+  guaranteed to exist). Upload failure is **non-blocking** — the user always
+  proceeds to `/app`, and can re-upload from `/app/ajustes` Identidad tab
+  anytime.
+- **Submit CTA copy** — adapts to file state: "SUBIR Y ENTRAR" when a file is
+  picked, "SALTAR Y ENTRAR" when not.
+- **Blob URL lifecycle** — preview uses `URL.createObjectURL` and revokes on
+  unmount + on file change to prevent memory leaks.
+
+Build clean, 107/107 tests still pass.
+
+---
+
 ## [2.31.0] — 2026-05-23
 
 ### Added — User avatars (PR A of the tournament UX overhaul)
