@@ -43,5 +43,17 @@ admin routes now `revalidatePath`), tournament-results PATCH revalidates `/team`
 modal-header 1px dividers removed, and the failure-UX consistency story is the new
 shared `AdminToastProvider` + `useAdminToast()` (see `src/components/admin/ui/Toast.tsx`).
 
+## Tournament cockpit (v2.36.0+)
+
+The tournament admin is **cockpit-first**. `/admin/torneos` is now a slim directory with
+Dashboard + QR row icons only and a name-only quick-create modal that redirects into
+`/admin/torneos/<slug>/manage`. Everything per-tournament (inline-edit Info, registrations
++ CSV, bracket setup/start/record/undo, podium + on-chain $1UP delivery, Share/copy summary)
+lives in `AdminTournamentCockpit`. The standalone `/admin/tournament-brackets` and
+`/admin/tournament-results` pages were deleted — never re-create them; extend the cockpit
+instead. The cockpit uses a 4-step phase stepper (Inscripciones → Borrador → En curso →
+Finalizado) driven by `bracket.status`/`tournament.status` — phases are *visualised*, not
+clickable navigation.
+
 You are on standby for new admin work. When fixing or shipping, report what changed, the
 build/test result, and which docs you updated.

@@ -5,6 +5,151 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.3] — 2026-05-23
+
+### Fixed — Phase stepper on narrow viewports
+
+The four-step phase stepper used long Spanish labels ("Inscripciones abiertas",
+"Borrador del bracket", "Torneo en curso", "Torneo finalizado") that wrapped to
+three lines on ≤375px screens, pushing the stepper to ~80px tall and crowding
+the cockpit. Added a parallel `stageLabelShort` map (Inscripción / Borrador /
+En curso / Finalizado) shown via `sm:hidden` on mobile; full labels stay on
+`sm+`. Same `aria-label` (full text) on the indicator so screen readers always
+get the complete name. Pure presentational tweak — no logic changed.
+
+---
+
+## [2.36.2] — 2026-05-23
+
+### Fixed — Post-shipment compliance pass on the cockpit refactor
+
+A compliance review of v2.36.0/2.36.1 by an independent code-reviewer agent surfaced
+four blockers, all closed in this patch.
+
+- **🔴 Sponsored on-chain prize delivery was broken** — `sendPrizeOnChain` in
+  `AdminTournamentResultsPanel` omitted `value: BigInt(0)` from the
+  `sendTransaction` call. Without it Privy's bundler doesn't classify the tx as a
+  sponsored EIP-7702 op (other sponsored-send sites — `BuyPassWizard`,
+  `CourseCheckoutWizard`, `WalletTab` — all include it; this is the canonical
+  pattern in `CLAUDE.md` → Gas Sponsorship). Restored.
+- **🔴 `lookupWallet` ignored the C-1 audit closure** — the API helper in
+  `/api/admin/tournament-results` chained `pass_orders` → `token_purchase_orders`
+  to find a winner's wallet, which returns `null` for any winner who never made
+  a token/pass order. Now reads `user_profiles.wallet_address` first (the
+  authoritative source, synced from Privy by `privySync.ts` per the C-1 fix in
+  `src/lib/verifiedWallet.ts`), with the order-table chain kept as a legacy
+  fallback only.
+- **🟠 Stale `revalidatePath("/admin/tournament-results")`** — three handlers in
+  `/api/admin/tournament-results` still revalidated the deleted standalone page.
+  Replaced with `revalidatePath("/admin/torneos/[slug]/manage", "page")` so the
+  cockpit re-renders after podium / prize-delivery mutations without a manual
+  refresh.
+- **🟡 1px-divider violation on the cockpit tab bar** — the tab strip wrapper
+  carried `border-b border-surface-container-high` (Rule 2 forbids 1px borders
+  for section separation). Removed; the visual separation now comes from the
+  `bg-surface-container` shift on the tab-content panel below. Active-tab
+  visual cue keeps the explicit container fill.
+
+### A11y polish
+
+- The phase stepper is now a proper `<ol role="list" aria-label="Etapas del torneo">`
+  with `<li>` step rows, `aria-label` on each indicator (e.g. "Etapa 2: Borrador del
+  bracket (actual)"), and `aria-hidden="true"` on the decorative connector lines and
+  ✓ icons.
+- The tab bar gains `role="tablist"` + `aria-selected` per tab.
+
+---
+
+## [2.36.1] — 2026-05-23
+
+### Changed — Cockpit information architecture polish
+
+- **Stats moved above the tournament header** — Inscritos · Asistieron · Capacidad ·
+  Premios are now a compact 4-card strip at the very top of the cockpit. The strip leads
+  the page so the operational numbers are visible before the chrome.
+- **Phase banner replaced with a proper stepper.** The four lifecycle stages
+  (1. Inscripciones · 2. Borrador · 3. En curso · 4. Finalizado) are now connected nodes
+  with a progress line between them: completed steps are filled tertiary with a ✓,
+  the current step is highlighted with a ring around a pink node, future steps are dim.
+  Phases remain driven by `bracket.status` / `tournament.status` (not clickable —
+  the bracket lifecycle owns transitions).
+- `Stat` helper is now a horizontal label↔value card instead of the larger
+  label-above-number block, so the strip stays compact at full width.
+
+### Docs
+
+- `CLAUDE.md`, `README.md`, `.claude/skills/admin-crud.md`, `.claude/agents/admin-maintainer.md`
+  refreshed to remove references to the deleted `/admin/tournament-brackets` and
+  `/admin/tournament-results` standalone pages and to document the cockpit's current
+  inline-editable Info tab, stats strip, phase stepper, and Share button.
+
+---
+
+## [2.36.0] — 2026-05-23
+
+### Changed — Tournament cockpit becomes the single source of truth
+
+The per-tournament cockpit (`/admin/torneos/<slug>/manage`) now owns every
+tournament action end-to-end. The standalone "Brackets" and "Hall of Fame"
+admin pages are removed; the row-level edit/cancel/delete shortcuts on
+`/admin/torneos` are removed; the modal edit popup is gone. Everything
+happens inline inside the cockpit.
+
+#### Cockpit additions
+
+- **Inline-editable Info tab** — replaces the read-only summary + popup. The
+  full edit form (image, name, game, date, location, max participants,
+  description, prizes, sponsor, registration/visibility toggles, sort) is now
+  the Info tab itself. New `AdminTournamentInfoEditor` component.
+- **Share button** in the header toolbar — copies a social-ready summary
+  (name · game · date · 1° prize · location · sponsor + public inscription
+  URL) to the clipboard, with native Web Share API fallback on mobile.
+- **On-chain $1UP prize delivery** is now in the Premios panel. Admins can
+  pay token prizes from their connected wallet with one click (sponsored
+  gas, ERC-20 transfer to the winner's embedded wallet) — the tx hash
+  capture and "marked sent" PATCH are wired in. Manual entry (paste tx hash
+  or comprobante URL) remains as the bank-transfer path.
+
+#### `/admin/torneos` list simplification
+
+- "+ NUEVO TORNEO" is now a **name-only quick-create** modal that POSTs a
+  stub then routes straight into the new tournament's cockpit. Mirrors the
+  `/admin/courses/new` pattern.
+- Row icons reduced to **Dashboard + QR Check-in** only. Editing,
+  cancelling, deleting, bracket setup and podium management all happen
+  inside the cockpit.
+
+#### Sidebar cleanup
+
+- Removed `Brackets` and `Hall of Fame` items from the Competiciones group —
+  both surfaces are subsumed by the cockpit's Bracket and Premios tabs.
+  `Inscripciones` stays (cross-tournament filtering + combined CSV export
+  remain unique to the standalone page).
+
+### Removed
+
+- `src/app/admin/(protected)/tournament-brackets/page.tsx` and
+  `AdminTournamentBracketsClient` — the standalone bracket page was a
+  tournament-selector wrapping the same `AdminTournamentBracketPanel` the
+  cockpit already embeds. Zero functional loss.
+- `src/app/admin/(protected)/tournament-results/page.tsx` and
+  `AdminTournamentResultsClient` — its unique on-chain $1UP send flow was
+  ported into `AdminTournamentResultsPanel` (above) before removal.
+- `revalidatePath("/admin/tournament-brackets")` and
+  `revalidatePath("/admin/tournament-results")` cleared from
+  `/api/admin/brackets`.
+
+### Migration notes
+
+- Old deep-links to `/admin/tournament-brackets` and
+  `/admin/tournament-results` return 404. The cockpit Bracket and Premios
+  tabs are the replacement path.
+- The `?edit=<id>` query param on `/admin/torneos` no longer auto-opens an
+  edit modal — that modal was deleted. Editing now lives inside the
+  cockpit's Info tab.
+
+---
+
 ## [2.35.0] — 2026-05-23
 
 ### Added — TV bracket view + avatar match cards (PR E)

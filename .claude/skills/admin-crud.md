@@ -97,8 +97,8 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | Referral codes | `/admin/referral-codes` |
 | User onboarding | `/app`, `/admin/referral-codes` |
 | Brand logos | `/`, `/admin/brand-logos` |
-| Tournaments | `/torneos`, `/admin/torneos` |
-| Brackets | `/torneos`, `/admin/tournament-brackets` |
+| Tournaments | `/torneos`, `/torneos/[slug]` (page), `/admin/torneos` |
+| Brackets | `/torneos`, `/torneos/[slug]` (page) — the per-tournament cockpit refreshes itself client-side after PATCHes |
 
 ## All admin routes
 
@@ -126,8 +126,9 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/submissions` | read-only table | — | — |
 | `/admin/users` | `AdminUsersClient` | `/api/admin/users` | GET/POST/DELETE |
 | `/admin/brand-logos` | `AdminBrandLogosClient` | `/api/admin/brand-logos` | GET/POST/PUT/DELETE |
-| `/admin/torneos` | `AdminTorneosClient` | `/api/admin/tournaments` | GET/POST/PUT/DELETE |
-| `/admin/tournament-brackets` | `AdminTournamentBracketsClient` | `/api/admin/brackets` | GET/POST/PATCH/DELETE |
+| `/admin/torneos` | `AdminTorneosClient` (slim directory + name-only quick-create) | `/api/admin/tournaments` | GET/POST/PUT/DELETE |
+| `/admin/torneos/[slug]/manage` | `AdminTournamentCockpit` (+ `AdminTournamentInfoEditor`, `AdminTournamentRegistrationsPanel`, `AdminTournamentBracketPanel`, `AdminTournamentResultsPanel`) | `/api/admin/tournaments`, `/api/admin/brackets`, `/api/admin/tournament-registrations`, `/api/admin/tournament-results` | all admin verbs across those four APIs |
+| `/admin/tournament-registrations` | `AdminTournamentRegistrationsClient` (cross-tournament report) | `/api/admin/tournament-registrations` | GET/PATCH |
 
 **Special endpoints:**
 - `/api/admin/upload` — POST multipart/form-data → Supabase Storage `images` bucket → returns `{ url }`
@@ -141,7 +142,7 @@ Sidebar is organized into 5 labeled groups:
 | Group | Items |
 |-------|-------|
 | **Sitio Web** | Juegos, Gaming Tower, Aliados, Imágenes Sitio, Redes |
-| **Competiciones** | Torneos, Inscripciones, Brackets, Hall of Fame, Intl. Torneos, Jugadores, Competiciones |
+| **Competiciones** | Torneos, Inscripciones, Intl. Torneos, Jugadores, Competiciones *(Brackets & Hall of Fame removed in 2.36.0 — both live inside the per-tournament cockpit at `/admin/torneos/[slug]/manage`)* |
 | **Academia** | Masters, Cursos, Inscripciones, Descuentos |
 | **1UP Pass & Tokens** | 1UP Pass, Órdenes Pass, Órdenes $1UP, Cuentas Banco |
 | **Sistema** | Usuarios Privy, Perfiles App, Referidos, Solicitudes, Admins |

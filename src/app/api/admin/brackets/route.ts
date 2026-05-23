@@ -214,7 +214,6 @@ export async function POST(req: NextRequest) {
 
   revalidatePath("/torneos");
   revalidatePath("/torneos/[slug]", "page");
-  revalidatePath("/admin/tournament-brackets");
 
   return NextResponse.json({ bracket, participants, matchCount: insertedMatches.length });
 }
@@ -255,7 +254,6 @@ export async function PATCH(req: NextRequest) {
 
     revalidatePath("/torneos");
     revalidatePath("/torneos/[slug]", "page");
-    revalidatePath("/admin/tournament-brackets");
     revalidatePath("/admin/torneos");
     return NextResponse.json({ ok: true });
   }
@@ -397,13 +395,11 @@ export async function PATCH(req: NextRequest) {
         }
 
         revalidatePath("/team");
-        revalidatePath("/admin/tournament-results");
       }
     }
 
     revalidatePath("/torneos");
     revalidatePath("/torneos/[slug]", "page");
-    revalidatePath("/admin/tournament-brackets");
     revalidatePath("/admin/torneos");
     return NextResponse.json({ ok: true, winnerId, loserId, tournamentCompleted: allDone, podiumWritten });
   }
@@ -486,7 +482,6 @@ export async function PATCH(req: NextRequest) {
 
     revalidatePath("/torneos");
     revalidatePath("/torneos/[slug]", "page");
-    revalidatePath("/admin/tournament-brackets");
     revalidatePath("/admin/torneos");
     return NextResponse.json({ ok: true });
   }
@@ -520,6 +515,5 @@ export async function DELETE(req: NextRequest) {
 
   revalidatePath("/torneos");
   revalidatePath("/torneos/[slug]", "page");
-  revalidatePath("/admin/tournament-brackets");
   return NextResponse.json({ ok: true });
 }

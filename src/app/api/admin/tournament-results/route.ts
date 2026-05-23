@@ -11,7 +11,19 @@ async function checkAdmin(req: NextRequest) {
   return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
+// Source of truth for a player's wallet is `user_profiles.wallet_address`,
+// synced from Privy by `src/lib/privySync.ts` (see audit C-1 closure +
+// `src/lib/verifiedWallet.ts`). We fall back to the historical order
+// tables only if a legacy profile somehow has no synced wallet yet.
 async function lookupWallet(userProfileId: number): Promise<string | null> {
+  const { data: profile } = await supabaseAdmin
+    .from("user_profiles")
+    .select("wallet_address")
+    .eq("id", userProfileId)
+    .maybeSingle();
+  if (profile?.wallet_address) return profile.wallet_address;
+
+  // Legacy fallback — keep until every profile is guaranteed synced.
   const { data: pass } = await supabaseAdmin
     .from("pass_orders")
     .select("wallet_address")
@@ -90,7 +102,7 @@ export async function POST(req: NextRequest) {
 
   revalidatePath("/torneos");
   revalidatePath("/team");
-  revalidatePath("/admin/tournament-results");
+  revalidatePath("/admin/torneos/[slug]/manage", "page");
   return NextResponse.json(data);
 }
 
@@ -133,7 +145,7 @@ export async function PATCH(req: NextRequest) {
   // changes (points / position / prize status) the public hall needs a refresh.
   revalidatePath("/torneos");
   revalidatePath("/team");
-  revalidatePath("/admin/tournament-results");
+  revalidatePath("/admin/torneos/[slug]/manage", "page");
   return NextResponse.json(data);
 }
 
@@ -143,6 +155,6 @@ export async function DELETE(req: NextRequest) {
   await supabaseAdmin.from("tournament_results").delete().eq("id", id);
   revalidatePath("/torneos");
   revalidatePath("/team");
-  revalidatePath("/admin/tournament-results");
+  revalidatePath("/admin/torneos/[slug]/manage", "page");
   return NextResponse.json({ ok: true });
 }

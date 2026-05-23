@@ -33,6 +33,7 @@ import {
   type ResultRow,
   type RegistrationOption,
 } from "@/components/admin/AdminTournamentResultsPanel";
+import { AdminTournamentInfoEditor } from "@/components/admin/AdminTournamentInfoEditor";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
@@ -47,6 +48,7 @@ interface Props {
   registrations: CockpitRegistration[];
   bracket:       { id: number; status: string; format: string; participant_count: number } | null;
   results:       ResultRow[];
+  games:         Pick<Game, "id" | "name">[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -92,7 +94,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "premios",       label: "Premios",       icon: "emoji_events"  },
 ];
 
-export function AdminTournamentCockpit({ tournament, registrations, bracket, results }: Props) {
+export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -109,10 +111,12 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
 
   // Modal state for cross-cutting actions on the header toolbar
   const [qrOpen,     setQrOpen]     = useState(false);
+  const [shareOpen,  setShareOpen]  = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError,   setActionError]   = useState<string | null>(null);
+  const [copyDone,      setCopyDone]      = useState(false);
 
   const publicUrl  = `${BASE_URL}/torneos/${tournament.slug}`;
   const checkinUrl = `${BASE_URL}/torneos/${tournament.slug}/checkin`;
@@ -138,6 +142,14 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
     2: "Borrador del bracket",
     3: "Torneo en curso",
     4: "Torneo finalizado",
+  };
+  // Shorter versions used on narrow viewports — the 4-step stepper needs the
+  // labels to fit under ~80px wide nodes without wrapping to 3 lines.
+  const stageLabelShort: Record<1 | 2 | 3 | 4, string> = {
+    1: "Inscripción",
+    2: "Borrador",
+    3: "En curso",
+    4: "Finalizado",
   };
 
   // Eligible candidates for manual podium assignment — only registered/attended
@@ -210,6 +222,45 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
     }
   }
 
+  // ── Share/copy summary ────────────────────────────────────────────
+  // Compose a social-friendly summary that includes name, date, game,
+  // 1° prize, location, sponsor (when set), and the public inscription URL.
+  function buildShareText(): string {
+    const lines: string[] = [];
+    lines.push(`🏆 ${tournament.name.toUpperCase()}`);
+    if (tournament.games?.name) lines.push(`🎮 ${tournament.games.name}`);
+    if (tournament.date)        lines.push(`📅 ${fmtDate(tournament.date)}`);
+    const firstPrize = sortedPrizes.find((p) => p.position === 1);
+    if (firstPrize)             lines.push(`🥇 1° lugar: ${fmtPrize(firstPrize)}`);
+    lines.push(`📍 ${LOC_LABELS[tournament.location_type] ?? tournament.location_type}`);
+    if (tournament.sponsor_name) lines.push(`🤝 Patrocinado por ${tournament.sponsor_name}`);
+    lines.push("");
+    lines.push(`👉 Inscríbete: ${publicUrl}`);
+    return lines.join("\n");
+  }
+
+  async function copyShareText() {
+    try {
+      await navigator.clipboard.writeText(buildShareText());
+      setCopyDone(true);
+      setTimeout(() => setCopyDone(false), 2000);
+    } catch {
+      // clipboard.writeText can fail in HTTP contexts — best-effort, no toast.
+    }
+  }
+
+  async function nativeShare() {
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({
+          title: tournament.name,
+          text:  buildShareText(),
+          url:   publicUrl,
+        });
+      } catch { /* user cancelled */ }
+    }
+  }
+
   const tournamentForBracket = {
     id:                   tournament.id,
     name:                 tournament.name,
@@ -228,6 +279,14 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
         <span className="material-symbols-outlined text-sm">arrow_back</span>
         Torneos
       </Link>
+
+      {/* ── Stats strip (above header) ───────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <Stat label="Inscritos"  value={counts.registered} />
+        <Stat label="Asistieron" value={counts.attended}   />
+        <Stat label="Capacidad"  value={tournament.max_participants ?? "—"} />
+        <Stat label="Premios"    value={sortedPrizes.length} />
+      </div>
 
       {/* ── Header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
@@ -295,14 +354,14 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
               <span className="hidden sm:inline">QR</span>
             </button>
           )}
-          <Link
-            href={`/admin/torneos?edit=${tournament.id}`}
-            className="flex items-center gap-1.5 bg-primary-container text-white hover:opacity-90 transition-opacity p-2 font-headline font-black text-[10px] uppercase tracking-widest"
-            title="Editar configuración"
+          <button
+            onClick={() => { setShareOpen(true); setCopyDone(false); }}
+            className="flex items-center gap-1.5 bg-surface-container-high hover:bg-primary-container/20 transition-colors p-2 font-headline font-bold text-[10px] uppercase tracking-widest"
+            title="Compartir torneo"
           >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span className="hidden sm:inline">Editar</span>
-          </Link>
+            <span className="material-symbols-outlined text-sm">share</span>
+            <span className="hidden sm:inline">Compartir</span>
+          </button>
           {tournament.status !== "completed" && (
             <button
               onClick={() => setCancelOpen(true)}
@@ -324,39 +383,73 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
         </div>
       </div>
 
-      {/* ── Stage banner ─────────────────────────────────────────────── */}
-      <div className="bg-surface-container p-4 mb-6 flex flex-wrap items-center gap-3">
-        <span className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Etapa</span>
-        {([1, 2, 3, 4] as const).map((s) => (
-          <span
-            key={s}
-            className={`font-headline font-black text-xs uppercase tracking-widest px-2 py-1 ${
-              s === stage
-                ? "bg-primary-container text-white"
-                : s < stage
-                  ? "bg-tertiary/15 text-tertiary"
-                  : "bg-surface-container-high text-outline/60"
-            }`}
-          >
-            {s}. {stageLabel[s]}
-          </span>
-        ))}
+      {/* ── Phase stepper ────────────────────────────────────────────── */}
+      {/* Stage is driven by the bracket lifecycle — not clickable. The
+         stepper just visualises where the tournament is, with completed
+         stages filled, the current one highlighted, future ones dim. */}
+      <div className="bg-surface-container p-5 mb-6">
+        <ol
+          className="flex items-center justify-between gap-2"
+          role="list"
+          aria-label="Etapas del torneo"
+        >
+          {([1, 2, 3, 4] as const).map((s, i, arr) => {
+            const isCurrent = s === stage;
+            const isPast    = s <  stage;
+            const label     = stageLabel[s];
+            return (
+              <li key={s} className="flex items-center flex-1 min-w-0 last:flex-none">
+                <div className="flex flex-col items-center flex-shrink-0 min-w-0">
+                  <div
+                    className={`w-10 h-10 flex items-center justify-center font-headline font-black text-sm transition-all ${
+                      isCurrent
+                        ? "bg-primary-container text-white ring-4 ring-primary-container/25"
+                        : isPast
+                          ? "bg-tertiary text-background"
+                          : "bg-surface-container-high text-outline/40"
+                    }`}
+                    aria-current={isCurrent ? "step" : undefined}
+                    aria-label={`Etapa ${s}: ${label}${isPast ? " (completada)" : isCurrent ? " (actual)" : ""}`}
+                  >
+                    {isPast ? (
+                      <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">check</span>
+                    ) : s}
+                  </div>
+                  <p
+                    className={`font-headline font-bold text-[10px] uppercase tracking-widest mt-2 text-center max-w-[90px] leading-tight ${
+                      isCurrent
+                        ? "text-on-surface"
+                        : isPast
+                          ? "text-tertiary"
+                          : "text-outline/40"
+                    }`}
+                  >
+                    <span className="sm:hidden">{stageLabelShort[s]}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                  </p>
+                </div>
+                {i < arr.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-2 mb-7 transition-colors ${
+                      s < stage ? "bg-tertiary" : "bg-surface-container-high"
+                    }`}
+                    aria-hidden="true"
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
       {actionError && (
         <div className="bg-error/10 text-error font-body text-sm p-3 mb-4">{actionError}</div>
       )}
 
-      {/* ── Stat row ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Stat label="Inscritos"  value={counts.registered} />
-        <Stat label="Asistieron" value={counts.attended}   />
-        <Stat label="Capacidad"  value={tournament.max_participants ?? "—"} />
-        <Stat label="Premios"    value={sortedPrizes.length} />
-      </div>
-
       {/* ── Tab bar ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1 mb-6 border-b border-surface-container-high">
+      {/* Visual separation between the tab strip and content below comes from
+         the bg-surface-container shift on the content panel — no 1px divider. */}
+      <div className="flex flex-wrap items-center gap-1" role="tablist">
         {TABS.map(t => {
           const active = activeTab === t.id;
           const badge =
@@ -366,11 +459,13 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           return (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={active}
               onClick={() => selectTab(t.id)}
               className={`flex items-center gap-2 px-4 py-3 font-headline font-black text-xs uppercase tracking-tight transition-colors ${
                 active
-                  ? "bg-surface-container text-primary-container border-b-2 border-primary-container -mb-px"
-                  : "text-outline hover:text-on-surface"
+                  ? "bg-surface-container text-primary-container"
+                  : "text-outline hover:text-on-surface hover:bg-surface-container/40"
               }`}
             >
               <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: active ? "'FILL' 1" : undefined }}>
@@ -392,7 +487,11 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
       {/* ── Tab content ──────────────────────────────────────────────── */}
       <div className="bg-surface-container/40 p-4 md:p-6">
         {activeTab === "info" && (
-          <InfoTab tournament={tournament} sortedPrizes={sortedPrizes} bracket={bracket} />
+          <AdminTournamentInfoEditor
+            tournament={tournament}
+            games={games}
+            onSaved={() => router.refresh()}
+          />
         )}
         {activeTab === "inscripciones" && (
           <AdminTournamentRegistrationsPanel
@@ -418,6 +517,46 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           />
         )}
       </div>
+
+      {/* ── Share modal ──────────────────────────────────────────── */}
+      {shareOpen && (
+        <Modal onClose={() => setShareOpen(false)}>
+          <h2 className="font-headline font-black text-2xl uppercase tracking-tighter mb-2">
+            COM<span className="text-primary-container">PARTIR</span>
+          </h2>
+          <p className="font-body text-sm text-outline mb-4">
+            Copia el texto para WhatsApp, Discord o Instagram, o usa compartir nativo.
+          </p>
+          <pre className="bg-surface-container-lowest text-on-surface font-body text-sm p-4 whitespace-pre-wrap break-words mb-4">
+{buildShareText()}
+          </pre>
+          <div className="flex gap-2">
+            <button
+              onClick={copyShareText}
+              className="flex-1 bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tight hover:opacity-90 transition-opacity"
+            >
+              {copyDone ? "✓ COPIADO" : "COPIAR TEXTO"}
+            </button>
+            {typeof navigator !== "undefined" && "share" in navigator && (
+              <button
+                onClick={nativeShare}
+                className="px-5 bg-surface-container-high text-on-surface font-headline font-black uppercase"
+                title="Compartir nativo (móvil)"
+              >
+                <span className="material-symbols-outlined">ios_share</span>
+              </button>
+            )}
+          </div>
+          <a
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block mt-4 font-headline font-bold text-[10px] uppercase tracking-widest text-secondary hover:underline text-center"
+          >
+            Abrir página pública →
+          </a>
+        </Modal>
+      )}
 
       {/* ── QR modal ─────────────────────────────────────────────── */}
       {qrOpen && (
@@ -508,124 +647,13 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
   );
 }
 
-// ── Info tab ────────────────────────────────────────────────────────
-
-function InfoTab({
-  tournament, sortedPrizes, bracket,
-}: {
-  tournament: TournamentRich;
-  sortedPrizes: TournamentPrize[];
-  bracket: Props["bracket"];
-}) {
-  const MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-  const BRACKET_LABEL: Record<string, string> = {
-    draft: "Borrador (privado)", in_progress: "En curso", completed: "Finalizado",
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-surface-container p-5 space-y-3">
-        <h3 className="font-headline font-black text-sm uppercase tracking-widest text-on-surface mb-3">
-          Detalles del torneo
-        </h3>
-        <Row label="Slug">
-          <code className="font-mono text-xs text-on-surface/70">{tournament.slug}</code>
-        </Row>
-        <Row label="Juego">{tournament.games?.name ?? "Sin juego"}</Row>
-        <Row label="Sponsor">
-          {tournament.sponsor_name ? (
-            <a
-              href={tournament.sponsor_website_url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-secondary hover:underline"
-            >
-              {tournament.sponsor_name}
-            </a>
-          ) : <span className="text-outline">Sin sponsor</span>}
-        </Row>
-        <Row label="Visible">
-          <span className={tournament.is_active ? "text-secondary" : "text-outline"}>
-            {tournament.is_active ? "Sí, visible al público" : "Oculto"}
-          </span>
-        </Row>
-        <Row label="Bracket">
-          {bracket ? (
-            <span className="font-headline font-bold text-xs uppercase">
-              {BRACKET_LABEL[bracket.status] ?? bracket.status} ·{" "}
-              {bracket.format === "single_elimination" ? "Elim. simple" : "Doble elim."} ·{" "}
-              {bracket.participant_count} jugadores
-            </span>
-          ) : (
-            <span className="text-outline">Sin bracket creado</span>
-          )}
-        </Row>
-        {tournament.description && (
-          <Row label="Descripción">
-            <p className="font-body text-sm text-on-surface/80 whitespace-pre-line">{tournament.description}</p>
-          </Row>
-        )}
-        <div className="pt-3 mt-2">
-          <Link
-            href={`/admin/torneos?edit=${tournament.id}`}
-            className="flex items-center justify-center gap-2 bg-primary-container text-white font-headline font-black text-xs uppercase tracking-widest py-2.5 hover:opacity-90 transition-opacity"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            Editar configuración completa
-          </Link>
-        </div>
-      </div>
-
-      <div className="bg-surface-container p-5 space-y-3">
-        <h3 className="font-headline font-black text-sm uppercase tracking-widest text-on-surface mb-3">
-          Premios configurados
-        </h3>
-        {sortedPrizes.length === 0 ? (
-          <p className="font-body text-sm text-outline">
-            No se han configurado premios. Agrégalos desde la edición completa.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            {sortedPrizes.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 bg-surface-container-high px-3 py-2">
-                <span className="text-lg shrink-0">{MEDAL[p.position]}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-headline font-bold text-xs uppercase tracking-tight text-outline">
-                    {p.position === 1 ? "1° Lugar" : p.position === 2 ? "2° Lugar" : "3° Lugar"}
-                  </p>
-                  <p className="font-headline font-black text-sm text-on-surface mt-0.5">
-                    {fmtPrize(p)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className="font-body text-xs text-outline pt-2">
-          Para asignar ganadores y registrar la entrega del premio, usa la pestaña{" "}
-          <strong className="text-on-surface">Premios</strong>.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-surface-container p-4">
-      <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">{label}</p>
-      <p className="font-headline font-black text-3xl text-primary-container leading-none">{value}</p>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[110px,1fr] gap-2 items-baseline">
-      <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">{label}</p>
-      <div className="font-body text-sm text-on-surface min-w-0">{children}</div>
+    <div className="bg-surface-container px-4 py-3 flex items-baseline justify-between gap-3 min-w-0">
+      <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline truncate">{label}</p>
+      <p className="font-headline font-black text-xl text-primary-container leading-none shrink-0">{value}</p>
     </div>
   );
 }
