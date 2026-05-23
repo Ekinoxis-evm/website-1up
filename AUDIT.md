@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.7 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.8 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -55,7 +55,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
 | 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
-| 🟡 Medium | ~22 | **7 fixed (through 2.29.7)** | ~~1px-divider violations~~ · ~~tournament-flow revalidatePath gaps~~ · ~~registrations PATCH res.ok~~ · ~~`/torneos/[slug]/checkin` noindex~~ · ~~placeholder WhatsApp number~~ · ~~route map drift~~ · ~~Rule 3 folder list~~ · input validation · OG images · `next/image` migration · ISR strategy · `any[]` types · admin UX consistency · payments TOCTOU · comprobante MIME · webhook freshness · CF JWT accessRules · more |
+| 🟡 Medium | ~22 | **11 fixed (through 2.29.8)** | Web batch (1px dividers · route map · checkin noindex · placeholder WhatsApp · Rule 3) · Portal batch (age-floor · `Bearer null` · `value: BigInt(0)` · `any[]` types) · tournament-flow revalidatePath gaps · registrations PATCH res.ok · still open: input validation · OG images · `next/image` migration · ISR strategy · admin UX consistency · payments TOCTOU · comprobante MIME · CF JWT accessRules · more |
 | 🔵 Low / Info | many | open | see per-area sections |
 
 > **Correction to the workspace `../AUDIT.md`:** the deeper database dive found
@@ -152,12 +152,16 @@ audit note was incorrect; `src/app/offline/page.tsx` exists and works as a PWA f
 unauthenticated and unonboarded users; onboarding sits outside `(protected)` to avoid the
 circular redirect. No protected page is reachable without auth.
 
-**Findings:** age-floor mismatch — onboarding enforces min age 14, but `IdentidadTab.tsx:365`
-lets a user later edit their birth year to age 5 (the PUT `/api/user/profile` should mirror
-the 14-year rule). `PassPurchasePanel.tsx` / `MisPassOrders.tsx` send `Bearer null` when
-`getAccessToken()` returns null — silent failures. `BuyPassWizard`/`CourseCheckoutWizard`
-omit `value: BigInt(0)` from the documented sponsored-send pattern. `/perfil` dead duplicate
-(H-10). Three `any[]` in `academia/[courseId]/page.tsx:57-61`.
+**Findings:** ~~age-floor mismatch — `IdentidadTab.tsx:365` lets a user later edit their
+birth year to age 5~~ ✅ 2.29.8 — `PUT /api/user/profile` now enforces the same 14-year
+floor as onboarding. ~~`PassPurchasePanel.tsx` / `MisPassOrders.tsx` send `Bearer null`
+when `getAccessToken()` returns null — silent failures.~~ ✅ 2.29.8 — both null-guard the
+token and short-circuit to the empty state. ~~`BuyPassWizard`/`CourseCheckoutWizard` omit
+`value: BigInt(0)` from the documented sponsored-send pattern.~~ ✅ 2.29.8 — both aligned.
+~~`/perfil` dead duplicate (H-10).~~ ✅ 2.29.5. ~~Three `any[]` in `academia/[courseId]/page.tsx:57-61`.~~
+✅ 2.29.8 — replaced with three structural `SessionRow`/`LinkRow`/`DocRow` types.
+
+**All Area 2 Mediums closed.**
 
 ## Area 3 · Admin Panel — `app/admin/**` *(owner: admin-maintainer)*
 

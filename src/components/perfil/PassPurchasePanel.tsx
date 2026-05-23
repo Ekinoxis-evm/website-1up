@@ -43,9 +43,11 @@ export function PassPurchasePanel({ config, benefits }: Props) {
   const walletAddress  = embeddedWallet?.address ?? "";
   const walletLoading  = ready && authenticated && wallets.length === 0;
 
+  // M-A2.2: null-guard the access token so we don't send `Bearer null`.
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true);
     const token = await getAccessToken();
+    if (!token) { setOrders([]); setOrdersLoading(false); return; }
     const res = await fetch("/api/user/pass-orders", {
       headers: { Authorization: `Bearer ${token}` },
     });

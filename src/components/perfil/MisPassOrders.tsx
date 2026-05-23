@@ -29,9 +29,13 @@ export function MisPassOrders({ getAccessToken }: Props) {
   const [orders, setOrders]   = useState<PassOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // M-A2.2: skip the call entirely when the token is null instead of sending
+  // `Bearer null` (which the server rejects as 401, leaving the user with a
+  // silent empty state). Empty state is the correct UX before Privy is ready.
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const token = await getAccessToken();
+    if (!token) { setOrders([]); setLoading(false); return; }
     const res = await fetch("/api/user/pass-orders", {
       headers: { Authorization: `Bearer ${token}` },
     });

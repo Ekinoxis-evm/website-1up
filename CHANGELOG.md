@@ -5,6 +5,34 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.8] — 2026-05-22
+
+### Fixed (audit Mediums — User Portal batch)
+
+- **M-A2.1 · Age-floor mismatch between onboarding and profile edit.** The onboarding
+  wizard enforced min-age 14, but `PUT /api/user/profile` allowed any birth date that put
+  the user at ≥ 5 years old. A user could finish onboarding at the correct age, then
+  regress their birth year on `/app/ajustes` to game any later age check. Both endpoints
+  now share the same 14-year floor.
+- **M-A2.2 · `Bearer null` was being sent on Privy cold starts.**
+  `PassPurchasePanel.tsx` and `MisPassOrders.tsx` called `fetch("/api/user/pass-orders",
+  { headers: { Authorization: \`Bearer ${token}\` } })` without null-checking `token` from
+  `getAccessToken()`. When Privy wasn't ready yet, the request went out as `Bearer null`,
+  the server returned 401, and the UI silently rendered an empty pass-orders state. Both
+  call sites now short-circuit when the token is null and render the (correct) empty state.
+- **M-A2.3 · Sponsored sends omitted `value: BigInt(0)`.** `BuyPassWizard.tsx` and
+  `CourseCheckoutWizard.tsx` were missing the `value: BigInt(0)` field that `CLAUDE.md`
+  ("Gas Sponsorship") documents as required for the Privy bundler. Both now match the
+  documented pattern.
+- **M-A2.4 · Three `any[]` in `academia/[courseId]/page.tsx`.** The Server Component used
+  `any[]` with `eslint-disable` for `sessions`, `links`, and `docs`. Replaced with three
+  structural row types (`SessionRow`, `LinkRow`, `DocRow`) that exactly mirror the columns
+  each query selects — the disables are gone and downstream consumers get proper types.
+
+Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 pass).
+
+---
+
 ## [2.29.7] — 2026-05-22
 
 ### Fixed (audit Mediums — Public Web batch)

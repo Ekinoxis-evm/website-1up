@@ -45,8 +45,11 @@ export function BuyPassWizard({
 
     let hash: string;
     try {
+      // M-A2.3: align with the documented sponsored-send pattern (CLAUDE.md
+      // → "Gas Sponsorship"). `value: BigInt(0)` is required so Privy's bundler
+      // doesn't infer a value transfer from a missing field on some networks.
       const result = await sendTransaction(
-        { to: ONE_UP_TOKEN.address, data, chainId: 8453 },
+        { to: ONE_UP_TOKEN.address, value: BigInt(0), data, chainId: 8453 },
         { address: walletAddress, sponsor: true },
       );
       hash = result.hash;

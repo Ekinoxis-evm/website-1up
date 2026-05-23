@@ -127,8 +127,12 @@ export async function PUT(req: NextRequest) {
       if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d)
         return NextResponse.json({ error: "Fecha de nacimiento inválida." }, { status: 400 });
       if (y < 1930) return NextResponse.json({ error: "Año de nacimiento muy antiguo." }, { status: 400 });
-      const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 5);
-      if (date > minAge) return NextResponse.json({ error: "Debes tener al menos 5 años." }, { status: 400 });
+      // M-A2.1: mirror the onboarding rule. The onboarding wizard enforces
+      // min-age 14 (`/api/user/onboarding`) but the profile PUT allowed any
+      // age >= 5, so a user could regress their birth year after onboarding
+      // to game the age check. Both endpoints now share the same floor.
+      const minAge = new Date(); minAge.setFullYear(minAge.getFullYear() - 14);
+      if (date > minAge) return NextResponse.json({ error: "Debes tener al menos 14 años." }, { status: 400 });
     }
     patch.birth_date = body.birthDate || null;
   }
