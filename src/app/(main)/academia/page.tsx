@@ -19,7 +19,6 @@ export const metadata: Metadata = {
     description: "Cursos con masters profesionales. Estrategia, mecánicas y coaching. Paga con $1UP o MercadoPago.",
     url: "https://1upesports.org/academia",
     type: "website",
-    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Academia 1UP Gaming Tower" }],
   },
   twitter: { card: "summary_large_image", title: "Academia 1UP Esports", description: "Cursos de esports con los mejores coaches de Colombia." },
   alternates: { canonical: "https://1upesports.org/academia" },

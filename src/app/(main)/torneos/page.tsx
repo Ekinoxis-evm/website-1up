@@ -15,7 +15,6 @@ export const metadata: Metadata = {
     description: "Compite, gana premios en $1UP y sube al Hall of Fame. Torneos oficiales del ecosistema 1UP en Colombia.",
     url: "https://1upesports.org/torneos",
     type: "website",
-    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Torneos 1UP Gaming Tower" }],
   },
   twitter: { card: "summary_large_image", title: "Torneos Esports 1UP", description: "Compite y gana en los torneos oficiales del ecosistema 1UP." },
   alternates: { canonical: "https://1upesports.org/torneos" },

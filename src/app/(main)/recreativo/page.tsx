@@ -12,7 +12,6 @@ export const metadata: Metadata = {
     description: "Lleva a tu equipo al gaming tower más completo de Colombia. Equipos top, cafetería y experiencia premium.",
     url: "https://1upesports.org/recreativo",
     type: "website",
-    images: [{ url: "/1up.png", width: 512, height: 512, alt: "Jornadas Recreativas 1UP Gaming Tower" }],
   },
   twitter: { card: "summary_large_image", title: "Jornadas Recreativas 1UP", description: "Eventos corporativos y recreativos en el gaming tower más completo de Colombia." },
   alternates: { canonical: "https://1upesports.org/recreativo" },

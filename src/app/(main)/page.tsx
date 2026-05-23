@@ -12,7 +12,6 @@ export const metadata: Metadata = {
     description: "Gaming Tower, Academia, torneos y 1UP Pass. El primer hub de esports profesional en Colombia.",
     url: "https://1upesports.org",
     type: "website",
-    images: [{ url: "/1up.png", width: 512, height: 512, alt: "1UP Gaming Tower" }],
   },
   twitter: { card: "summary_large_image", title: "1UP Gaming Tower", description: "El primer hub de esports profesional en Colombia." },
   alternates: { canonical: "https://1upesports.org" },
