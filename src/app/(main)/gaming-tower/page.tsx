@@ -16,7 +16,6 @@ export const metadata = {
     description: "6 plantas con PCs pro, VR, streaming, cafetería y catálogo completo de juegos. El primer gaming tower de Colombia.",
     url: "https://1upesports.org/gaming-tower",
     type: "website",
-    images: [{ url: "/1up.png", width: 512, height: 512, alt: "1UP Gaming Tower Cali" }],
   },
   twitter: { card: "summary_large_image", title: "Gaming Tower 1UP Cali", description: "El primer gaming tower profesional de Colombia." },
   alternates: { canonical: "https://1upesports.org/gaming-tower" },

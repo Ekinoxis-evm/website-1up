@@ -5,6 +5,48 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.3] — 2026-05-23
+
+### Fixed — OG images at 1200×630 (replacing the 512² square)
+
+Closes the audit's Area 1 SEO finding: *"home/section OG images are 512² squares declared
+as `summary_large_image` — should be 1200×630."* The old `1up.png` at 512×512 was rendering
+small and centered in Twitter/LinkedIn/Discord link previews because every previewer
+expects a 1.91:1 card for `summary_large_image`.
+
+- **New `src/lib/og.tsx`** — shared `renderOgImage({ title, subtitle, accent })` helper
+  that returns a `next/og` `ImageResponse` at exactly 1200×630. Uses inline CSS only
+  (the `ImageResponse` subset), colors pulled verbatim from `tailwind.config.ts`
+  (`#0b1326` bg, `#ff4d80` / `#0897ff` / `#abd600` accents). Renders the 1UP wordmark
+  + accent stripe + uppercase title + subtitle + footer.
+- **New `app/opengraph-image.tsx`** (root default) — covers `/` and any route without
+  its own override.
+- **New per-section route handlers** in `(main)/torneos/`, `(main)/academia/`,
+  `(main)/gaming-tower/`, `(main)/recreativo/`, `(main)/marketplace/` — each declares
+  `runtime = "edge"`, `size = 1200×630`, `contentType = "image/png"` and calls the shared
+  helper with section-specific title + accent (primary / secondary / tertiary).
+- **Removed** the obsolete `images: [{ url: "/1up.png", width: 512, height: 512, … }]`
+  arrays from each page's `metadata.openGraph`. Next.js's file-convention OG auto-discovery
+  now serves the new 1200×630 images.
+
+Per-tournament (`/torneos/[slug]`) and per-course (`/academia/[courseId]`) pages already
+generate their own OG via `generateMetadata` — left alone. The new root and section OGs
+are the default for everything else.
+
+Verified: `npm run build` (the new `opengraph-image-*` routes appear in the route list).
+Test via the **Open Graph debugger** post-deploy:
+- https://www.opengraph.xyz/?url=https://1upesports.org/
+- https://www.linkedin.com/post-inspector/?url=https://1upesports.org/torneos
+- https://cards-dev.twitter.com/validator (paste any 1upesports.org URL)
+
+### Audit status — fully closed
+
+All four explicit follow-ups now shipped. Every Critical, every High, every Medium-from-
+the-audit-text, every Area-1 deferred SEO/perf item, plus the Area-3 failure-UX consistency
+follow-up: closed.
+
+---
+
 ## [2.30.2] — 2026-05-23
 
 ### Changed — admin failure UX consistency
