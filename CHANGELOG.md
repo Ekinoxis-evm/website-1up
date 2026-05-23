@@ -5,6 +5,55 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.32.0] — 2026-05-23
+
+### Added — Auto-podium from bracket completion (PR B)
+
+When the last match of a bracket completes, the tournament's 1st / 2nd / 3rd
+positions are now derived directly from the bracket and written to
+`tournament_results` — no more separate admin step to copy who won. This is the
+"derived state" principle applied to the podium: the bracket is the source of
+truth, the Hall of Fame reads from `tournament_results`, and the link is now
+automatic.
+
+- **Pure derivation** (`src/lib/bracket/podium.ts`) — given a format + matches
+  + participants, returns `{ position, userProfileId }[]`. Single-elimination:
+  1st / 2nd from the final, no 3rd (semifinalists are tied — admin sets
+  manually if needed). Double-elimination: 1st / 2nd from grand_final + 3rd
+  from the loser of the last losers-bracket match.
+- **Wired into `PATCH /api/admin/brackets { action: "result" }`** — the
+  existing `allDone` branch now also: re-reads matches + participants,
+  pre-fetches existing `tournament_results` rows, and **inserts only missing
+  positions** (manual overrides made via `POST /api/admin/tournament-results`
+  before bracket completion are preserved). Points come from `pointsFor()`
+  (10/5/3), `awarded_by` is stamped `system:auto-podium` so undo can tell
+  which rows it owns. `prize_status` follows the existing rule: `"pending"`
+  if a matching `tournament_prizes` row exists, else `"no_prize"`.
+- **Undo cleanup** — `PATCH { action: "undo" }` on a final that flips the
+  tournament back from `completed` to `live` now also deletes
+  `tournament_results` rows where `awarded_by = 'system:auto-podium'`, so a
+  re-completion can re-derive accurately. Manual rows are untouched.
+- **Manual-override contract** — admin can override any position at any time
+  via the existing `POST /api/admin/tournament-results`; auto-derivation will
+  never overwrite a position the admin already set. No code change there —
+  the contract is enforced by the pre-check on insert.
+- **Race safety** — the pre-check then insert sequence is not atomic; if an
+  admin sets a row between the check and the insert, the unique violation on
+  `(tournament_id, position)` is swallowed and the admin's value wins. Same
+  manual-override contract.
+- **Test coverage** — `derivePodium` has 7 cases in `podium.test.ts`: SE
+  podium, SE incomplete final, SE byes filtered out, DE full podium, DE
+  incomplete grand_final, DE degenerate (no losers matches), placeholder
+  participant (null `user_profile_id`) silently skipped. 114/114 tests pass.
+
+Response shape addition — `PATCH /result` now returns
+`{ podiumWritten: number }` alongside the existing fields, so the admin UI
+can show "Podium derivado: 3 posiciones" feedback.
+
+Build clean.
+
+---
+
 ## [2.31.1] — 2026-05-23
 
 ### Added — Avatar step in onboarding wizard (PR A.5, fast-follow to PR A)
