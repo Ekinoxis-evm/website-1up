@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.3 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.4 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -10,8 +10,15 @@ public web, user portal, admin panel, database, payments, security.
 > **2026-05-22 patch · H-4 — `fix/audit-h4-rate-limiting`:** rate limiting added on the 5
 > most abuse-prone endpoints (recruitment, course-intro-token, referral-codes/validate,
 > pass-orders POST, course-orders POST) — `src/lib/rateLimit.ts` + Upstash Ratelimit. Ships
-> safe-by-default; activates as soon as Upstash env vars are provisioned. 9 of 13 Highs
-> remain.
+> safe-by-default; activates as soon as Upstash env vars are provisioned.
+>
+> **2026-05-22 patch · H-3 / H-8 / H-9 — `fix/audit-h3-h8-h9-payments`:** payments-layer
+> hardening closed in 2.29.4. Token-order approval now verifies the payout on-chain via
+> new `src/lib/tokenTransferVerifier.ts` before persisting `approved` (H-3).
+> `verifyPassTransfer` now requires an exact-amount match and at least 3 Base-mainnet
+> confirmations (H-8). The MercadoPago webhook uses MP's documented `id;request-id;ts` HMAC
+> manifest with a ±10-min replay window and fails closed when the secret is unset, including
+> in development (H-9). 21 new unit tests, total 77 → 98. 6 of 13 Highs remain.
 
 > **2026-05-22 patch — `fix/tournament-flow-and-critical-audit`:** all 3 🔴 Critical
 > findings (C-1, C-2, C-3) are fixed in 2.29.1. Tournament flow tightened end-to-end —
@@ -37,7 +44,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 | Severity | Count | Status | Theme |
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
-| 🟠 High | 13 | **4 fixed in 2.29.2 + 2.29.3** · 9 open | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · ~~no rate limiting~~ · no on-chain verify on token approval · schema un-versioned · more |
+| 🟠 High | 13 | **7 fixed in 2.29.2 + 2.29.3 + 2.29.4** · 6 open | ~~`aliados` key leak~~ · ~~`@privy-io` unpinned~~ · ~~anon-client admin pages~~ · ~~no rate limiting~~ · ~~no on-chain verify on token approval~~ · ~~`verifyPassTransfer` no confirmation depth~~ · ~~webhook HMAC manifest~~ · schema un-versioned · bank-account exposure · more |
 | 🟡 Medium | ~22 | 2 fixed in 2.29.1 | input validation · revalidatePath gaps (tournaments fixed) · 1px-divider violations · error-handling gaps (registrations PATCH fixed) |
 | 🔵 Low / Info | many | open | see per-area sections |
 
@@ -91,13 +98,13 @@ active in production — but the code is live.*
 |---|---|---|
 | ~~H-1~~ ✅ | ~~`select("*")` on `aliados` from the **anon** client ships partner `api_key`/`api_url` to every visitor's browser~~ — **fixed in 2.29.2** (explicit column list + tightened `BrandsBanner` props type) | `app/(main)/page.tsx` |
 | ~~H-2~~ ✅ | ~~5 admin pages use the anon `supabase` client~~ — **fixed in 2.29.2** (all 5 switched to `supabaseAdmin`) | `admin/(protected)/{players,competitions,games,floors,discounts}/page.tsx` |
-| H-3 | Token-order **approval performs no on-chain verification** — `approved_tx_hash` is admin-typed and unvalidated | `api/admin/token-orders/route.ts:72-99` |
+| ~~H-3~~ ✅ | ~~Token-order **approval performs no on-chain verification** — `approved_tx_hash` is admin-typed and unvalidated~~ — **fixed in 2.29.4** (new `src/lib/tokenTransferVerifier.ts` re-runs the receipt before flipping to `approved`; rejects unless treasury → order wallet, value ≥ token_amount, and ≥3 confirmations) | `api/admin/token-orders/route.ts:72-99` |
 | ~~H-4~~ ✅ | ~~**No rate limiting** anywhere~~ — **fixed in 2.29.3**: 5 endpoints now behind Upstash Ratelimit sliding-window limits via `src/lib/rateLimit.ts` (anon-strict 5/min/IP, anon-read 30/min/IP, auth-mutate 20/min/user). Ships safe-by-default. | `src/lib/rateLimit.ts` |
 | ~~H-5~~ ✅ | ~~`@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"`~~ — **fixed in 2.29.2** (pinned to `3.18.0` / `1.32.5`) | `package.json` |
 | H-6 | Full bank account numbers + holder document exposed to **every** authenticated user | `api/bank-accounts/route.ts:9-14` |
 | H-7 | Entire schema un-versioned — `supabase/migrations/` has **one** file; no baseline DDL, no `config.toml`; the DB cannot be rebuilt from the repo | `supabase/migrations/` |
-| H-8 | No confirmation-depth / reorg check in `verifyPassTransfer`; `value >= expectedWei` silently accepts overpayment | `src/lib/passVerifier.ts:28-54` |
-| H-9 | Webhook HMAC manifest is non-standard (`ts.dataId`) — omits `x-request-id`, no `ts` freshness check → signature replayable | `src/lib/mercadopago.ts:96-133` |
+| ~~H-8~~ ✅ | ~~No confirmation-depth / reorg check in `verifyPassTransfer`; `value >= expectedWei` silently accepts overpayment~~ — **fixed in 2.29.4** (exact-amount equality + `MIN_CONFIRMATIONS = 3` on Base mainnet; `confirmations_pending` is a retryable code distinct from `amount_mismatch`) | `src/lib/passVerifier.ts:28-54` |
+| ~~H-9~~ ✅ | ~~Webhook HMAC manifest is non-standard (`ts.dataId`) — omits `x-request-id`, no `ts` freshness check → signature replayable~~ — **fixed in 2.29.4** (manifest is now `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, ±10 min replay window, fails closed when secret is unset in every environment) | `src/lib/mercadopago.ts:96-133` |
 | H-10 | `/perfil` renders a full auth UI instead of redirecting (CLAUDE.md says "redirects to app subdomain") — stale duplicate of the `(protected)` shell | `app/(main)/perfil/page.tsx`, `ProfilePage.tsx` |
 | H-11 | `sitemap.ts` omits all `/torneos/[slug]` tournament detail pages | `src/app/sitemap.ts` |
 | H-12 | No `res.ok` check after delete/PATCH — failed operations look successful to the operator | `AdminCoursesClient.tsx:24`, `AdminTournamentRegistrationsClient.tsx:46` |
@@ -168,12 +175,13 @@ tables (any with RLS disabled = anon-key data leak), FK/filter-column index cove
 server-side, HMAC uses constant-time `timingSafeEqual`, webhook re-fetches payment from MP's
 API, comprobantes in a private bucket with 1h signed URLs.
 
-**Findings:** C-2, C-3, H-3, H-8, H-9 above. Plus: webhook **skips signature verification
-when the secret is unset outside production** (`mercadopago.ts:100-108`) — fail closed
-instead. Duplicate-`tx_hash` guard is a check-then-insert TOCTOU race relying on a DB unique
-constraint not present in repo migrations (ties into H-7). Comprobante upload trusts
-client-declared MIME/extension — add magic-byte sniffing. `moveComprobanteToOrder` lets a
-user attach any `pending/` object they can name. Dead `pass` branch in `/api/checkout`.
+**Findings:** ~~C-2, C-3, H-3, H-8, H-9~~ (all closed by 2.29.4). Plus: ~~webhook **skips
+signature verification when the secret is unset outside production**~~ — fixed in 2.29.4
+(`verifyWebhookSignature` returns `missing_secret` in every environment; route returns 500).
+Duplicate-`tx_hash` guard is a check-then-insert TOCTOU race relying on a DB unique constraint
+not present in repo migrations (ties into H-7). Comprobante upload trusts client-declared
+MIME/extension — add magic-byte sniffing. `moveComprobanteToOrder` lets a user attach any
+`pending/` object they can name. Dead `pass` branch in `/api/checkout`.
 
 ## Area 6 · Security *(owner: security-auditor)*
 
@@ -197,7 +205,7 @@ tokens). `verifyToken` doesn't assert the `appId` claim (defense-in-depth).
 4. ~~**H-5** — pin `@privy-io/*` to exact versions~~ ✅ **Done in 2.29.2**.
 5. ~~**H-2** — switch the 5 admin pages to `supabaseAdmin`~~ ✅ **Done in 2.29.2**.
 6. ~~**H-4** — add IP rate limiting~~ ✅ **Done in 2.29.3** (Upstash Ratelimit, 5 endpoints).
-7. **H-3 / H-8 / H-9** — server-side on-chain verification for token approvals; confirmation depth; correct HMAC manifest + fail-closed.
+7. ~~**H-3 / H-8 / H-9** — server-side on-chain verification for token approvals; confirmation depth; correct HMAC manifest + fail-closed.~~ ✅ **Done in 2.29.4** (new `src/lib/tokenTransferVerifier.ts`; `verifyPassTransfer` exact-amount + 3-block depth; MP webhook `id;request-id;ts` + ±10 min replay window + fail-closed).
 8. **H-7** — commit a schema baseline migration; authorize the Supabase MCP and run `get_advisors`. *Started in 2.29.1: `register_for_tournament` is now committed in `supabase/migrations/`; `get_advisors` ran clean for the change. Remaining: dump every other live function/table/policy as a baseline migration.*
 9. **H-6, H-10 → H-13** and the Medium items per area.
 10. ~~CHANGELOG patch entry for the `2026-05-22` tournaments-GET fix~~ ✅ **Done in 2.29.1**.

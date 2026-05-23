@@ -86,50 +86,136 @@ export async function createCoursePreference(
 // ── Webhook verification ─────────────────────────────────────────
 
 /**
- * Verify the x-signature header sent by MercadoPago on webhook notifications.
+ * Maximum age of an x-signature timestamp before it is considered stale and
+ * rejected as a replay attempt. MP's documented webhook delivery latency is
+ * well under this window. H-9 audit fix.
+ */
+export const WEBHOOK_TS_MAX_AGE_SECONDS = 10 * 60; // 10 minutes
+
+export type VerifyWebhookSignatureResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code:
+        | "missing_secret"
+        | "missing_header"
+        | "malformed_header"
+        | "missing_request_id"
+        | "stale_timestamp"
+        | "bad_signature";
+      reason: string;
+    };
+
+/**
+ * Verify the `x-signature` header sent by MercadoPago on webhook deliveries.
  *
- * MP signs with: HMAC_SHA256(ts + "." + dataId, secret)
- * Header format: "ts=<timestamp>,v1=<hex_hash>"
+ * MP's documented signing template is:
+ *   manifest = `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
+ *   v1       = HMAC_SHA256(manifest, secret)
+ * The `x-signature` header has the form `ts=<unix>,v1=<hex>`.
  *
- * @returns true if valid, false otherwise
+ * Security rules (H-9 + audit fail-closed note):
+ *   - If `MERCADOPAGO_WEBHOOK_SECRET` is unset we ALWAYS reject — including in
+ *     development. There is no silent bypass.
+ *   - `id`, `x-request-id`, `ts`, and `v1` must all be present.
+ *   - `ts` must be within `WEBHOOK_TS_MAX_AGE_SECONDS` of now (replay window).
+ *   - HMAC comparison uses constant-time equality.
+ *
+ * @param signatureHeader  Value of `x-signature`
+ * @param requestId        Value of `x-request-id`
+ * @param dataId           `data.id` from the JSON body (also passed as `?id=` on the URL)
+ * @param nowSeconds       Override `Date.now()` for tests; defaults to current unix time
  */
 export function verifyWebhookSignature(
   signatureHeader: string | null,
+  requestId: string | null,
   dataId: string,
-): boolean {
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): VerifyWebhookSignatureResult {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   if (!secret) {
-    // If secret is not configured, skip verification in development
-    if (process.env.NODE_ENV === "production") {
-      console.error("[MP Webhook] MERCADOPAGO_WEBHOOK_SECRET is not set — rejecting");
-      return false;
-    }
-    return true;
+    return {
+      ok: false,
+      code: "missing_secret",
+      reason: "MERCADOPAGO_WEBHOOK_SECRET is not configured — refusing to verify.",
+    };
   }
 
-  if (!signatureHeader) return false;
+  if (!signatureHeader) {
+    return { ok: false, code: "missing_header", reason: "Missing x-signature header." };
+  }
+  if (!requestId) {
+    return {
+      ok: false,
+      code: "missing_request_id",
+      reason: "Missing x-request-id header.",
+    };
+  }
+  if (!dataId) {
+    return {
+      ok: false,
+      code: "malformed_header",
+      reason: "Missing data.id in body.",
+    };
+  }
 
+  let parts: Record<string, string>;
   try {
-    const parts = Object.fromEntries(
-      signatureHeader.split(",").map((p) => p.split("=")),
+    parts = Object.fromEntries(
+      signatureHeader.split(",").map((p) => {
+        const eq = p.indexOf("=");
+        if (eq === -1) return [p.trim(), ""];
+        return [p.slice(0, eq).trim(), p.slice(eq + 1).trim()];
+      }),
     ) as Record<string, string>;
-
-    const ts = parts["ts"];
-    const v1 = parts["v1"];
-
-    if (!ts || !v1) return false;
-
-    const payload = `${ts}.${dataId}`;
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(payload)
-      .digest("hex");
-
-    // Constant-time comparison to prevent timing attacks
-    return crypto.timingSafeEqual(Buffer.from(v1, "hex"), Buffer.from(expected, "hex"));
   } catch {
-    return false;
+    return { ok: false, code: "malformed_header", reason: "Could not parse x-signature." };
   }
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+  if (!ts || !v1) {
+    return {
+      ok: false,
+      code: "malformed_header",
+      reason: "x-signature is missing ts or v1.",
+    };
+  }
+
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum) || tsNum <= 0) {
+    return { ok: false, code: "malformed_header", reason: "ts is not a number." };
+  }
+  if (Math.abs(nowSeconds - tsNum) > WEBHOOK_TS_MAX_AGE_SECONDS) {
+    return {
+      ok: false,
+      code: "stale_timestamp",
+      reason: `ts is more than ${WEBHOOK_TS_MAX_AGE_SECONDS}s away from current time.`,
+    };
+  }
+
+  const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(manifest)
+    .digest("hex");
+
+  let a: Buffer;
+  let b: Buffer;
+  try {
+    a = Buffer.from(v1, "hex");
+    b = Buffer.from(expected, "hex");
+  } catch {
+    return { ok: false, code: "bad_signature", reason: "v1 is not valid hex." };
+  }
+  if (a.length !== b.length) {
+    return { ok: false, code: "bad_signature", reason: "Signature length mismatch." };
+  }
+  if (!crypto.timingSafeEqual(a, b)) {
+    return { ok: false, code: "bad_signature", reason: "Signature mismatch." };
+  }
+
+  return { ok: true };
 }
 
 // ── Payment lookup ───────────────────────────────────────────────

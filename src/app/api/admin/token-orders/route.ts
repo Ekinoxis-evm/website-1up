@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { sendTokenOrderApprovedEmail, sendTokenOrderRejectedEmail } from "@/lib/email";
 import { getComprobanteSignedUrl } from "@/lib/blob";
+import { verifyTokenTransfer } from "@/lib/tokenTransferVerifier";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -74,6 +75,55 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "txHash requerido para aprobar" }, { status: 400 });
 
     const txHash = body.txHash.trim();
+    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash))
+      return NextResponse.json({ error: "txHash inválido" }, { status: 400 });
+
+    // H-3: server-side on-chain verification before flipping the order to
+    // approved. The treasury (`pass_config.recipient_address`) is the sender;
+    // the user's verified wallet (`order.wallet_address`, derived server-side
+    // post C-1) is the recipient; amount must be >= `order.token_amount`; tx
+    // must be successful and deep enough to be reorg-safe.
+    const { data: passConfig, error: cfgErr } = await supabaseAdmin
+      .from("pass_config")
+      .select("recipient_address")
+      .eq("id", 1)
+      .single();
+
+    if (cfgErr || !passConfig?.recipient_address) {
+      return NextResponse.json(
+        { error: "Treasury wallet no configurada en pass_config." },
+        { status: 500 },
+      );
+    }
+
+    if (!order.wallet_address || !/^0x[0-9a-fA-F]{40}$/.test(order.wallet_address)) {
+      return NextResponse.json(
+        { error: "La orden no tiene una wallet destino válida." },
+        { status: 400 },
+      );
+    }
+
+    const tokenAmount = Number(order.token_amount);
+    if (!Number.isFinite(tokenAmount) || tokenAmount <= 0) {
+      return NextResponse.json(
+        { error: "Monto de tokens inválido en la orden." },
+        { status: 400 },
+      );
+    }
+
+    const verify = await verifyTokenTransfer(
+      txHash as `0x${string}`,
+      passConfig.recipient_address,
+      order.wallet_address,
+      tokenAmount,
+    );
+
+    if (!verify.ok) {
+      return NextResponse.json(
+        { error: `Verificación on-chain falló: ${verify.reason}`, code: verify.code },
+        { status: 422 },
+      );
+    }
 
     await supabaseAdmin
       .from("token_purchase_orders")
