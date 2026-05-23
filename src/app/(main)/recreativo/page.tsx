@@ -31,6 +31,10 @@ const BENEFITS = [
 // form on `/torneos`, which is always available.
 const CTA_MESSAGE = "Hola, quiero solicitar una jornada recreativa en 1UP Gaming Tower";
 
+// ISR: only pulls the whatsapp `social_links` row. Mutations from
+// `/admin/social-links` revalidate `/` (layout) which cascades here.
+export const revalidate = 3600;
+
 export default async function RecreativoPage() {
   const { data: whatsappRow } = await supabase
     .from("social_links")

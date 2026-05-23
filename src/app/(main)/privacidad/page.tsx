@@ -9,6 +9,9 @@ const NIT = "En trámite de registro";
 const ADDRESS = "Cali, Valle del Cauca, Colombia";
 const EMAIL_CONTACT = "privacidad@1upesports.org";
 
+// Pure markdown — practically static. 1-day revalidate is a safety net only.
+export const revalidate = 86400;
+
 export default function PrivacidadPage() {
   return (
     <main className="min-h-screen bg-background text-on-background">

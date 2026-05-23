@@ -94,6 +94,10 @@ async function fetchBracket(tournamentId: number): Promise<{
   return { bracket, participants: participants ?? [], matches: matches ?? [] };
 }
 
+// ISR: bracket state + registration counts. Admin bracket-action mutations
+// call `revalidatePath("/torneos/[slug]", "page")`, so 60s is just a floor.
+export const revalidate = 60;
+
 export default async function TournamentDetailPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {

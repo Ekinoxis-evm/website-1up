@@ -5,6 +5,40 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.1] — 2026-05-23
+
+### Performance — ISR (`revalidate`) on every public Server Component page
+
+The audit's Area 1 perf note: *"No `revalidate` on any page — ISR effectively unused."*
+Closed. Every dynamic public page now declares a `revalidate` value matched to its content
+freshness needs. Admin mutations still call `revalidatePath` (instant invalidation), so
+these values are the **fallback max-age** when no admin action has happened.
+
+| Page | `revalidate` (s) | Why |
+|---|---:|---|
+| `/` | 300 (5 min) | Hero + brands + games + pass benefits — changed weekly at most |
+| `/torneos` | 60 (1 min) | Tournament status + live registration counts during events |
+| `/torneos/[slug]` | 60 (1 min) | Bracket state + per-tournament registrations |
+| `/academia` | 300 | Course catalog + masters |
+| `/academia/[courseId]` | 300 | Per-course preview, admin-edited |
+| `/gaming-tower` | 3600 (1 hr) | Floor info + site content — change rarely |
+| `/recreativo` | 3600 | Only pulls the WhatsApp `social_links` row |
+| `/privacidad` | 86400 (1 day) | Pure markdown content |
+| `/marketplace` | 3600 | Features + CTA, essentially static |
+
+Skipped: redirect-only pages (`/team`, `/juegos`, `/perfil`), check-in
+(`/torneos/[slug]/checkin` — auth-driven client interaction, noindex from 2.29.7).
+
+Verified: `npm run build` (zero errors, all routes regenerated),
+`npm run test:run` (100/100 pass).
+
+### Remaining deferred follow-ups
+
+- OG image regen at 1200×630 (asset work, not code)
+- Admin failure-UX consistency (shared toast component)
+
+---
+
 ## [2.30.0] — 2026-05-23
 
 ### Performance — `next/image` migration on public content

@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://1upesports.org/marketplace" },
 };
 
+// Features + CTA — content is essentially static.
+export const revalidate = 3600;
+
 export default async function MarketplacePage() {
   const { data: socialLinks } = await supabase
     .from("social_links")

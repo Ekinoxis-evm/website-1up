@@ -21,6 +21,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://1upesports.org/torneos" },
 };
 
+// ISR: tournament status + registration counts change frequently during live
+// events; 60s is the freshness floor. Admin actions revalidate immediately.
+export const revalidate = 60;
+
 export default async function TorneosPage() {
   const [
     { data: tournaments },
