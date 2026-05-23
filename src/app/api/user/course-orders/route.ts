@@ -130,6 +130,11 @@ export async function POST(req: NextRequest) {
     }
     const walletAddress = walletLookup.wallet;
 
+    // M-A5.1: pre-insert SELECT is kept as a friendly fast-path; the real
+    // guarantee against concurrent duplicate inserts is the
+    // `enrollments_tx_hash_uniq` partial unique index (migration
+    // 20260523041358) that fires `23505` on the INSERT — translated to 409
+    // below.
     const { data: existing } = await supabaseAdmin
       .from("enrollments")
       .select("id")
@@ -171,8 +176,12 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (insertErr || !enrollment)
+    if (insertErr || !enrollment) {
+      if (insertErr?.code === "23505") {
+        return NextResponse.json({ error: "Esta transacción ya fue registrada." }, { status: 409 });
+      }
       return NextResponse.json({ error: insertErr?.message ?? "Error creando inscripción" }, { status: 500 });
+    }
 
     revalidatePath("/academia");
     revalidatePath("/admin/enrollments");
@@ -240,7 +249,8 @@ export async function POST(req: NextRequest) {
 
   const ext = comprobantePath.split(".").pop() || "jpg";
   try {
-    const finalUrl = await moveComprobanteToOrder(comprobantePath, enrollment.id, ext);
+    // M-A5.3: pin the pending object to the caller's namespace.
+    const finalUrl = await moveComprobanteToOrder(comprobantePath, enrollment.id, ext, claims.userId);
     await supabaseAdmin
       .from("enrollments")
       .update({ comprobante_url: finalUrl })

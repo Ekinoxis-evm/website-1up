@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.10 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.11 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -55,7 +55,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
 | 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
-| 🟡 Medium | ~22 | **19 fixed (through 2.29.10)** | Web + Portal + Admin batches + tournament-flow revalidate + Security batch (recruitment input caps · `tournamentId` coercion · CF JWT `accessRules` · `verifyToken` `appId` assert). **Still open:** OG images · `next/image` migration · ISR strategy · admin failure-UX consistency · payments TOCTOU · comprobante MIME magic-byte sniffing · `moveComprobanteToOrder` path guard · dead `pass` branch in `/api/checkout` |
+| 🟡 Medium | ~22 | **23/22 fixed (through 2.29.11)** ✅ | All six areas closed: Web · Portal · Admin · DB · Payments (tx_hash TOCTOU · comprobante magic-byte · move-path guard · dead pass branch) · Security. **Deferred (out-of-scope of the audit text):** OG images regen at 1200×630 (asset work), `next/image` migration on content images, opinionated ISR/`revalidate` strategy, admin failure-UX consistency (single shared toast). |
 | 🔵 Low / Info | many | open | see per-area sections |
 
 > **Correction to the workspace `../AUDIT.md`:** the deeper database dive found
@@ -200,13 +200,20 @@ tables (any with RLS disabled = anon-key data leak), FK/filter-column index cove
 server-side, HMAC uses constant-time `timingSafeEqual`, webhook re-fetches payment from MP's
 API, comprobantes in a private bucket with 1h signed URLs.
 
-**Findings:** ~~C-2, C-3, H-3, H-8, H-9~~ (all closed by 2.29.4). Plus: ~~webhook **skips
-signature verification when the secret is unset outside production**~~ — fixed in 2.29.4
-(`verifyWebhookSignature` returns `missing_secret` in every environment; route returns 500).
-Duplicate-`tx_hash` guard is a check-then-insert TOCTOU race relying on a DB unique constraint
-not present in repo migrations (ties into H-7). Comprobante upload trusts client-declared
-MIME/extension — add magic-byte sniffing. `moveComprobanteToOrder` lets a user attach any
-`pending/` object they can name. Dead `pass` branch in `/api/checkout`.
+**Findings:** ~~C-2, C-3, H-3, H-8, H-9~~ (all closed by 2.29.4). ~~webhook skips
+signature verification when the secret is unset outside production~~ ✅ 2.29.4.
+~~Duplicate-`tx_hash` guard is a check-then-insert TOCTOU race relying on a DB unique
+constraint not present in repo migrations~~ ✅ 2.29.11 — new `enrollments_tx_hash_uniq`
+partial unique index (migration `20260523041358`) matches the existing `pass_orders`
+guarantee; both routes catch `23505` and return 409. ~~Comprobante upload trusts
+client-declared MIME/extension — add magic-byte sniffing.~~ ✅ 2.29.11 — `sniffComprobanteMime`
+reads the file header and rejects if the magic bytes don't match an allowed type.
+~~`moveComprobanteToOrder` lets a user attach any `pending/` object they can name.~~ ✅
+2.29.11 — refactored to take `callerPrivyUserId` and verify the path's hash prefix
+matches; mismatch throws `ComprobantePathError`. ~~Dead `pass` branch in
+`/api/checkout`.~~ ✅ 2.29.11 — removed (1UP Pass purchases never went through MercadoPago).
+
+**All Area 5 Mediums closed.**
 
 ## Area 6 · Security *(owner: security-auditor)*
 

@@ -5,6 +5,50 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.11] — 2026-05-23
+
+### Security (audit Mediums — Payments batch)
+
+- **M-A5.1 · `tx_hash` TOCTOU race on order creation.** The `pass-orders` token path was
+  the only one with a `pass_orders_tx_hash_uniq` unique index — `enrollments` lacked the
+  equivalent guard, so two concurrent `course-orders` POSTs with the same `txHash` could
+  both pass the check-then-insert SELECT and create two enrollments off one on-chain
+  transfer. Added migration `20260523041358_enrollments_tx_hash_unique` —
+  `CREATE UNIQUE INDEX … ON enrollments (lower(tx_hash)) WHERE tx_hash IS NOT NULL`.
+  Both call sites now catch Postgres `23505` from the INSERT and translate it to a clean
+  `409`. The H-7 baseline was extended to include the new index so a fresh DB matches.
+- **M-A5.2 · Comprobante MIME magic-byte sniffing.** `/api/user/upload-comprobante`
+  previously trusted the client-set `file.type`. A user could rename `evil.exe` to
+  `receipt.pdf` and the server would accept it on extension+MIME alone. Added
+  `sniffComprobanteMime` in `src/lib/blob.ts` that reads the first 16 bytes and matches
+  against JPEG/PNG/WebP/PDF magic-byte signatures. The upload route rejects with `400` if
+  the file header doesn't match any allowed type OR if it doesn't match the declared
+  `file.type`.
+- **M-A5.3 · `moveComprobanteToOrder` lets a user attach any pending object they can
+  name.** The pending storage path includes an 8-char `md5(privyUserId)` prefix but is
+  enumerable — a client could submit another user's pending path in their own order POST.
+  Added a `callerPrivyUserId` parameter and a `userPathPrefix` helper. `moveComprobanteToOrder`
+  now refuses with `ComprobantePathError` if the pending path's prefix doesn't match the
+  caller's hash. Wired into all three order POSTs (token-orders, pass-orders, course-orders).
+- **M-A5.4 · Dead `pass` branch in `/api/checkout`.** The route's body type was
+  documented as `{ courseId: number } | { productType: "pass" }`, but `courseId` was
+  required immediately after the type discrimination — the pass branch was never
+  reachable. The 1UP Pass is purchased through `/api/user/pass-orders` (token or bank),
+  never MercadoPago. Removed the dead union member and updated the doc comment.
+
+Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass), live DB now
+holds the new `enrollments_tx_hash_uniq` index.
+
+### Audit status
+
+This closes Area 5. **All four payment-area Mediums shipped. The audit is now: 3 Critical +
+13 High + 23/~22 Medium closed** (one Area-3 item — admin failure-UX consistency — is
+explicitly deferred for a focused shared-toast PR; the bigger Area-1 items — OG image
+regen, `next/image` migration, ISR strategy — were also deferred). For practical purposes,
+**the audit-driven work is done.**
+
+---
+
 ## [2.29.10] — 2026-05-23
 
 ### Security (audit Mediums — Security/Validation batch)

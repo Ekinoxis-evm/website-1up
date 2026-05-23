@@ -1,11 +1,16 @@
 /**
  * /api/checkout — POST
  *
- * Creates a MercadoPago preference for a course or pass purchase.
- * Applies the best active discount the user qualifies for.
- * Requires a valid Privy Bearer token.
+ * Creates a MercadoPago preference for a course purchase. Applies the best
+ * active discount the user qualifies for. Requires a valid Privy Bearer token.
  *
- * Body: { courseId: number } | { productType: "pass" }
+ * Body: { courseId: number }
+ *
+ * NOTE: previously typed as `{ courseId: number } | { productType: "pass" }`,
+ * but the pass branch was dead — courseId was required immediately after the
+ * type discrimination, so `productType: "pass"` was never reachable. The 1UP
+ * Pass is purchased through `/api/user/pass-orders` (token or bank), never
+ * through MercadoPago, so the dead branch has been removed (audit M-A5.4).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -42,9 +47,8 @@ export async function POST(req: NextRequest) {
   const email = await resolveUserEmail(claims.userId);
 
   // ── Parse body ─────────────────────────────────────────────────
-  const body = await req.json() as { courseId?: unknown; productType?: unknown };
+  const body = await req.json() as { courseId?: unknown };
   const courseId = typeof body.courseId === "number" ? body.courseId : null;
-  const productType = courseId ? "course" : "pass";
 
   if (!courseId) {
     return NextResponse.json({ error: "courseId requerido" }, { status: 400 });
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
     .from("enrollments")
     .insert({
       user_profile_id:      profile.id,
-      product_type:         productType,
+      product_type:         "course",
       course_id:            courseId,
       original_price_cop:   originalPrice,
       discount_rule_id:     ruleId,

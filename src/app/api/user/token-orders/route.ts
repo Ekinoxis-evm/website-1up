@@ -140,7 +140,8 @@ export async function POST(req: NextRequest) {
 
   // Move comprobante from pending/ to final path
   try {
-    const finalUrl = await moveComprobanteToOrder(comprobantePath, order.id, ext);
+    // M-A5.3: pin the pending object to the caller's namespace.
+    const finalUrl = await moveComprobanteToOrder(comprobantePath, order.id, ext, user.userId);
     await supabaseAdmin
       .from("token_purchase_orders")
       .update({ comprobante_url: finalUrl })

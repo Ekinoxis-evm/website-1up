@@ -90,7 +90,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "txHash inválido." }, { status: 400 });
   }
 
-  // Duplicate tx_hash guard
+  // M-A5.1: duplicate tx_hash. The pre-insert SELECT is kept as a friendly
+  // fast-path (returns 409 with a clean message on the common case), but the
+  // real guarantee is now the `pass_orders_tx_hash_uniq` partial unique index
+  // — `lower(tx_hash) WHERE tx_hash IS NOT NULL` — which fires `23505` on the
+  // INSERT if a concurrent request slips through the SELECT window. We catch
+  // and translate that below.
   const { data: existing } = await supabaseAdmin
     .from("pass_orders")
     .select("id")
@@ -254,7 +259,8 @@ async function handleBankOrder(
 
   const ext = comprobantePath.split(".").pop() || "jpg";
   try {
-    const finalUrl = await moveComprobanteToOrder(comprobantePath, inserted.id, ext);
+    // M-A5.3: pin the pending object to the caller's namespace.
+    const finalUrl = await moveComprobanteToOrder(comprobantePath, inserted.id, ext, privyUserId);
     await supabaseAdmin.from("pass_orders").update({ comprobante_url: finalUrl }).eq("id", inserted.id);
   } catch {
     await supabaseAdmin.from("pass_orders").update({ status: "failed" }).eq("id", inserted.id);
