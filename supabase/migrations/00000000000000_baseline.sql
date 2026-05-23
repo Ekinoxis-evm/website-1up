@@ -695,6 +695,7 @@ CREATE INDEX IF NOT EXISTS course_session_links_session_idx         ON public.co
 CREATE INDEX IF NOT EXISTS course_sessions_module_id_sort_idx       ON public.course_sessions          (module_id, sort_order);
 CREATE UNIQUE INDEX IF NOT EXISTS pass_orders_one_pending_per_user  ON public.pass_orders              (user_profile_id) WHERE (status = 'pending_tx'::pass_order_status);
 CREATE UNIQUE INDEX IF NOT EXISTS pass_orders_tx_hash_uniq          ON public.pass_orders              ((lower(tx_hash)));
+CREATE UNIQUE INDEX IF NOT EXISTS enrollments_tx_hash_uniq          ON public.enrollments              ((lower(tx_hash))) WHERE (tx_hash IS NOT NULL);
 CREATE INDEX IF NOT EXISTS pass_orders_user_expiry_idx              ON public.pass_orders              (user_profile_id, expires_at DESC) WHERE (status = 'confirmed'::pass_order_status);
 CREATE UNIQUE INDEX IF NOT EXISTS token_purchase_orders_one_pending_per_user ON public.token_purchase_orders (user_profile_id) WHERE (status = 'pending'::token_purchase_status);
 CREATE INDEX IF NOT EXISTS token_purchase_orders_privy_idx          ON public.token_purchase_orders    (privy_user_id);

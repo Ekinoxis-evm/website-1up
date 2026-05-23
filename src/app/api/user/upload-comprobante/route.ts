@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/privy";
-import { uploadComprobante } from "@/lib/blob";
+import { uploadComprobante, sniffComprobanteMime } from "@/lib/blob";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "webp", "pdf"]);
@@ -25,6 +25,24 @@ export async function POST(req: NextRequest) {
 
   if (file.size > MAX_BYTES)
     return NextResponse.json({ error: "Archivo demasiado grande (máx 5MB)" }, { status: 400 });
+
+  // M-A5.2: magic-byte sniff. The browser-set `file.type` and the
+  // extension-based check above are both client-controllable; only the file
+  // header is authoritative. Reject anything that doesn't look like a real
+  // JPG/PNG/WebP/PDF.
+  const sniffed = await sniffComprobanteMime(file);
+  if (!sniffed) {
+    return NextResponse.json(
+      { error: "El archivo no parece ser un JPG/PNG/WebP/PDF válido." },
+      { status: 400 },
+    );
+  }
+  if (sniffed !== file.type) {
+    return NextResponse.json(
+      { error: "El tipo declarado del archivo no coincide con su contenido." },
+      { status: 400 },
+    );
+  }
 
   try {
     const { path } = await uploadComprobante(file, claims.userId);
