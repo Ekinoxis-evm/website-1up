@@ -5,6 +5,8 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { seedBracket } from "@/lib/bracket/seed";
 import { nextPow2 } from "@/lib/bracket/byes";
+import { derivePodium } from "@/lib/bracket/podium";
+import { pointsFor } from "@/lib/tournamentPoints";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -324,18 +326,86 @@ export async function PATCH(req: NextRequest) {
 
     // Tournament lifecycle is driven by the bracket — when the bracket completes,
     // the tournament does too. The status is a derived value, not editor-controlled.
+    let podiumWritten = 0;
     if (allDone && bracket.tournament_id) {
       await supabaseAdmin
         .from("tournaments")
         .update({ status: "completed" })
         .eq("id", bracket.tournament_id);
+
+      // Auto-derive the podium from the completed bracket. Manual overrides
+      // are preserved — `ignoreDuplicates: true` on the unique
+      // `(tournament_id, position)` index means a position the admin already
+      // set via `POST /api/admin/tournament-results` is never overwritten.
+      // Admins can still re-derive any row manually if the auto-pick is wrong.
+      const { data: bracketMatches } = await supabaseAdmin
+        .from("bracket_matches")
+        .select("id, bracket_side, round, winner_id, loser_id, next_match_id, state")
+        .eq("bracket_id", match.bracket_id);
+      const { data: bracketParticipants } = await supabaseAdmin
+        .from("bracket_participants")
+        .select("id, user_profile_id")
+        .eq("bracket_id", match.bracket_id);
+      const { data: bracketMeta } = await supabaseAdmin
+        .from("brackets").select("format").eq("id", match.bracket_id).single();
+
+      if (bracketMatches && bracketParticipants && bracketMeta?.format) {
+        const claims = await verifyToken(req.headers.get("authorization"));
+        const adminEmail = claims ? await resolveUserEmail(claims.userId) : null;
+
+        const podium = derivePodium(
+          bracketMeta.format as "single_elimination" | "double_elimination",
+          bracketMatches,
+          bracketParticipants,
+        );
+
+        // Pre-fetch the positions that already exist — manual overrides set
+        // via /api/admin/tournament-results before the bracket finished must
+        // be preserved. We only INSERT for missing positions, never overwrite.
+        const { data: existingResults } = await supabaseAdmin
+          .from("tournament_results")
+          .select("position")
+          .eq("tournament_id", bracket.tournament_id);
+        const taken = new Set((existingResults ?? []).map(r => r.position));
+
+        for (const entry of podium) {
+          if (taken.has(entry.position)) continue;
+
+          const { data: prize } = await supabaseAdmin
+            .from("tournament_prizes")
+            .select("id")
+            .eq("tournament_id", bracket.tournament_id)
+            .eq("position", entry.position)
+            .maybeSingle();
+          const prizeStatus: "pending" | "no_prize" = prize ? "pending" : "no_prize";
+
+          const { error } = await supabaseAdmin
+            .from("tournament_results")
+            .insert({
+              tournament_id:   bracket.tournament_id,
+              user_profile_id: entry.userProfileId,
+              position:        entry.position,
+              points:          pointsFor(entry.position),
+              awarded_by:      adminEmail ?? "system:auto-podium",
+              prize_status:    prizeStatus,
+            });
+
+          if (!error) podiumWritten++;
+          // A race (admin sets the row between our check + insert) returns
+          // a unique-violation — swallowed; the admin's value wins, which is
+          // exactly the manual-override-always contract.
+        }
+
+        revalidatePath("/team");
+        revalidatePath("/admin/tournament-results");
+      }
     }
 
     revalidatePath("/torneos");
     revalidatePath("/torneos/[slug]", "page");
     revalidatePath("/admin/tournament-brackets");
     revalidatePath("/admin/torneos");
-    return NextResponse.json({ ok: true, winnerId, loserId, tournamentCompleted: allDone });
+    return NextResponse.json({ ok: true, winnerId, loserId, tournamentCompleted: allDone, podiumWritten });
   }
 
   // ── UNDO (safe revert) ─────────────────────────────────────────────────
@@ -402,6 +472,16 @@ export async function PATCH(req: NextRequest) {
         .update({ status: "live" })
         .eq("id", br.tournament_id)
         .eq("status", "completed");
+
+      // When we revert the tournament out of `completed`, drop the rows that
+      // auto-podium derivation wrote so a future re-completion can re-derive
+      // accurately. Manual overrides (rows where `awarded_by !=
+      // 'system:auto-podium'`) are kept — the admin's intent persists.
+      await supabaseAdmin
+        .from("tournament_results")
+        .delete()
+        .eq("tournament_id", br.tournament_id)
+        .eq("awarded_by", "system:auto-podium");
     }
 
     revalidatePath("/torneos");
