@@ -251,7 +251,8 @@ export function CourseCheckoutWizard({
   return (
     <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-surface-container w-full max-w-lg my-8">
-        <div className="flex items-center justify-between p-6 border-b border-surface-container-high">
+        {/* M-A1.1: header uses a background tone shift instead of a 1px divider (Rule 2). */}
+        <div className="flex items-center justify-between p-6 bg-surface-container-high">
           <h2 className="font-headline font-black text-xl uppercase tracking-tighter">
             INSCRIBIRSE — <span className="text-primary-container">{course.name}</span>
           </h2>

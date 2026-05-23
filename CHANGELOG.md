@@ -5,6 +5,40 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.7] — 2026-05-22
+
+### Fixed (audit Mediums — Public Web batch)
+
+- **M-A1.1 · 1px-divider violations.** Two real violations of `CLAUDE.md` Rule 2 closed:
+  `CourseCheckoutWizard.tsx` header (`border-b`) and `MasterCard.tsx` courses panel
+  (`border-t`). Both now use a background-tone shift in line with the rest of the design
+  system.
+- **M-A1.2 · Rule 3 folder list.** `CLAUDE.md` Rule 3 ("Public pages = pure Tailwind")
+  now also lists `masters/` and `torneos/`, which were missed when the project added them.
+- **M-A1.3 · `/torneos/[slug]/checkin` missing metadata.** Added `robots: { index: false,
+  follow: false }` and an explicit `title`. Check-in is a single-use authenticated action
+  page — it should never appear in search results.
+- **M-A1.7 · Placeholder WhatsApp number `wa.me/57300000000` was shipping in production.**
+  `recreativo/page.tsx`'s CTA now pulls the WhatsApp URL from `social_links` (the same
+  source the Footer and CommunitySection already use). When the row is missing or inactive,
+  the CTA falls back to a `<Link>` pointing at `/torneos#recruitment` — the existing
+  RecruitmentForm. Added a `<div id="recruitment">` wrapper on `/torneos` so the anchor
+  resolves.
+- **M-A1.9 · Route map drift.** `CLAUDE.md` route map now lists `/marketplace` and
+  `/offline`; the `/recreativo` and `/perfil` entries updated to match current behavior.
+  The earlier audit note that `/offline` was a dead route was incorrect — it's a working
+  PWA fallback at `src/app/offline/page.tsx` (top-level, no `(main)` layout).
+
+### Notes
+
+- **Deferred** for follow-up PRs: OG image regen at 1200×630 (asset work), `next/image`
+  migration on content images, opinionated ISR/`revalidate` strategy. These are bigger
+  than quick-wins and each warrants a focused PR.
+
+Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 pass).
+
+---
+
 ## [2.29.6] — 2026-05-22
 
 ### Security

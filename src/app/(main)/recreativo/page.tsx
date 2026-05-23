@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export const metadata: Metadata = {
   title: "Jornadas Recreativas — 1UP Gaming Tower Colombia",
@@ -22,7 +24,25 @@ const BENEFITS = [
   { icon: "local_cafe",     label: "Cafetería Incluida", value: "$10.000 COP en consumibles por persona", color: "border-tertiary"            },
 ];
 
-export default function RecreativoPage() {
+// M-A1.7: previously hard-coded `wa.me/57300000000` (audit-flagged placeholder).
+// The contact path now comes from social_links (same source the Footer +
+// CommunitySection use) so the marketing team controls it from `/admin/social-links`.
+// If the WhatsApp row is missing or inactive the CTA falls back to the recruitment
+// form on `/torneos`, which is always available.
+const CTA_MESSAGE = "Hola, quiero solicitar una jornada recreativa en 1UP Gaming Tower";
+
+export default async function RecreativoPage() {
+  const { data: whatsappRow } = await supabase
+    .from("social_links")
+    .select("url")
+    .eq("platform", "whatsapp")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  const ctaHref = whatsappRow?.url
+    ? `${whatsappRow.url}${whatsappRow.url.includes("?") ? "&" : "?"}text=${encodeURIComponent(CTA_MESSAGE)}`
+    : "/torneos#recruitment";
+
   return (
     <>
       {/* Hero */}
@@ -73,14 +93,23 @@ export default function RecreativoPage() {
         <p className="font-body text-on-surface-variant text-lg mb-10 max-w-xl">
           Contáctanos para coordinar tu jornada recreativa personalizada. Nuestro equipo diseñará una experiencia a la medida de tu organización.
         </p>
-        <a
-          href="https://wa.me/57300000000?text=Hola%2C%20quiero%20solicitar%20una%20jornada%20recreativa%20en%201UP%20Gaming%20Tower"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block bg-secondary-container text-white font-headline font-black text-xl px-12 py-5 skew-fix hover:neo-shadow-blue transition-all"
-        >
-          <span className="block skew-content">SOLICITAR JORNADA RECREATIVA</span>
-        </a>
+        {whatsappRow?.url ? (
+          <a
+            href={ctaHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-secondary-container text-white font-headline font-black text-xl px-12 py-5 skew-fix hover:neo-shadow-blue transition-all"
+          >
+            <span className="block skew-content">SOLICITAR JORNADA RECREATIVA</span>
+          </a>
+        ) : (
+          <Link
+            href={ctaHref}
+            className="inline-block bg-secondary-container text-white font-headline font-black text-xl px-12 py-5 skew-fix hover:neo-shadow-blue transition-all"
+          >
+            <span className="block skew-content">SOLICITAR JORNADA RECREATIVA</span>
+          </Link>
+        )}
       </section>
     </>
   );
