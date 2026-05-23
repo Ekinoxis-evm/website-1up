@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
+import { useAdminToast } from "@/components/admin/ui/Toast";
 
 interface Props {
   courses: Course[];
@@ -13,6 +14,7 @@ interface Props {
 export function AdminCoursesClient({ courses }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
+  const { showError, showSuccess } = useAdminToast();
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -29,9 +31,10 @@ export function AdminCoursesClient({ courses }: Props) {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(`No se pudo eliminar el curso: ${data.error ?? "Error desconocido."}`);
+      showError(`No se pudo eliminar el curso: ${data.error ?? "Error desconocido."}`);
       return;
     }
+    showSuccess("Curso eliminado.");
     router.refresh();
   }
 
