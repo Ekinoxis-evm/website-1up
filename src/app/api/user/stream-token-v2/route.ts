@@ -3,6 +3,7 @@ import { verifyToken } from "@/lib/privy";
 import { signStreamToken } from "@/lib/stream";
 import { assertEnrollment, courseIdFromSession, CourseAccessError } from "@/lib/courseAccess";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getClientIp } from "@/lib/rateLimit";
 
 // Returns a signed CF Stream token for a course session video.
 // Requires the user to be enrolled (payment_status = approved) in the parent course.
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 
-  const token = await signStreamToken(session.video_uid);
+  // M-A6.3: bind the JWT to the caller's IP via CF Stream `accessRules`.
+  const token = await signStreamToken(session.video_uid, { clientIp: getClientIp(req) });
   return NextResponse.json({ token });
 }

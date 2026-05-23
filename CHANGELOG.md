@@ -5,6 +5,41 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.10] — 2026-05-23
+
+### Security (audit Mediums — Security/Validation batch)
+
+- **M-A6.1 · `/api/recruitment` was storing unvalidated, uncapped free-form input.**
+  Anyone could POST a 10 MB `message` or a malformed `email` and it would land in
+  `recruitment_submissions` and surface in the admin viewer. Added per-field length caps
+  (matched to the DB column limits in the H-7 baseline), an explicit `EMAIL_RE` regex, a
+  pragmatic `PHONE_RE`, trim+slice on every string, and coercion (`Number.isFinite` +
+  positive) on the optional `categoryId` / `gameId` foreign keys.
+- **M-A6.2 · `tournament-registrations` didn't coerce `tournamentId`.** Both
+  `POST` and `DELETE /api/user/tournament-registrations` now run
+  `Number(body?.tournamentId)` through `Number.isFinite && > 0` and return a clean
+  `400 "tournamentId inválido."` on garbage input — replacing the Postgres parse error
+  that used to leak out as a 500.
+- **M-A6.3 · CF Stream JWTs carried no `accessRules` — 1-hour shareable bearer tokens.**
+  Once a user obtained an intro/session token they could share the playback URL and
+  anyone could stream from anywhere for the next hour. `signStreamToken` now accepts an
+  optional `clientIp` and embeds CF Stream's documented `accessRules` pattern
+  (`{ type: "ip.src", ip: ["<ip>/32"], action: "allow" }` + a catch-all block). All four
+  token-mint endpoints (`/api/user/stream-token`, `/api/user/stream-token-v2`,
+  `/api/user/course-intro-token`, `/api/public/course-intro-token`) pass the caller's IP
+  (extracted via the existing `getClientIp` helper). Tokens still expire in 1 hour, but
+  they now only play from the IP that minted them.
+- **M-A6.4 · `verifyToken` didn't assert the `appId` claim.** `privyServer.verifyAuthToken`
+  validates signature + expiry against this app's keys, but it returned `null` on a
+  cross-tenant claim only because the signature would mismatch — not because of an explicit
+  check. Added an explicit `claims.appId === process.env.NEXT_PUBLIC_PRIVY_APP_ID` assert
+  in both `verifyToken` and `verifyCookieToken`. Defense-in-depth against a mis-pointed
+  production key or a JWT minted by a different Privy app. Test count: 98 → 100.
+
+Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass).
+
+---
+
 ## [2.29.9] — 2026-05-23
 
 ### Fixed (audit Mediums — Admin Panel batch)

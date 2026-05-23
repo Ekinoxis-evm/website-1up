@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.9 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.10 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -55,7 +55,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
 | 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
-| 🟡 Medium | ~22 | **15 fixed (through 2.29.9)** | Web (1px dividers · route map · checkin noindex · placeholder WhatsApp · Rule 3) · Portal (age-floor · `Bearer null` · `value: BigInt(0)` · `any[]` types) · Admin (revalidate gaps · dead pass-bank-orders redirect · orphan academia-content · 3 modal-header dividers) · tournament-flow revalidate gaps · registrations PATCH res.ok · **still open:** input validation · OG images · `next/image` migration · ISR strategy · admin failure-UX consistency · payments TOCTOU · comprobante MIME · CF JWT accessRules · more |
+| 🟡 Medium | ~22 | **19 fixed (through 2.29.10)** | Web + Portal + Admin batches + tournament-flow revalidate + Security batch (recruitment input caps · `tournamentId` coercion · CF JWT `accessRules` · `verifyToken` `appId` assert). **Still open:** OG images · `next/image` migration · ISR strategy · admin failure-UX consistency · payments TOCTOU · comprobante MIME magic-byte sniffing · `moveComprobanteToOrder` path guard · dead `pass` branch in `/api/checkout` |
 | 🔵 Low / Info | many | open | see per-area sections |
 
 > **Correction to the workspace `../AUDIT.md`:** the deeper database dive found
@@ -214,11 +214,16 @@ MIME/extension — add magic-byte sniffing. `moveComprobanteToOrder` lets a user
 vars reachable from client code, ownership checks correct on `token-orders/cancel`,
 `tournament-checkin`, `profile` PUT, and all course-content/stream-token endpoints.
 
-**Findings:** C-1, H-4, H-5, H-6 above. Plus: `/api/recruitment` stores unvalidated,
-uncapped free-form input (spam + stored-content vector — add length caps + email regex).
-`tournament-registrations` doesn't coerce `tournamentId`. Public `course-intro-token` is an
-unrate-limited signing oracle. CF Stream JWTs carry no `accessRules` (1h shareable bearer
-tokens). `verifyToken` doesn't assert the `appId` claim (defense-in-depth).
+**Findings:** ~~C-1~~ ✅ 2.29.1. ~~H-4 / H-5 / H-6~~ ✅ 2.29.2/3/5.
+~~`/api/recruitment` stores unvalidated, uncapped free-form input~~ ✅ 2.29.10 — length
+caps + `EMAIL_RE` + `PHONE_RE` + coercion on optional foreign keys.
+~~`tournament-registrations` doesn't coerce `tournamentId`~~ ✅ 2.29.10 — both POST and
+DELETE now `Number.isFinite && > 0`. ~~Public `course-intro-token` is an unrate-limited
+signing oracle.~~ ✅ 2.29.3. ~~CF Stream JWTs carry no `accessRules`~~ ✅ 2.29.10 — tokens
+now embed `ip.src` allow + `any` block via `accessRules`; bound to the caller's IP for
+the full 1-hour lifetime. ~~`verifyToken` doesn't assert the `appId` claim~~ ✅ 2.29.10 —
+explicit `claims.appId === NEXT_PUBLIC_PRIVY_APP_ID` check on both `verifyToken` and
+`verifyCookieToken`. **All Area 6 Mediums closed.**
 
 ---
 

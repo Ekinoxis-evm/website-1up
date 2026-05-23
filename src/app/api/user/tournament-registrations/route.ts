@@ -29,8 +29,13 @@ export async function POST(req: NextRequest) {
   if (!privyUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { tournamentId } = body;
-  if (!tournamentId) return NextResponse.json({ error: "tournamentId requerido" }, { status: 400 });
+  // M-A6.2: coerce + validate. Previously `tournamentId` was passed straight
+  // through, so a non-numeric value would surface as a Postgres parse error
+  // instead of a clean 400.
+  const tournamentId = Number(body?.tournamentId);
+  if (!Number.isFinite(tournamentId) || tournamentId <= 0) {
+    return NextResponse.json({ error: "tournamentId inválido." }, { status: 400 });
+  }
 
   // Resolve user_profile_id
   const { data: profile } = await supabaseAdmin
@@ -122,8 +127,11 @@ export async function DELETE(req: NextRequest) {
   if (!privyUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { tournamentId } = body;
-  if (!tournamentId) return NextResponse.json({ error: "tournamentId requerido" }, { status: 400 });
+  // M-A6.2: coerce DELETE's tournamentId as well.
+  const tournamentId = Number(body?.tournamentId);
+  if (!Number.isFinite(tournamentId) || tournamentId <= 0) {
+    return NextResponse.json({ error: "tournamentId inválido." }, { status: 400 });
+  }
 
   const { error } = await supabaseAdmin
     .from("tournament_registrations")
