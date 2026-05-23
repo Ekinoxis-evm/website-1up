@@ -42,6 +42,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+// ISR: course preview data is admin-edited; admin mutations revalidate.
+export const revalidate = 300;
+
 export default async function CoursePreviewPage({ params }: Props) {
   const { courseId } = await params;
   const id = Number(courseId);

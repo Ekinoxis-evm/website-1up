@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://1upesports.org/academia" },
 };
 
+// ISR: course catalog + masters change weekly at most. Admin mutations
+// revalidate immediately.
+export const revalidate = 300;
+
 export default async function AcademiaPage() {
   const [{ data: allCourses }, { data: siteImage }, { data: masters }, { data: masterCourses }] = await Promise.all([
     supabase.from("courses").select("*").eq("is_active", true).order("category").order("sort_order"),

@@ -26,6 +26,11 @@ import { RecruitmentForm } from "@/components/home/RecruitmentForm";
 import { PassSection } from "@/components/tower/PassSection";
 import { CommunitySection } from "@/components/home/CommunitySection";
 
+// ISR: home pulls game_categories, games, pass_benefits, aliados — all changed
+// only by admin actions which call `revalidatePath("/")`. The 5-minute fallback
+// catches anything that slipped through (manual DB edit, future bug).
+export const revalidate = 300;
+
 export default async function HomePage() {
   const [{ data: allCategories }, { data: allGames }, { data: benefits }, { data: brandLogos }] = await Promise.all([
     supabase.from("game_categories").select("*").order("sort_order"),

@@ -22,6 +22,10 @@ export const metadata = {
   alternates: { canonical: "https://1upesports.org/gaming-tower" },
 };
 
+// ISR: floor info + site content change rarely — 1 hour is generous, admin
+// mutations to `floors` / `site_content` revalidate this path immediately.
+export const revalidate = 3600;
+
 export default async function GamingTowerPage() {
   const [
     { data: floors },
