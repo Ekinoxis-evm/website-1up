@@ -4,6 +4,7 @@ import { verifyCookieToken } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { privyServer } from "@/lib/privy";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminToastProvider } from "@/components/admin/ui/Toast";
 
 export const metadata = { title: "Admin — 1UP Gaming Tower" };
 
@@ -31,9 +32,11 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   if (!await isAdmin(email)) redirect(process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org");
 
   return (
-    <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
-      <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10 pt-20 md:pt-10">{children}</main>
-    </div>
+    <AdminToastProvider>
+      <div className="flex min-h-screen bg-surface-container-lowest text-on-background">
+        <AdminSidebar />
+        <main className="flex-1 ml-0 md:ml-56 p-6 md:p-10 pt-20 md:pt-10">{children}</main>
+      </div>
+    </AdminToastProvider>
   );
 }

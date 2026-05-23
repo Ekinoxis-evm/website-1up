@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { useAdminToast } from "@/components/admin/ui/Toast";
 
 interface DiscountRule {
   id: number;
@@ -50,6 +51,7 @@ const TRIGGER_BADGE: Record<string, string> = {
 export function AdminDiscountsClient({ rules, aliados }: Props) {
   const router = useRouter();
   const { getAccessToken, user } = usePrivy();
+  const { showError, showSuccess } = useAdminToast();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DiscountRule | null>(null);
   const [form, setForm] = useState(EMPTY);
@@ -91,9 +93,10 @@ export function AdminDiscountsClient({ rules, aliados }: Props) {
       method, headers: await authHeaders(), body: JSON.stringify(body),
     });
     if (!res.ok) {
-      const { error } = await res.json();
-      alert(`Error: ${error}`);
+      const { error } = await res.json().catch(() => ({ error: "Error desconocido." }));
+      showError(`No se pudo guardar el descuento: ${error}`);
     } else {
+      showSuccess("Descuento guardado.");
       setOpen(false);
       router.refresh();
     }

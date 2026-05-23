@@ -5,6 +5,35 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.2] — 2026-05-23
+
+### Changed — admin failure UX consistency
+
+Closes the deferred Area 3 follow-up: *"inline `setSaveError` vs `alert()` vs silence —
+needs a single shared toast/banner."*
+
+- **New `src/components/admin/ui/Toast.tsx`** — `AdminToastProvider` + `useAdminToast` hook
+  with `showError` / `showSuccess` / `showInfo`. Renders bottom-right toast stack, auto-
+  dismisses after 5s, `role="alert"` for errors / `role="status"` for the rest
+  (accessibility), sharp corners + background tone per the design system. Uses Material
+  Symbols icons in line with the rest of the admin panel.
+- **`admin/(protected)/layout.tsx`** wraps every admin page in `AdminToastProvider`, so any
+  client component under the protected shell can call `useAdminToast()` without further
+  setup.
+- **Replaced `alert()` calls** — `AdminCoursesClient` (delete failure) and
+  `AdminDiscountsClient` (save failure) now use `showError`. The discounts client also
+  shows a success toast on save.
+- **`CLAUDE.md`** updated with the going-forward rule: *use the shared toast, never
+  `alert()`; existing inline `setSaveError` banners may stay where they work.*
+
+Existing inline `setSaveError` patterns across other admin clients were not swept here —
+they're working, and the audit only flagged the inconsistency, not the inline pattern
+itself. New admin code uses the toast.
+
+Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass).
+
+---
+
 ## [2.30.1] — 2026-05-23
 
 ### Performance — ISR (`revalidate`) on every public Server Component page

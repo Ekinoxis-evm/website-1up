@@ -172,6 +172,8 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 > **Admin Server Components must use `supabaseAdmin`** (service role key), never `supabase` (anon). RLS policies on tables like `masters` silently filter inactive records from the anon client — admin panels need to see everything. Import: `import { supabaseAdmin } from "@/lib/supabase"`.
 
+> **Admin failure UX: use the shared toast, not `alert()` or silent failure.** The admin `(protected)` layout wraps every page in `AdminToastProvider` (`src/components/admin/ui/Toast.tsx`). In any `"use client"` admin component, call `const { showError, showSuccess, showInfo } = useAdminToast();` and surface every API failure through it. Existing inline `setSaveError` banners can stay where they're working, but new code uses the toast. **Never use `alert()`** — it breaks the design system flow.
+
 ---
 
 ## Database Migrations
