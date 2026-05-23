@@ -1,6 +1,14 @@
-import type { Aliado } from "@/types/database.types";
+// H-1: the banner only renders the logo, name and an optional website link.
+// Typing the prop to exactly that shape stops api_key / api_url from ever being
+// accidentally widened back into the public query — the compiler enforces the
+// narrow select in src/app/(main)/page.tsx.
+type BrandLogo = {
+  name:         string;
+  logo_url:     string | null;
+  website_url:  string | null;
+};
 
-interface Props { logos: Aliado[] }
+interface Props { logos: BrandLogo[] }
 
 export function BrandsBanner({ logos }: Props) {
   if (logos.length === 0) return null;

@@ -31,7 +31,15 @@ export default async function HomePage() {
     supabase.from("game_categories").select("*").order("sort_order"),
     supabase.from("games").select("*").order("sort_order"),
     supabase.from("pass_benefits").select("*").order("sort_order"),
-    supabase.from("aliados").select("*").eq("is_active", true).eq("show_in_banner", true).order("sort_order"),
+    // H-1: explicit column list — never `select("*")` on aliados from the anon client.
+    // api_key, api_url, nit, email are partner-integration secrets and must not ship to
+    // unauthenticated visitors. Only render-time-needed columns leave the database.
+    supabase
+      .from("aliados")
+      .select("id, name, logo_url, website_url, sort_order, show_in_banner")
+      .eq("is_active", true)
+      .eq("show_in_banner", true)
+      .order("sort_order"),
   ]);
 
   const localBusiness = {

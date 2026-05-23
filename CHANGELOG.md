@@ -5,6 +5,50 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.2] — 2026-05-22
+
+### Security
+
+Three 🟠 High findings from the 2026-05-22 audit (`AUDIT.md` → H-1, H-5, H-2) closed.
+
+- **H-1 · `aliados` `select("*")` leaked partner API credentials to every visitor.**
+  `src/app/(main)/page.tsx` was fetching every column on `aliados` from the **anon** Supabase
+  client, so `api_key`, `api_url`, `nit`, and `email` were shipped to every unauthenticated
+  home-page request — visible in the response body and the React Server Component payload.
+  Replaced with an explicit column list (`id, name, logo_url, website_url, sort_order,
+  show_in_banner`). `BrandsBanner`'s props type also tightened to exactly those columns —
+  the compiler now refuses to widen the public query back to the full row.
+  `src/app/app/(protected)/beneficios/page.tsx` was already on an explicit list but still
+  read `api_url`; that column is used server-side only (to compute the `hasPendingApi`
+  boolean) and never serialized to the client, but the select is now commented to make the
+  invariant explicit so a future hand doesn't widen it accidentally.
+- **H-5 · `@privy-io/*` pinned to `"latest"` — supply-chain risk on the auth backbone.**
+  `package.json` had `@privy-io/react-auth: "latest"` and `@privy-io/server-auth: "latest"`,
+  meaning any fresh `npm install` would auto-adopt new releases of the auth SDK — including
+  a compromised one. Pinned to the currently-deployed versions: `react-auth 3.18.0` and
+  `server-auth 1.32.5`. Future upgrades become a deliberate, reviewable PR.
+- **H-2 · 5 admin pages used the anon `supabase` client — silently hid inactive rows.**
+  The `players`, `competitions`, `games`, `floors`, and `discounts` admin pages queried
+  through the anon client, so RLS policies that filter `is_active = false` were silently
+  hiding records the operator needed to reactivate or edit (violation of `CLAUDE.md` Rule:
+  "Admin Server Components MUST use `supabaseAdmin`"). All five switched to `supabaseAdmin`.
+  Verified that none of these pages or their sibling Client Components import
+  `supabaseAdmin` from a `"use client"` boundary — service-role key stays server-side.
+
+Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (70/70 pass).
+
+### Tooling
+
+- **`gh` CLI installed (`brew install gh`, v2.92.0) and authenticated for this machine.**
+  The official GitHub MCP server (`api.githubcopilot.com/mcp`) requires pre-registered
+  OAuth clients and rejects Claude Code's dynamic client registration ("Incompatible auth
+  server" error), so the MCP path is blocked until either side updates. `gh` is the working
+  substitute — persistent keyring auth, full PR/issue/release coverage, callable from any
+  future Claude Code session via plain `Bash`. Documented in `CLAUDE.md` infrastructure
+  table.
+
+---
+
 ## [2.29.1] — 2026-05-22
 
 ### Changed
