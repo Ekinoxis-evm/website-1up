@@ -7,13 +7,13 @@ import type {
   ParticipantType,
   SingleElimLeaderboardProps,
   DoubleElimLeaderboardProps,
-  MatchComponentProps,
 } from "@g-loot/react-tournament-brackets";
 import type {
   Bracket,
   BracketParticipant,
   BracketMatch,
 } from "@/types/database.types";
+import { TournamentMatchCard, TournamentMatchCardTv } from "@/components/torneos/TournamentMatchCard";
 
 const SingleEliminationBracket = dynamic<SingleElimLeaderboardProps>(
   () => import("@g-loot/react-tournament-brackets").then(m => ({ default: m.SingleEliminationBracket })),
@@ -23,10 +23,18 @@ const DoubleEliminationBracket = dynamic<DoubleElimLeaderboardProps>(
   () => import("@g-loot/react-tournament-brackets").then(m => ({ default: m.DoubleEliminationBracket })),
   { ssr: false, loading: () => <BracketSkeleton /> },
 );
-const Match = dynamic<MatchComponentProps>(
-  () => import("@g-loot/react-tournament-brackets").then(m => ({ default: m.Match })),
-  { ssr: false },
-);
+
+// BracketParticipant is augmented with the joined user_profiles fields by
+// `GET /api/tournaments/[slug]/bracket` — we don't redeclare the DB Row type;
+// instead the consumer narrows when it transforms to MatchType.
+type ParticipantWithProfile = BracketParticipant & {
+  user_profiles: {
+    avatar_url: string | null;
+    username:   string | null;
+    nombre:     string | null;
+    apellidos:  string | null;
+  } | null;
+};
 
 // ── State map ────────────────────────────────────────────────
 
@@ -52,7 +60,7 @@ function winnersLabel(round: number, totalRounds: number): string {
 
 function buildMatchType(
   match: BracketMatch,
-  participantMap: Map<number, BracketParticipant>,
+  participantMap: Map<number, ParticipantWithProfile>,
   roundLabel: string,
 ): MatchType {
   const p1 = match.p1_id ? participantMap.get(match.p1_id) : undefined;
@@ -61,7 +69,7 @@ function buildMatchType(
   const isCompleted = match.state === "completed";
 
   function toParty(
-    participant: BracketParticipant | undefined,
+    participant: ParticipantWithProfile | undefined,
     score: number | null,
     isWinner: boolean,
     fallbackId: string,
@@ -75,6 +83,10 @@ function buildMatchType(
       isWinner:   isCompleted && isWinner,
       resultText: isCompleted ? String(score ?? "") : null,
       status:     isCompleted ? "PLAYED" : null,
+      // ─── Extended (consumed by the custom matchComponent) ──────────────
+      avatarUrl:  participant.user_profiles?.avatar_url ?? null,
+      username:   participant.user_profiles?.username   ?? null,
+      eliminated: participant.eliminated,
     };
   }
 
@@ -96,20 +108,30 @@ function buildMatchType(
 
 export interface BracketData {
   bracket:      Bracket;
-  participants: BracketParticipant[];
+  participants: ParticipantWithProfile[];
   matches:      BracketMatch[];
 }
 
 interface Props {
-  data: BracketData;
+  data:  BracketData;
+  /** `tv` = larger boxes + larger typography for venue / TV display.  Default: `regular`. */
+  scale?: "regular" | "tv";
 }
 
 // ── Component ────────────────────────────────────────────────
 
-export function TournamentBracketView({ data }: Props) {
+export function TournamentBracketView({ data, scale = "regular" }: Props) {
   const { bracket, participants, matches } = data;
 
   const participantMap = new Map(participants.map(p => [p.id, p]));
+
+  const matchComponent = scale === "tv" ? TournamentMatchCardTv : TournamentMatchCard;
+
+  // Box dimensions scale with the avatar size in the custom card. TV mode is
+  // significantly bigger so a venue screen can read it from across the room.
+  const options = scale === "tv"
+    ? { style: { width: 460, boxHeight: 200, spaceBetweenColumns: 80, spaceBetweenRows: 32 } }
+    : { style: { width: 280, boxHeight: 120 } };
 
   if (bracket.format === "single_elimination") {
     const wRounds = bracket.rounds_winners;
@@ -121,8 +143,8 @@ export function TournamentBracketView({ data }: Props) {
       <div className="w-full overflow-x-auto">
         <SingleEliminationBracket
           matches={libraryMatches}
-          matchComponent={Match as (props: MatchComponentProps) => React.ReactElement}
-          options={{ style: { width: 220, boxHeight: 72 } }}
+          matchComponent={matchComponent}
+          options={options}
         />
       </div>
     );
@@ -156,8 +178,8 @@ export function TournamentBracketView({ data }: Props) {
     <div className="w-full overflow-x-auto">
       <DoubleEliminationBracket
         matches={{ upper, lower }}
-        matchComponent={Match as (props: MatchComponentProps) => React.ReactElement}
-        options={{ style: { width: 220, boxHeight: 72 } }}
+        matchComponent={matchComponent}
+        options={options}
       />
     </div>
   );

@@ -5,6 +5,60 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.35.0] — 2026-05-23
+
+### Added — TV bracket view + avatar match cards (PR E)
+
+Final piece of the tournament UX overhaul. Two deliverables:
+
+#### 1. Public TV view — `/torneos/[slug]/tv`
+Fullscreen, no chrome, built for a venue screen during a live event.
+
+- New top-level route group `(bare)` — sibling of `(main)`, has its own
+  minimal layout so the TV page inherits no nav / footer. Both
+  `(main)/torneos/[slug]/page.tsx` and `(bare)/torneos/[slug]/tv/page.tsx`
+  coexist cleanly (different URLs, different layout groups).
+- **Layout** — huge tournament title across the top (responsive
+  `clamp(3rem, 6vw, 7rem)` so it scales from a phone preview to a 65" TV),
+  cover image at left, "EN VIVO" badge + last-updated timestamp at right.
+- **Bracket area** — uses the same `TournamentBracketView` component with
+  the new `scale="tv"` prop, which switches to a larger matchComponent
+  (`TournamentMatchCardTv`, 56px avatars, 2xl name typography) and bumps
+  the box dimensions to 460×200 (was 280×120 for the regular page).
+- **Sponsor strip** — bottom band showing sponsor logo + name + the 1UP
+  Gaming Tower wordmark. Hidden when no sponsor is configured.
+- **Live updates** — polls `GET /api/tournaments/[slug]/bracket` every 15s
+  with `cache: "no-store"`. When the cockpit's Bracket tab records a
+  winner, the TV picks up the change next tick. No manual refresh needed.
+- **Holding screens** — "Bracket aún no publicado" before the tournament
+  starts; "Sin conexión / Reintentando…" on transient errors. Polling
+  continues so a transient error self-heals.
+
+#### 2. Avatar-aware bracket match cards
+The deferred avatars-in-bracket-matches work from PR A finally ships.
+
+- **New component** `src/components/torneos/TournamentMatchCard.tsx` —
+  exports two variants from the same factory: `TournamentMatchCard`
+  (regular scale, 32px avatars) and `TournamentMatchCardTv` (TV scale,
+  56px avatars + big typography).
+- **Both consumers wired** — `TournamentBracketView` now defaults to
+  `TournamentMatchCard`; the TV view passes `scale="tv"` to get
+  `TournamentMatchCardTv`. One render path, two scales.
+- **Bracket API extended** — `GET /api/tournaments/[slug]/bracket` now
+  joins `bracket_participants → user_profiles(avatar_url, username,
+  nombre, apellidos)` so every participant carries an avatar through to
+  the bracket view. The detail page's server-side `fetchBracket` got the
+  same join.
+- **Slot rendering** — winner gets `bg-primary-container/15` + filled
+  check icon, loser gets `opacity-40`, TBD slots show a help-circle icon
+  in the avatar position. Score rendered with `tabular-nums` so scores
+  align at any scale.
+
+Verification — `npm run build` clean (TV route registered, 115/115 static
++ 1 dynamic), `npm test --run` 114/114 pass.
+
+---
+
 ## [2.34.0] — 2026-05-23
 
 ### Changed — Tournament cockpit becomes fully embedded tab UI (PR D)
