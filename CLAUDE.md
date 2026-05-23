@@ -75,6 +75,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 |----------|------|---------|
 | `POST /api/recruitment` | Public | Recruitment form submission |
 | `GET\|PUT /api/user/profile` | Privy user | Own profile CRUD |
+| `POST\|DELETE /api/user/avatar` | Privy user | Upload (multipart `file`, JPEG/PNG/WebP, ≤5MB, magic-byte sniffed) or remove the user's avatar. Stored at `users/{user_profile_id}/avatar` in the `images` bucket; updates `user_profiles.avatar_url`. |
 | `POST /api/user/comfenalco/verify` | Privy user | Comfenalco affiliation check |
 | `POST /api/user/aliado/verify` | Privy user | Generic aliado affiliation check |
 | `POST /api/checkout` | Privy user | Creates MP preference + pending enrollment |
@@ -145,7 +146,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `pass_benefits` | title, description |
 | `floor_info` | floor_label, title, description, accent_color, image_url |
 | `recruitment_submissions` | name, email, phone, source |
-| `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, barrio, birth_date (DATE), onboarding_completed_at, referred_by_code, comfenalco_afiliado, verified_aliados[], pass_status (pass_status_enum: never/active/expired — auto-synced by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE; nightly pg_cron job flips active→expired at 04:00 UTC), **wallet_address** (Privy embedded wallet), **auth_provider** (email/google/…), **linked_accounts** (jsonb snapshot of Privy linked accounts), **privy_created_at**, **last_synced_at** — the last 5 captured from Privy by `src/lib/privySync.ts` on onboarding + throttled on profile GET |
+| `user_profiles` | privy_user_id, nombre, apellidos, username (unique nullable), phone_country, phone_number, game_ids[], tipo_documento, numero_documento, barrio, birth_date (DATE), onboarding_completed_at, referred_by_code, comfenalco_afiliado, verified_aliados[], **avatar_url** (Supabase Storage URL — managed by `/api/user/avatar`; null → UI shows the deterministic initials gradient via `<Avatar />`), pass_status (pass_status_enum: never/active/expired — auto-synced by trigger `trg_sync_pass_status` on every `pass_orders` INSERT/UPDATE; nightly pg_cron job flips active→expired at 04:00 UTC), **wallet_address** (Privy embedded wallet), **auth_provider** (email/google/…), **linked_accounts** (jsonb snapshot of Privy linked accounts), **privy_created_at**, **last_synced_at** — the last 5 captured from Privy by `src/lib/privySync.ts` on onboarding + throttled on profile GET |
 | `referral_codes` | code (unique), description, is_active, max_uses, used_count — optional at onboarding (addable later on /app/identidad), admin-managed |
 | `aliados` | name, nit, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active — API integration partners AND visual banner sponsors. `show_in_banner = true` → appears in home marquee. `brand_logos` table was merged here. |
 | `discount_rules` | trigger_type, discount_pct, applies_to, aliado_id FK, is_active, valid_from/until |
@@ -163,7 +164,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `tournament_registrations` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at — UNIQUE (tournament_id, user_profile_id). RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | name, organizer, date, country, city, game_id FK (nullable → games), registration_link, image_url, description, is_active, sort_order — no prizes/registrations/capacity lifecycle |
 | `tournament_results` | tournament_id FK → tournaments (CASCADE), user_profile_id FK → user_profiles (CASCADE), position (1–3), points, awarded_by, prize_status (prize_delivery_status: no_prize/pending/sent — auto-set on INSERT from tournament_prizes), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url — UNIQUE per tournament+position and per tournament+user |
-| `hall_of_fame` | PostgreSQL VIEW: user_profile_id, username, nombre, apellidos, gold_count, silver_count, bronze_count, total_points — ordered by points DESC then gold_count DESC |
+| `hall_of_fame` | PostgreSQL VIEW: user_profile_id, username, nombre, apellidos, gold_count, silver_count, bronze_count, total_points, avatar_url — ordered by points DESC then gold_count DESC |
 | `brackets` | id (bigint PK), tournament_id FK → tournaments (UNIQUE CASCADE), format (bracket_format enum: single_elimination/double_elimination), status (bracket_status enum: draft/published/in_progress/completed), participant_count, rounds_winners, rounds_losers, created_at, updated_at |
 | `bracket_participants` | id (bigint PK), bracket_id FK → brackets (CASCADE), seed (1-based), display_name, user_profile_id FK → user_profiles (nullable), eliminated (bool default false), created_at |
 | `bracket_matches` | id (bigint PK), bracket_id FK → brackets (CASCADE), bracket_side (text: winners/losers/grand_final), round, match_number, p1_id/p2_id FK → bracket_participants (nullable), p1_score/p2_score, winner_id/loser_id FK → bracket_participants, state (match_state enum: pending/ready/in_progress/completed/bye), p1_source/p2_source (slot_source enum: seed/winner_of/loser_of/bye), p1_source_match_id/p2_source_match_id self-ref, next_match_id self-ref (where winner advances), next_match_slot (1 or 2), next_loser_match_id self-ref (DE — where loser drops), next_loser_slot, created_at, updated_at |
@@ -220,6 +221,7 @@ Upload via `/api/admin/upload` → `src/lib/blob.ts` → `supabaseAdmin.storage`
 | `aliados/{id}/cover` | Partner logos and banner sponsor logos (consolidated from brand-logos) |
 | `tournaments/{id}/cover` | Tournament cover images |
 | `site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
+| `users/{user_profile_id}/avatar` | User profile avatar — JPEG/PNG/WebP only, ≤5MB, managed by `/api/user/avatar` |
 | `comprobantes/pending/{privyUserIdHash}-{timestamp}.{ext}` | Payment receipt — temporary path before order ID exists |
 | `comprobantes/{orderId}/receipt.{ext}` | Payment receipt — moved here after order is created (jpg/png/webp/pdf) |
 

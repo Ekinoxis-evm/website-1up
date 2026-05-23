@@ -1762,6 +1762,7 @@ export type Database = {
         Row: {
           apellidos: string | null
           auth_provider: string | null
+          avatar_url: string | null
           barrio: string | null
           birth_date: string | null
           comfenalco_afiliado: boolean | null
@@ -1790,6 +1791,7 @@ export type Database = {
         Insert: {
           apellidos?: string | null
           auth_provider?: string | null
+          avatar_url?: string | null
           barrio?: string | null
           birth_date?: string | null
           comfenalco_afiliado?: boolean | null
@@ -1818,6 +1820,7 @@ export type Database = {
         Update: {
           apellidos?: string | null
           auth_provider?: string | null
+          avatar_url?: string | null
           barrio?: string | null
           birth_date?: string | null
           comfenalco_afiliado?: boolean | null

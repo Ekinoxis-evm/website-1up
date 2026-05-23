@@ -5,6 +5,58 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.31.0] — 2026-05-23
+
+### Added — User avatars (PR A of the tournament UX overhaul)
+
+First piece of the multi-PR tournament management rework. Users can now upload a
+profile photo — shown anywhere a user appears publicly (Hall of Fame, admin lists,
+top app bar). When no avatar is set, the UI renders a deterministic initials-on-
+gradient fallback so the surface always looks finished.
+
+- **DB** — `user_profiles.avatar_url` (text, nullable). `hall_of_fame` view rebuilt
+  to expose `avatar_url` alongside the medal counts.
+- **Storage** — new `users/{user_profile_id}/avatar` path under the existing `images`
+  bucket (no extension; upsert overwrites prior uploads → zero orphan files).
+  `ImageFolder` type extended with `"users"`.
+- **API** — `POST | DELETE /api/user/avatar` (Privy user auth, 5 MB cap, JPEG / PNG /
+  WebP only). Magic-byte sniffed server-side to defeat client-set `file.type` lies.
+  Cache-busts the new public URL with `?t=<timestamp>` so surfaces that cached the
+  old URL refresh immediately. Revalidates `/torneos`, `/torneos/[slug]`, `/team`.
+- **`/api/user/profile` GET** already returns `avatar_url` via `select("*")` — no
+  changes needed. PUT intentionally unchanged; uploads/removals go through the
+  dedicated `/api/user/avatar` route which also handles the storage object.
+- **Component** — `src/components/ui/Avatar.tsx`: shared, deterministic, no
+  Supabase deps. Six brand-adjacent gradients; same name always hashes to the same
+  one across every surface. Sizes `xs | sm | md | lg | xl | 2xl`; `square` prop for
+  the project's sharp-corner design rule.
+- **UI surfaces wired**:
+  - `/app/ajustes` Identidad tab — new "Foto de perfil" section at top with picker,
+    preview, "Cambiar" / "Eliminar" buttons, inline status messages.
+  - `/torneos` Hall of Fame list — avatar next to medal.
+  - `/admin/tournament-registrations` — avatar in player column (page query now
+    selects `avatar_url`).
+  - `/admin/user-profiles` table + detail modal header — avatar in row and large
+    avatar in the modal header.
+  - Top app bar "Mi cuenta" link — avatar replaces the generic `account_circle`
+    icon. Lazy-fetched from `/api/user/profile` on auth (progressive enhancement).
+- **Test coverage** — `sniffAvatarMime` extracted to `src/lib/imageSniff.ts` (pure,
+  no Supabase deps) and re-exported from `blob.ts`. New `sniffAvatarMime.test.ts`
+  with 7 cases covering JPEG / PNG / WebP detection, partial-signature attacks,
+  PDF rejection (distinct from the comprobante sniff which accepts PDF), and
+  ASCII-masquerading-as-image. 107/107 tests passing (was 100/100).
+
+**Deferred to follow-ups** (per the build-order plan A → B → C → D):
+- Onboarding-wizard avatar step (skippable) — will land alongside the wizard
+  refactor in a small fast-follow.
+- Avatars inside bracket match cards — requires a custom matchComponent for the
+  `@g-loot` library; cleanest to do as part of PR D (TV view), which already
+  needs a custom render to scale matches across a TV screen.
+
+Build clean, 107/107 tests pass.
+
+---
+
 ## [2.30.5] — 2026-05-23
 
 ### Docs — post-audit sync sweep

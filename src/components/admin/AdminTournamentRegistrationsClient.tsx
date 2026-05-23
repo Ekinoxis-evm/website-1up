@@ -4,9 +4,10 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { TournamentRegistration } from "@/types/database.types";
+import { Avatar } from "@/components/ui/Avatar";
 
 type RegWithRelations = TournamentRegistration & {
-  user_profiles: { nombre: string | null; apellidos: string | null; username: string | null; numero_documento: string | null } | null;
+  user_profiles: { nombre: string | null; apellidos: string | null; username: string | null; numero_documento: string | null; avatar_url: string | null } | null;
   tournaments:   { name: string; date: string | null } | null;
 };
 
@@ -164,12 +165,22 @@ export function AdminTournamentRegistrationsClient({ registrations, tournaments,
             {filtered.map((r) => (
               <tr key={r.id} className="even:bg-surface-container-low">
                 <td className="px-4 py-3">
-                  <p className="font-headline font-bold text-on-surface">
-                    {r.user_profiles?.nombre} {r.user_profiles?.apellidos}
-                  </p>
-                  {r.user_profiles?.username && (
-                    <p className="font-body text-xs text-outline">@{r.user_profiles.username}</p>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      src={r.user_profiles?.avatar_url ?? null}
+                      name={[r.user_profiles?.nombre, r.user_profiles?.apellidos].filter(Boolean).join(" ") || r.user_profiles?.username || null}
+                      size="sm"
+                      square
+                    />
+                    <div className="min-w-0">
+                      <p className="font-headline font-bold text-on-surface truncate">
+                        {r.user_profiles?.nombre} {r.user_profiles?.apellidos}
+                      </p>
+                      {r.user_profiles?.username && (
+                        <p className="font-body text-xs text-outline truncate">@{r.user_profiles.username}</p>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">{r.tournaments?.name ?? "—"}</td>
                 <td className="px-4 py-3 font-body text-on-surface/70 whitespace-nowrap">

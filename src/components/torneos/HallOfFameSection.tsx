@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase";
+import { Avatar } from "@/components/ui/Avatar";
 
 type HofEntry = {
   user_profile_id: number;
   username:        string | null;
   nombre:          string | null;
   apellidos:       string | null;
+  avatar_url:      string | null;
   gold_count:      number;
   silver_count:    number;
   bronze_count:    number;
@@ -54,6 +56,8 @@ export async function HallOfFameSection() {
                 <div className="w-8 flex justify-center shrink-0">
                   <Medal position={rank} />
                 </div>
+
+                <Avatar src={entry.avatar_url} name={name} size="md" square className="shrink-0" />
 
                 <div className="flex-1 min-w-0">
                   <p className="font-headline font-black text-base uppercase tracking-tight text-on-surface truncate">

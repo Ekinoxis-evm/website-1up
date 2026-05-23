@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { Avatar } from "@/components/ui/Avatar";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 
@@ -18,12 +20,38 @@ const NAV_LINKS = [
 
 export function TopAppBar() {
   const pathname = usePathname();
-  const { logout, authenticated, ready, login, user } = usePrivy();
+  const { logout, authenticated, ready, login, user, getAccessToken } = usePrivy();
 
   const displayName =
     user?.google?.name ??
     user?.email?.address ??
     user?.linkedAccounts?.[0]?.type ?? null;
+
+  const [avatarUrl, setAvatarUrl]   = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+
+  // Lazy-fetch the user's avatar + display name from the profile table.
+  // Pure progressive enhancement — Privy already gives us a working displayName.
+  useEffect(() => {
+    if (!authenticated) { setAvatarUrl(null); setProfileName(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const res = await fetch("/api/user/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setAvatarUrl(data.avatar_url ?? null);
+        const name = [data.nombre, data.apellidos].filter(Boolean).join(" ") || data.username || null;
+        setProfileName(name);
+      } catch { /* silent — fallback to Privy displayName */ }
+    })();
+    return () => { cancelled = true; };
+  }, [authenticated, getAccessToken]);
 
   return (
     <header className="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 glass-panel">
@@ -68,14 +96,14 @@ export function TopAppBar() {
               {/* Go to app */}
               <a
                 href={APP_URL}
-                className="flex items-center gap-1.5 font-headline font-bold uppercase text-sm transition-colors text-on-background/70 hover:text-primary"
+                className="flex items-center gap-2 font-headline font-bold uppercase text-sm transition-colors text-on-background/70 hover:text-primary"
               >
-                <span
-                  className="material-symbols-outlined text-xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  account_circle
-                </span>
+                <Avatar
+                  src={avatarUrl}
+                  name={profileName ?? displayName}
+                  size="sm"
+                  square
+                />
                 <span className="hidden sm:block">Mi cuenta</span>
               </a>
 
