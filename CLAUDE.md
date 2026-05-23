@@ -9,7 +9,7 @@ Built and maintained by **Ekinoxis** — stack: Next.js 16 App Router, TypeScrip
 
 1. **0px border-radius.** `rounded-*` is banned except `rounded-full`. Sharp corners everywhere.
 2. **No 1px dividers.** Never `<hr>`, `border-b`, or `border-t` for section separation — use background color shifts.
-3. **Public pages = pure Tailwind.** No shadcn imports in `src/components/{home,tower,team,academia,recreativo,juegos}/`.
+3. **Public pages = pure Tailwind.** No shadcn imports in `src/components/{home,tower,team,academia,recreativo,juegos,masters,torneos}/`.
 4. **Skew pattern.** Outer element: `className="skew-fix"`. Inner text: `className="block skew-content"`.
 5. **Glass nav.** TopAppBar always uses `glass-panel` class — never opaque.
 6. **Auth on every admin API route.** `verifyToken` + `isAdmin` before any DB operation. No exceptions.
@@ -53,8 +53,10 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/torneos/[slug]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin. Numeric ID fallback for old QR codes. |
 | `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + token/bank checkout (MercadoPago not yet active) |
 | `/academia/[courseId]` | `(main)` | Public course preview — hero card (image, master, stats, price), playable intro video (CF Stream signed token via `/api/public/course-intro-token`), full module + session list with lock icons, INSCRIBIRSE CTA. `generateMetadata` with per-course OG. |
-| `/recreativo` | `(main)` | Casual gaming |
-| `/perfil` | `(main)` | Legacy — redirects to app subdomain |
+| `/recreativo` | `(main)` | Jornadas recreativas (corporate gaming days). CTA URL comes from `social_links` (whatsapp) with a `/torneos#recruitment` fallback. |
+| `/marketplace` | `(main)` | Marketplace landing — features + CTA |
+| `/perfil` | `(main)` | Legacy — `permanentRedirect` to `app.1upesports.org` (noindex) |
+| `/offline` | top-level | PWA offline fallback page (no `(main)` layout — bare shell) |
 | `app/login` | `app/` | Public login page — `safeRedirectTarget()` allowlist, redirects back to `?redirect=` URL after auth |
 | `app/onboarding` | `app/` | Mandatory first-time wizard (outside `(protected)` to avoid circular redirect) — own auth check |
 | `app/(protected)/*` | `app/` | Auth-gated user shell (wallet, mis-torneos, beneficios, pass, academia, ajustes) — AppSidebar on desktop, AppBottomNav on mobile. Layout redirects unonboarded users to `/app/onboarding`. |

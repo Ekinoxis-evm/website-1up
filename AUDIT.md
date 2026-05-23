@@ -1,6 +1,6 @@
 # Website Audit — 1UP Gaming Tower (`website/`)
 
-**Audited:** 2026-05-22 · **Version:** 2.29.6 · **Method:** six parallel deep-dives —
+**Audited:** 2026-05-22 · **Version:** 2.29.7 · **Method:** six parallel deep-dives —
 public web, user portal, admin panel, database, payments, security.
 
 > **2026-05-22 patch · H-batch 1 — `fix/audit-h-batch-1`:** three 🟠 High findings
@@ -55,7 +55,7 @@ guards** — all 36 admin routes are `checkAdmin`-gated, all user routes verify 
 |---|---|---|---|
 | 🔴 Critical | 3 | ✅ **all fixed in 2.29.1** | ~~Wallet IDOR~~ · ~~pass-transfer hijack~~ · ~~webhook idempotency~~ |
 | 🟠 High | 13 | **all 13 closed (2.29.2 → 2.29.6)** ✅ | ~~all struck~~ |
-| 🟡 Medium | ~22 | 2 fixed in 2.29.1 | input validation · revalidatePath gaps (tournaments fixed) · 1px-divider violations · error-handling gaps (registrations PATCH fixed) |
+| 🟡 Medium | ~22 | **7 fixed (through 2.29.7)** | ~~1px-divider violations~~ · ~~tournament-flow revalidatePath gaps~~ · ~~registrations PATCH res.ok~~ · ~~`/torneos/[slug]/checkin` noindex~~ · ~~placeholder WhatsApp number~~ · ~~route map drift~~ · ~~Rule 3 folder list~~ · input validation · OG images · `next/image` migration · ISR strategy · `any[]` types · admin UX consistency · payments TOCTOU · comprobante MIME · webhook freshness · CF JWT accessRules · more |
 | 🔵 Low / Info | many | open | see per-area sections |
 
 > **Correction to the workspace `../AUDIT.md`:** the deeper database dive found
@@ -124,21 +124,27 @@ active in production — but the code is live.*
 
 ## Area 1 · Public Web — `app/(main)/**` *(owner: web-maintainer)*
 
-**Design system:** mostly clean — 0px-radius rule fully respected. Two real 1px-divider
-violations: `CourseCheckoutWizard.tsx:231` (`border-b`), `MasterCard.tsx:99` (`border-t`).
-CLAUDE.md Rule 3's folder list omits `masters/` — add it.
+**Design system:** mostly clean — 0px-radius rule fully respected. ~~Two real 1px-divider
+violations: `CourseCheckoutWizard.tsx:231` (`border-b`), `MasterCard.tsx:99` (`border-t`).~~
+✅ both fixed in 2.29.7. ~~CLAUDE.md Rule 3's folder list omits `masters/`~~ ✅ added in 2.29.7
+(also added `torneos/`).
 
-**SEO:** `sitemap.ts` missing tournament detail pages (H-11). `/torneos/[slug]/checkin` has no
-metadata — should be `noindex`. `/perfil` is indexable but is an auth page. Home/section OG
-images are 512² squares declared as `summary_large_image` — should be 1200×630.
+**SEO:** ~~`sitemap.ts` missing tournament detail pages (H-11)~~ ✅ 2.29.5.
+~~`/torneos/[slug]/checkin` has no metadata — should be `noindex`.~~ ✅ 2.29.7 (`noindex` +
+title). ~~`/perfil` is indexable but is an auth page.~~ ✅ 2.29.5 (server redirect + `noindex`).
+**Open:** home/section OG images are 512² squares declared as `summary_large_image` —
+should be 1200×630.
 
-**Performance:** raw `<img>` everywhere (`next/image` used only in `TopAppBar`) — content
-images (`PlayerCard`, `CourseCatalog`, `FloorBreakdown`, tournament covers) should use
-`next/image` with `remotePatterns`. No `revalidate` on any page — ISR effectively unused.
+**Performance:** **Open** — raw `<img>` everywhere (`next/image` used only in `TopAppBar`);
+content images (`PlayerCard`, `CourseCatalog`, `FloorBreakdown`, tournament covers) should
+use `next/image` with `remotePatterns`. No `revalidate` on any page — ISR effectively unused.
 
-**Correctness:** `recreativo/page.tsx:77` ships a **placeholder WhatsApp number**
-(`wa.me/57300000000`). `/offline` route directory exists with no `page.tsx` — dead route.
-`/marketplace` and `/offline` are absent from the CLAUDE.md route map (doc drift).
+**Correctness:** ~~`recreativo/page.tsx:77` ships a **placeholder WhatsApp number**
+(`wa.me/57300000000`).~~ ✅ 2.29.7 — sourced from `social_links` with `/torneos#recruitment`
+fallback. ~~`/offline` route directory exists with no `page.tsx` — dead route.~~ ✅ 2.29.7 —
+audit note was incorrect; `src/app/offline/page.tsx` exists and works as a PWA fallback.
+~~`/marketplace` and `/offline` are absent from the CLAUDE.md route map (doc drift).~~ ✅
+2.29.7 — both added.
 
 ## Area 2 · User Portal — `app/app/**` *(owner: portal-maintainer)*
 

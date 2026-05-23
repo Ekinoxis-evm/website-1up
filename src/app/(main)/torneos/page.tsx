@@ -91,7 +91,10 @@ export default async function TorneosPage() {
         games={allGames ?? []}
       />
       {(competitions ?? []).length > 0 && <HallOfFame competitions={competitions ?? []} />}
-      <RecruitmentForm categories={categories ?? []} games={allGames ?? []} source="torneos" />
+      {/* `#recruitment` anchor — see `/recreativo` CTA fallback (M-A1.7). */}
+      <div id="recruitment">
+        <RecruitmentForm categories={categories ?? []} games={allGames ?? []} source="torneos" />
+      </div>
     </>
   );
 }

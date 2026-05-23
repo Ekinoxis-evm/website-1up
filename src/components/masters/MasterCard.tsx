@@ -96,7 +96,9 @@ export function MasterCard({ master, courses }: Props) {
 
         {/* Courses */}
         {courses.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-surface-container-highest">
+          // M-A1.1: was `border-t border-surface-container-highest` — Rule 2 forbids
+          // 1px dividers. Background tint + extra top padding gives the same visual cue.
+          <div className="mt-4 -mx-4 px-4 pt-4 bg-surface-container-highest/40">
             <p className="font-headline font-black text-[9px] uppercase tracking-widest text-outline mb-2">
               Cursos
             </p>

@@ -3,6 +3,13 @@ import { notFound } from "next/navigation";
 import { TournamentCheckinClient } from "@/components/torneos/TournamentCheckinClient";
 import type { Tournament } from "@/types/database.types";
 
+// M-A1.3: check-in is a single-purpose authenticated action page. It must
+// never appear in search results and Twitter/OG previews are meaningless here.
+export const metadata = {
+  title:  "Check-in — 1UP Gaming Tower",
+  robots: { index: false, follow: false },
+};
+
 type TRow = { id: number; name: string; status: string; date: string | null; is_active: boolean };
 
 export default async function TournamentCheckinPage(
