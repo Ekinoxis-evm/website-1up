@@ -184,6 +184,18 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 
 After applying, confirm `success: true` before moving on.
 
+**Schema baseline.** The full live schema is committed at
+`supabase/migrations/00000000000000_baseline.sql` (audit H-7). It's idempotent — running it
+on the live DB is a no-op; running it on a fresh DB produces the live state. After applying
+any new DDL migration via the MCP, also commit a matching `.sql` file under
+`supabase/migrations/` named `YYYYMMDDHHMMSS_<snake_case_name>.sql` so the repo and the
+remote stay in sync (the live `supabase_migrations.schema_migrations` table is the source
+of truth on timestamps — `mcp__plugin_supabase_supabase__list_migrations` shows them).
+
+Local dev: `supabase start` will spin up a Postgres + Auth + Studio + Storage replica that
+matches production (configured in `supabase/config.toml`). Requires the Supabase CLI:
+`brew install supabase/tap/supabase`.
+
 ---
 
 ## Image Storage
