@@ -1,14 +1,18 @@
-// Unified admin cockpit for a single tournament.
+// Unified admin cockpit for a single tournament — server-component loader.
 //
-// Loads everything an admin needs to manage one tournament in one place:
-// the tournament row (with prizes + game), registration counts, bracket
-// status, and the final-podium rows. Renders the cockpit client component
-// which owns the UI shell (header, actions, tabs/cards).
+// Parallel-loads everything the cockpit needs in one round trip so the four
+// embedded tabs (Info / Inscripciones / Bracket / Premios) render with full
+// data on first paint:
+//   • tournament row + game + prizes
+//   • full registration list (avatars joined) — the Inscripciones tab embeds
+//     `AdminTournamentRegistrationsPanel` and uses this for instant render
+//   • bracket meta — the Bracket tab's panel auto-fetches richer detail on
+//     mount; this lookup just powers the cockpit header pill
+//   • tournament_results (with avatars) — Premios tab inputs
 //
-// The existing /admin/torneos list and the per-action pages
-// (tournament-registrations, tournament-brackets, tournament-results) stay
-// fully intact as deep-link targets — the cockpit doesn't replace them, it
-// orchestrates them.
+// The standalone admin pages (/admin/tournament-registrations, etc.) stay
+// untouched as the global filter views; the cockpit reuses the same data
+// shape but scoped to one tournament for instant inline editing.
 
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -29,28 +33,16 @@ export default async function AdminTournamentManagePage({
 
   if (!tournament) notFound();
 
-  // Parallelize the rest — none of these depend on each other.
   const [
-    { count: regCount },
-    { count: registeredCount },
-    { count: attendedCount },
+    { data: registrations },
     { data: bracket },
     { data: results },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
-      .select("*", { count: "exact", head: true })
-      .eq("tournament_id", tournament.id),
-    supabaseAdmin
-      .from("tournament_registrations")
-      .select("*", { count: "exact", head: true })
+      .select("*, user_profiles(nombre, apellidos, username, numero_documento, avatar_url)")
       .eq("tournament_id", tournament.id)
-      .eq("status", "registered"),
-    supabaseAdmin
-      .from("tournament_registrations")
-      .select("*", { count: "exact", head: true })
-      .eq("tournament_id", tournament.id)
-      .eq("status", "attended"),
+      .order("registered_at", { ascending: false }),
     supabaseAdmin
       .from("brackets")
       .select("id, status, format, participant_count")
@@ -66,11 +58,7 @@ export default async function AdminTournamentManagePage({
   return (
     <AdminTournamentCockpit
       tournament={tournament}
-      counts={{
-        total:      regCount      ?? 0,
-        registered: registeredCount ?? 0,
-        attended:   attendedCount  ?? 0,
-      }}
+      registrations={registrations ?? []}
       bracket={bracket ?? null}
       results={results ?? []}
     />
