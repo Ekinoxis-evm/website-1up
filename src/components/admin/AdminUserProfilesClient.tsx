@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import type { UserProfile } from "@/types/database.types";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface Props {
   profiles: UserProfile[];
@@ -82,10 +83,20 @@ export function AdminUserProfilesClient({ profiles, gameNames }: Props) {
                 className="border-t border-surface-container-high bg-surface-container hover:bg-surface-container-high/60 transition-colors cursor-pointer"
               >
                 <td className={`${TD}`}>
-                  <p className="font-body text-sm text-on-background">
-                    {[p.nombre, p.apellidos].filter(Boolean).join(" ") || "—"}
-                  </p>
-                  {p.username && <p className="font-body text-[10px] text-outline">@{p.username}</p>}
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      src={p.avatar_url}
+                      name={[p.nombre, p.apellidos].filter(Boolean).join(" ") || p.username || p.email || null}
+                      size="sm"
+                      square
+                    />
+                    <div className="min-w-0">
+                      <p className="font-body text-sm text-on-background truncate">
+                        {[p.nombre, p.apellidos].filter(Boolean).join(" ") || "—"}
+                      </p>
+                      {p.username && <p className="font-body text-[10px] text-outline truncate">@{p.username}</p>}
+                    </div>
+                  </div>
                 </td>
                 <td className={`${TD} font-body text-sm text-on-background/80`}>{p.email ?? "—"}</td>
                 <td className={`${TD} font-mono text-xs text-on-background/60`}>
@@ -202,11 +213,20 @@ function PlayerDetailModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high sticky top-0 z-10">
-          <div>
-            <h2 className="font-headline font-black text-xl uppercase tracking-tighter">{fullName}</h2>
-            <p className="font-body text-[11px] text-outline">
-              {profile.username ? `@${profile.username} · ` : ""}ID #{profile.id}
-            </p>
+          <div className="flex items-center gap-4 min-w-0">
+            <Avatar
+              src={profile.avatar_url}
+              name={fullName}
+              size="lg"
+              square
+              className="shrink-0"
+            />
+            <div className="min-w-0">
+              <h2 className="font-headline font-black text-xl uppercase tracking-tighter truncate">{fullName}</h2>
+              <p className="font-body text-[11px] text-outline">
+                {profile.username ? `@${profile.username} · ` : ""}ID #{profile.id}
+              </p>
+            </div>
           </div>
           <button onClick={onClose} className="text-outline hover:text-on-surface">
             <span className="material-symbols-outlined">close</span>

@@ -10,7 +10,7 @@ export default async function AdminTournamentRegistrationsPage({
   const [{ data: registrations }, { data: tournaments }] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
-      .select("*, user_profiles(nombre, apellidos, username, numero_documento), tournaments(name, date)")
+      .select("*, user_profiles(nombre, apellidos, username, numero_documento, avatar_url), tournaments(name, date)")
       .order("registered_at", { ascending: false }),
     supabaseAdmin
       .from("tournaments")

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { Avatar } from "@/components/ui/Avatar";
 
 type Game = { id: number; name: string };
 
@@ -17,6 +18,7 @@ interface UserProfile {
   barrio: string | null;
   birth_date: string | null;
   referred_by_code: string | null;
+  avatar_url: string | null;
 }
 
 const MONTHS = [
@@ -111,6 +113,12 @@ export function IdentidadTab({ games = [] }: Props) {
     null;
   const [loading, setLoading] = useState(true);
 
+  // Section state — avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarStatus, setAvatarStatus] = useState<SectionStatus>("idle");
+  const [avatarMessage, setAvatarMessage] = useState("");
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
   // Section state — personal
   const [nombre, setNombre] = useState("");
   const [apellidos, setApellidos] = useState("");
@@ -171,6 +179,7 @@ export function IdentidadTab({ games = [] }: Props) {
         setReferredByCode(data.referred_by_code ?? null);
         setTipoDoc(data.tipo_documento ?? "CC");
         setNumDoc(data.numero_documento ?? "");
+        setAvatarUrl(data.avatar_url ?? null);
       }
     } finally {
       setLoading(false);
@@ -199,6 +208,59 @@ export function IdentidadTab({ games = [] }: Props) {
     setSelectedGames((prev) =>
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
+  }
+
+  async function handleAvatarUpload(file: File) {
+    setAvatarStatus("saving");
+    setAvatarMessage("");
+    try {
+      const token = await getAccessToken();
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAvatarMessage(data.error ?? "Error al subir la imagen.");
+        setAvatarStatus("error");
+        return;
+      }
+      setAvatarUrl(data.avatarUrl);
+      setAvatarMessage("Avatar actualizado.");
+      setAvatarStatus("success");
+    } catch {
+      setAvatarMessage("Error de red. Intenta nuevamente.");
+      setAvatarStatus("error");
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarStatus("saving");
+    setAvatarMessage("");
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/user/avatar", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAvatarMessage(data.error ?? "Error al eliminar.");
+        setAvatarStatus("error");
+        return;
+      }
+      setAvatarUrl(null);
+      setAvatarMessage("Avatar eliminado.");
+      setAvatarStatus("success");
+    } catch {
+      setAvatarMessage("Error de red. Intenta nuevamente.");
+      setAvatarStatus("error");
+    }
   }
 
   const usernameError =
@@ -239,6 +301,64 @@ export function IdentidadTab({ games = [] }: Props) {
           <p className="font-body text-xs text-on-surface/30 mt-2">
             Este es el correo vinculado a tu cuenta. No se puede cambiar desde aquí.
           </p>
+        </div>
+      </div>
+
+      {/* ── Foto de perfil ──────────────────────────────────────── */}
+      <div className="bg-surface-container p-6">
+        <h2 className="font-headline font-black text-lg uppercase tracking-tighter mb-1">
+          FOTO DE PERFIL
+        </h2>
+        <div className="h-0.5 w-12 bg-primary-container mb-5" />
+
+        <div className="flex items-center gap-5">
+          <Avatar src={avatarUrl} name={[nombre, apellidos].filter(Boolean).join(" ") || username || null} size="2xl" square />
+          <div className="flex-1 space-y-3">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleAvatarUpload(f);
+              }}
+              className="hidden"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarStatus === "saving"}
+                className="bg-primary-container text-white font-headline font-black px-4 py-2 text-xs uppercase tracking-tight disabled:opacity-40 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">photo_camera</span>
+                {avatarUrl ? "CAMBIAR FOTO" : "SUBIR FOTO"}
+              </button>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={handleAvatarRemove}
+                  disabled={avatarStatus === "saving"}
+                  className="bg-surface-container-high text-on-surface font-headline font-black px-4 py-2 text-xs uppercase tracking-tight disabled:opacity-40 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                  ELIMINAR
+                </button>
+              )}
+            </div>
+            <p className="font-body text-xs text-on-surface/40">
+              JPG, PNG o WebP. Máx 5 MB. Cuadrada se ve mejor.
+            </p>
+            {avatarMessage && (
+              <p
+                className={`font-headline text-xs uppercase tracking-tight ${
+                  avatarStatus === "error" ? "text-error" : "text-primary-container"
+                }`}
+              >
+                {avatarMessage}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
