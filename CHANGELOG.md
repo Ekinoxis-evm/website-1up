@@ -5,6 +5,49 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.34.0] — 2026-05-23
+
+### Changed — Tournament cockpit becomes fully embedded tab UI (PR D)
+
+PR C shipped the cockpit shell with launcher cards that deep-linked to the
+existing admin pages. PR D delivers what the original brief asked for: every
+tournament concern is **embedded as a tab inside the cockpit**, no
+context-switching required. The cockpit is now the single place an admin
+opens to run a tournament end-to-end.
+
+- **4 tabs, all inline:**
+  | Tab | What lives there | Source |
+  |---|---|---|
+  | **Información** | Read-only summary (slug, sponsor, visibility, bracket state, descripción) + configured prizes + deep-link to the full edit modal | New `InfoTab` inside the cockpit |
+  | **Inscripciones** | Pre-filtered registration list (avatars + statuses), status-filter chips, status-update actions (ASISTIÓ / NO / REVERTIR), CSV export | New `AdminTournamentRegistrationsPanel` (~190 lines) |
+  | **Bracket** | Full bracket editor for this tournament — roster picker, format select, "Crear / Regenerar / Iniciar / Eliminar", match grid with click-to-pick winner and per-match undo | New `AdminTournamentBracketPanel` extracted from `AdminTournamentBracketsClient` (~480 lines) |
+  | **Premios** | Podium of 1°/2°/3° with avatars + prize info + delivery status, "Asignar ganador" picker (lists registered/attended participants, hides those already on podium), "Marcar entregado" modal (tx_hash + comprobante URL), "Revertir" | New `AdminTournamentResultsPanel` (~330 lines) |
+
+- **Active tab persists in URL hash** (`#info` / `#inscripciones` / `#bracket` /
+  `#premios`) so refresh, back-button, and share-links work naturally. An
+  admin can send a colleague a link directly to the bracket tab.
+
+- **Auto-podium feedback loop closes** — PR B already auto-fills
+  `tournament_results` on bracket completion. The new Premios tab is where
+  the admin sees those auto-filled rows and registers prize delivery, all
+  inline.
+
+- **Bracket admin (`/admin/tournament-brackets`) refactored** — its
+  per-tournament editor (~440 lines of state + render) is now the new
+  `AdminTournamentBracketPanel`. The wrapper page becomes ~60 lines: a
+  tournament selector + the panel. Same UI, same behavior; just reusable.
+
+- **Standalone admin pages stay** — `/admin/tournament-registrations`
+  (global filter view), `/admin/tournament-brackets` (cross-tournament
+  switcher), `/admin/tournament-results` (full detail editor). These are
+  unaffected by PR D; the cockpit references them when an admin needs
+  features outside the cockpit's scope (cross-tournament work).
+
+Verification — `npm run build` clean (115/115 pages), `npm test --run`
+114/114 pass.
+
+---
+
 ## [2.33.0] — 2026-05-23
 
 ### Added — Unified admin tournament cockpit `/admin/torneos/[slug]/manage` (PR C)
