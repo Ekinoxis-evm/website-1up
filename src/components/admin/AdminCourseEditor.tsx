@@ -330,8 +330,9 @@ export function AdminCourseEditor({ course, masters, initialModules, initialSess
         </span>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-surface-container-high">
+      {/* Tabs — M-A3.x: outer `border-b` removed (Rule 2). The active tab's
+          own `border-b-2` indicator is the only visual separator now. */}
+      <div className="flex">
         {(["info", "contenido"] as const).map(t => (
           <button
             key={t}

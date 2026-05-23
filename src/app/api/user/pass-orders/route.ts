@@ -262,7 +262,7 @@ async function handleBankOrder(
   }
 
   revalidatePath("/app/pass");
-  revalidatePath("/admin/pass-bank-orders");
+  revalidatePath("/admin/pass-orders");
 
   if (email) {
     const { data: bankAccount } = await supabaseAdmin

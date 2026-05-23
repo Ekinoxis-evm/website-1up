@@ -348,7 +348,7 @@ export async function sendPassBankEmails(opts: {
       html: `
         <p><strong>Pass #${orderId}</strong> solicitado vía banco por <strong>${userName}</strong> (${userEmail})</p>
         <p>${tokenAmount.toLocaleString()} $1UP · ${durationDays} días · Banco: ${bankName}</p>
-        <p><a href="https://admin.1upesports.org/pass-bank-orders">Revisar en admin →</a></p>
+        <p><a href="https://admin.1upesports.org/pass-orders">Revisar en admin →</a></p>
       `,
     }),
   ]);

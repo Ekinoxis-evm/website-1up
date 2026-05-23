@@ -5,6 +5,45 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.9] — 2026-05-23
+
+### Fixed (audit Mediums — Admin Panel batch)
+
+- **revalidatePath gaps closed.**
+  - `PATCH /api/admin/tournament-results` was missing `revalidatePath("/team")` — when a
+    result's points/position/prize state changed, the public hall-of-fame on `/team` was
+    stale until the next deploy. Added.
+  - `POST` / `PATCH /api/admin/pass-orders` and `POST /api/user/pass-orders` were
+    revalidating `/admin/pass-bank-orders` — a dead redirect-only stub with no
+    content to revalidate. All three call sites now revalidate `/admin/pass-orders`,
+    where the page actually lives. The same dead URL in the admin notification email
+    (`src/lib/email.ts:351`) was also corrected.
+- **Dead pages removed.**
+  - `/admin/pass-bank-orders` (redirect-only stub) deleted — every inbound reference now
+    targets `/admin/pass-orders` directly.
+  - `/admin/academia-content` deleted (page + client component + `/api/admin/academia-content`
+    route). The `academia_content` table is documented as `DEPRECATED — read-only` in
+    `CLAUDE.md`; the admin route was an orphan (reachable by URL, not in the sidebar) that
+    let an operator write to a table no one reads anymore. Legacy data stays in the DB for
+    the legacy `app/(protected)/academia/page.tsx` reader.
+- **Modal-header 1px-divider violations.** Three admin modals/tabs violated `CLAUDE.md`
+  Rule 2 (no 1px dividers):
+  - `AdminReferralCodesClient.tsx` "Nuevo Código" modal header → background-tone shift
+  - `Admin1PassClient.tsx` "Nuevo Beneficio" modal header → background-tone shift
+  - `AdminCourseEditor.tsx` tab strip outer `border-b` → removed; the active tab's own
+    `border-b-2` indicator stands alone.
+
+### Deferred for a focused follow-up PR
+
+- **Inconsistent failure UX in admin clients** (inline `setSaveError` vs `alert()` vs
+  silence). This is opinionated — needs a single shared toast/banner component instead of
+  patching call-by-call. Tracked as an Area 3 follow-up.
+
+Verified: `npm run build` (114 routes — 3 dead routes removed, zero errors),
+`npm run test:run` (98/98 pass).
+
+---
+
 ## [2.29.8] — 2026-05-22
 
 ### Fixed (audit Mediums — User Portal batch)
