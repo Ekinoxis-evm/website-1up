@@ -17,12 +17,16 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 |-------|-----------|
 | Framework | Next.js 16 (App Router, TypeScript, Turbopack) |
 | Styling | Tailwind CSS v3 — Neo-Brutalist design system |
-| Auth | Privy (`@privy-io/react-auth` + `@privy-io/server-auth`) |
-| Database | Supabase (`@supabase/supabase-js`) |
-| File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private) + `course-docs` bucket (private, 25MB, session documents) |
-| Video Streaming | Cloudflare Stream — gated playback via signed RS256 JWTs (1h), direct upload from admin browser |
-| Payments | MercadoPago (`mercadopago` SDK v2) |
+| Auth | Privy (`@privy-io/react-auth 3.18.0` + `@privy-io/server-auth 1.32.5`) — exact-pinned, `appId` claim asserted on every verify |
+| Database | Supabase (`@supabase/supabase-js`) — full schema versioned in `supabase/migrations/` (1097-line idempotent baseline + incremental migrations) |
+| File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private, magic-byte sniffed, caller-namespace pinned) + `course-docs` bucket (private, 25MB, session documents) |
+| Video Streaming | Cloudflare Stream — signed RS256 JWTs (1h) bound to caller IP via `accessRules`, direct upload from admin browser |
+| Payments | MercadoPago (`mercadopago` SDK v2) — `id;request-id;ts` HMAC manifest + ±10 min replay window + allowed-transition idempotency map |
+| Rate limiting | Upstash Ratelimit + Upstash Redis (`@upstash/ratelimit 2.0.8` + `@upstash/redis 1.38.0`) — sliding window, IP + per-user buckets; **live in production** as of 2026-05-23 |
+| Image optimization | `next/image` on all public content + `next/og` for 1200×630 OG cards (every section has its own `opengraph-image.tsx`) |
+| ISR | `revalidate` declared on every public page; admin mutations bust the cache via `revalidatePath` |
 | QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
+| Testing | Vitest — 100 tests, all green (`npm run test:run`) |
 | Runtime | Node.js 24 |
 
 ---

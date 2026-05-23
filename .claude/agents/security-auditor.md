@@ -39,18 +39,23 @@ reviewing, produce findings as `Severity · file:line · description · fix`. Wh
 the minimal change, then run `npm run build` and `npm run test:run`. Never weaken an existing
 guard to make something work.
 
-## Known open issues (AUDIT.md, 2026-05-22)
+## Audit status
 
-- 🔴 C-1 — wallet IDOR: `token-orders`/`pass-orders`/`course-orders` accept a body
-  `walletAddress`. (Owned jointly with payments-maintainer.)
-- 🟠 H-4 — no rate limiting anywhere — public `recruitment`, the `course-intro-token` signing
-  oracle, referral-code enumeration, on-chain verify endpoints.
-- 🟠 H-5 — `@privy-io/react-auth` + `@privy-io/server-auth` pinned to `"latest"` — pin exactly.
-- 🟠 H-6 — `GET /api/bank-accounts` exposes full account numbers + holder document to every
-  authenticated user — consider masking until an order is initiated.
-- 🟡 `/api/recruitment` stores unvalidated, uncapped input (spam + stored-content vector).
-  `tournament-registrations` doesn't coerce `tournamentId`. CF Stream JWTs carry no
-  `accessRules`. `verifyToken` doesn't assert the `appId` claim.
+**All findings from the 2026-05-22 audit are closed across every area** — 3 Critical, 13
+High, every audit-text Medium. Specifically in your cross-cutting concerns:
 
-Baseline is healthy: no missing auth guards, no tracked secrets, no client-reachable secret
-env vars, ownership checks correct on the cancel/checkin/profile routes. Keep it that way.
+- C-1 (wallet IDOR): `src/lib/verifiedWallet.ts` derives the credited wallet server-side
+  on every order POST.
+- H-4 (rate limiting): `src/lib/rateLimit.ts` + Upstash Ratelimit on 5 endpoints. **Active
+  in production as of 2026-05-23** — verified with a `429` smoke test on `/api/recruitment`.
+- H-5 (`@privy-io` pinning): exact versions pinned in `package.json`.
+- H-6 (bank account exposure): bulk list masked + per-id route + rate-limited.
+- M-A6.1 (recruitment input validation): length caps + `EMAIL_RE` / `PHONE_RE` + coercion.
+- M-A6.2 (`tournamentId` coercion): both POST and DELETE now `Number`-coerce + validate.
+- M-A6.3 (CF Stream `accessRules`): JWTs bind to the caller's IP via `ip.src` allow + `any` block.
+- M-A6.4 (Privy `appId` assertion): both `verifyToken` and `verifyCookieToken` require the
+  `appId` claim to match `NEXT_PUBLIC_PRIVY_APP_ID`.
+
+Baseline is still healthy: no missing auth guards, no tracked secrets, no client-reachable
+secret env vars, ownership checks correct on the cancel/checkin/profile routes — keep it
+that way. You are on standby for pre-deploy reviews and any new finding triage.

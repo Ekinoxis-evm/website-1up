@@ -110,7 +110,7 @@ The component POSTs `FormData` to `/api/admin/upload` (auth-protected), which up
 | `/admin/players` | `AdminPlayersClient` | `/api/admin/players` | POST/PUT/DELETE |
 | `/admin/competitions` | `AdminCompetitionsClient` | `/api/admin/competitions` | POST/PUT/DELETE |
 | `/admin/masters` | `AdminMastersClient` | `/api/admin/masters` | POST/PUT/DELETE |
-| `/admin/courses` | `AdminCoursesClient` | `/api/admin/courses` + `/api/admin/academia-content` | POST/PUT/DELETE — course CRUD + inline content CRUD (content sub-modal inside course edit modal at z-60) |
+| `/admin/courses` | `AdminCoursesClient` + `AdminCourseEditor` | `/api/admin/courses` (+ `/api/admin/course-modules`, `/api/admin/course-sessions`, `/api/admin/course-session-links`, `/api/admin/course-session-documents`) | POST/PUT/DELETE — course CRUD on the list page; per-course `/courses/[id]/edit` editor handles modules/sessions/docs/links. The legacy `/api/admin/academia-content` was removed in 2.29.9. |
 | `/admin/1pass` | `Admin1PassClient` | `/api/admin/pass-config` + `/api/admin/pass-benefits` | GET/PUT + POST/PUT/DELETE |
 | `/admin/pass-orders` | `AdminPassOrdersClient` | `/api/admin/pass-orders` | GET/PATCH |
 | `/admin/discounts` | `AdminDiscountsClient` | `/api/admin/discounts` | POST/PUT/DELETE |

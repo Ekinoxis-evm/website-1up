@@ -25,7 +25,7 @@ You (Claude) have **live access to the four platforms that run this project**. U
 | Platform | How to access | What it's for |
 |----------|--------------|---------------|
 | **Supabase** | MCP `mcp__plugin_supabase_supabase__*` (OAuth — re-auth per session via `__authenticate`, then complete via `/mcp`) | Project `1uptower` = `kwqfpkvalspuvyiszrfh`. Run migrations (`apply_migration`), queries (`execute_sql`), check logs/advisors. See **Database Migrations** below. |
-| **Vercel** | MCP `mcp__claude_ai_Vercel__*` **and** the `vercel` CLI (installed, repo linked) | Project `website-1up` = `prj_hNsodgd6Gh4eToJub3zUKnG6m7ND`, team `team_jxTNRBmimeErr5ULGBepXlL0` (slug `ekinoxis-team`). Inspect deployments, build logs, runtime logs; manage env vars (`vercel env ls/add/pull`). |
+| **Vercel** | MCP `mcp__claude_ai_Vercel__*` (always available) **or** `npx vercel@latest <cmd>` (CLI not globally installed; `npm i -g vercel` needs sudo on this machine — use `npx` for one-off `env ls/add/pull`). Repo already linked to the project. | Project `website-1up` = `prj_hNsodgd6Gh4eToJub3zUKnG6m7ND`, team `team_jxTNRBmimeErr5ULGBepXlL0` (slug `ekinoxis-team`). Inspect deployments, build logs, runtime logs; manage env vars. |
 | **Cloudflare** | MCP `mcp__plugin_cloudflare_cloudflare-api__*` (OAuth — re-auth per session via `__authenticate`) | Account `3347a58a0885b5e3c040d1f9fb408c4e`. General CF API. **Caveat:** the MCP OAuth scope excludes Stream — for Stream API calls use `CF_STREAM_API_TOKEN` from `.env.local` directly via `curl`/`fetch`. |
 | **GitHub** | `gh` CLI (installed v2.92.0, authed via keyring — persistent across sessions). **Do not try the GitHub MCP** — the server (`api.githubcopilot.com/mcp`) rejects Claude Code's dynamic OAuth client registration with "Incompatible auth server"; `mcp__github__authenticate` will always fail until either side updates. Plain `git` covers branch/commit/push. | Repo `Ekinoxis-evm/website-1up`. Default branch `main`. Use `gh pr create / list / merge / view`, `gh issue ...`, `gh release ...`, `gh run ...` via plain `Bash`. For branch cleanup use plain git (`git push origin --delete <branch>`). |
 
@@ -82,12 +82,12 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `POST /api/user/upload-comprobante` | Privy user | Upload payment receipt → Supabase Storage (`comprobantes/`) |
 | `GET\|POST /api/user/token-orders` | Privy user | List own purchase orders / create new order |
 | `POST /api/user/token-orders/cancel` | Privy user | Cancel own pending order |
-| `GET /api/bank-accounts` | Privy user | List active bank accounts (shown in BUY modal) |
+| `GET /api/bank-accounts` | Privy user | List active bank accounts — **masked** (`account_number_masked` = last 4 only; `holder_document` dropped) for the wizards' picker. Rate-limited under `authMutate` (audit M-A5.3 / H-6 — 2.29.5). |
+| `GET /api/bank-accounts/[id]` | Privy user | Returns the **full** bank account record for a single id — invoked once per checkout after a user picks a bank. Rate-limited. |
 | `POST\|PUT\|DELETE /api/admin/courses` | isAdmin | Course CRUD |
 | `POST\|PUT\|DELETE /api/admin/discounts` | isAdmin | Discount rule CRUD |
 | `POST\|PUT\|DELETE /api/admin/masters` | isAdmin | Masters CRUD |
 | `GET\|POST\|PUT\|DELETE /api/admin/aliados` | isAdmin | Aliados CRUD (GET lists all; POST/PUT include `website_url`, `sort_order`, `show_in_banner`) |
-| `POST\|PUT\|DELETE /api/admin/academia-content` | isAdmin | Academia content CRUD |
 | `PUT /api/admin/social-links` | isAdmin | Footer social links update |
 | `GET /api/admin/enrollments` | isAdmin | Enrollment list |
 | `GET\|POST\|DELETE /api/admin/users` | isAdmin | Admin user management |

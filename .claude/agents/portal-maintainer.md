@@ -32,17 +32,15 @@ touch the public `(main)` surface or the `admin/` panel.
 
 `npm run build` — zero errors. `npm run test:run` stays green.
 
-## Known open issues (AUDIT.md, 2026-05-22)
+## Audit status
 
-- 🟡 Age-floor mismatch — onboarding enforces min age 14, but `IdentidadTab.tsx:365` lets a
-  user later edit their birth year to age 5. Mirror the 14-year rule in `PUT /api/user/profile`.
-- 🟡 `PassPurchasePanel.tsx` / `MisPassOrders.tsx` send `Bearer null` when `getAccessToken()`
-  returns null — silent failures. Add null guards.
-- 🟡 `BuyPassWizard.tsx` / `CourseCheckoutWizard.tsx` omit `value: BigInt(0)` from the
-  sponsored-send call — align with the documented pattern.
-- 🟡 H-10 `/perfil` is a stale duplicate of the `(protected)` shell — coordinate with
-  web-maintainer to redirect or delete it.
-- 🔵 Three `any[]` in `academia/[courseId]/page.tsx:57-61` — replace with Row types.
-- 🔵 Legacy `academia_content` and the new `course_modules`/`course_sessions` model coexist.
+**All Area 2 (User Portal) findings from the 2026-05-22 audit are closed** — age-floor
+mismatch fixed (`PUT /api/user/profile` mirrors onboarding's 14-year rule), `Bearer null`
+guards in `PassPurchasePanel` + `MisPassOrders`, `value: BigInt(0)` added on both sponsored
+sends, `/perfil` server-side `permanentRedirect` to the app subdomain, three `any[]` in
+`academia/[courseId]/page.tsx` replaced with structural row types.
 
-Report what changed and the build/test result.
+Legacy `academia_content` reader on `/app/academia` still serves historical data — new
+content lives in `course_modules` / `course_sessions` (see `cloudflare-stream.md` skill).
+
+You are on standby for new portal work. Report what changed and the build/test result.

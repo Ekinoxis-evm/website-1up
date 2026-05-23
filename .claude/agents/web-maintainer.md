@@ -33,15 +33,24 @@ unauthenticated visitor sees at `1upesports.org`.
 
 `npm run build` — zero errors, all routes generated. `npm run test:run` stays green.
 
-## Known open issues (AUDIT.md, 2026-05-22)
+## Audit status
 
-- 🟠 H-10 `/perfil` renders a full auth UI instead of redirecting — reconcile with CLAUDE.md.
-- 🟠 H-11 `sitemap.ts` omits all `/torneos/[slug]` tournament detail pages.
-- 🟡 Two 1px-divider violations: `CourseCheckoutWizard.tsx:231`, `MasterCard.tsx:99`.
-- 🟡 `recreativo/page.tsx:77` ships a placeholder WhatsApp number (`wa.me/57300000000`).
-- 🟡 `/offline` directory has no `page.tsx` (dead route); `/marketplace` + `/offline` are
-  missing from the CLAUDE.md route map.
-- 🟡 Content images use raw `<img>` — migrate to `next/image` (needs `remotePatterns`).
-- 🔵 No `revalidate` on any page — ISR is unused; OG images are 512² not 1200×630.
+**All Area 1 (Public Web) findings from the 2026-05-22 audit are closed**, plus every
+deferred perf/SEO follow-up:
 
+- H-10 (`/perfil` server-side `permanentRedirect` + `noindex`).
+- H-11 (`sitemap.ts` includes every active tournament slug with status-derived
+  `priority` + `changeFrequency`).
+- M-A1.1 (1px-divider violations in `CourseCheckoutWizard` + `MasterCard` replaced
+  with background-tone shifts).
+- M-A1.7 (`recreativo` placeholder WhatsApp number replaced — CTA now reads from
+  `social_links` with `/torneos#recruitment` fallback).
+- M-A1.9 (`CLAUDE.md` route map updated; `/offline` confirmed as a working PWA fallback,
+  not a dead route).
+- `next/image` migration on 12 public content components (2.30.0).
+- ISR `revalidate` on every public Server Component page (2.30.1).
+- OG images at 1200×630 via `next/og` (2.30.3) — `src/lib/og.tsx` + 6
+  `opengraph-image.tsx` route handlers; the 512² `1up.png` references are gone.
+
+You are on standby. Keep the 0px-radius, no-1px-divider, pure-Tailwind rules.
 Report what changed, the build result, and which docs you updated.
