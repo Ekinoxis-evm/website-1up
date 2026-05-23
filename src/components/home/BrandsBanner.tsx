@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 // H-1: the banner only renders the logo, name and an optional website link.
 // Typing the prop to exactly that shape stops api_key / api_url from ever being
 // accidentally widened back into the public query — the compiler enforces the
@@ -24,11 +26,15 @@ export function BrandsBanner({ logos }: Props) {
       </p>
       <div className="animate-marquee gap-12 items-center px-6">
         {doubled.map((logo, i) => {
+          // Partner logos arrive at unpredictable aspect ratios. `width=200` is a
+          // generous max — the actual rendered size is constrained by `h-[80px]
+          // w-auto object-contain` so the visual stays unchanged.
           const img = (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={logo.logo_url!}
               alt={logo.name}
+              width={200}
+              height={80}
               className="h-[80px] w-auto object-contain opacity-70 hover:opacity-100 transition-opacity shrink-0"
             />
           );

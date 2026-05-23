@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { FloorInfo } from "@/types/database.types";
 
 interface Props { floors: FloorInfo[] }
@@ -54,11 +55,12 @@ export function FloorBreakdown({ floors }: Props) {
               {/* Floor image */}
               {floor.image_url && (
                 <div className="w-full md:w-80 aspect-video md:aspect-auto overflow-hidden relative flex-shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={floor.image_url}
                     alt={floor.title}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 320px"
+                    className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                   />
                   {/* Blend edge into content on desktop */}
                   <div className="absolute inset-0 bg-gradient-to-r from-surface-container-low/60 to-transparent pointer-events-none hidden md:block" />

@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const STATS = [
   { value: "100", label: "PlayStation", sublabel: "Pro-Grade Units" },
   { value: "100", label: "Monitores",   sublabel: "High-Refresh Displays" },
@@ -31,12 +33,15 @@ export function EquipmentHighlight({ imageUrl, updatedAt }: Props) {
 
         <div className="flex-1 max-w-md">
           {src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src}
-              alt="Elite Hardware"
-              className="w-full aspect-square object-cover border-4 border-secondary-container/30"
-            />
+            <div className="relative w-full aspect-square border-4 border-secondary-container/30">
+              <Image
+                src={src}
+                alt="Elite Hardware"
+                fill
+                sizes="(max-width: 768px) 100vw, 28rem"
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div className="w-full aspect-square bg-surface-container flex items-center justify-center border-4 border-secondary-container/30">
               <span className="material-symbols-outlined text-[8rem] text-secondary-container/40">videogame_asset</span>

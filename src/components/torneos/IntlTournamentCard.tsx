@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { InternationalTournament, Game } from "@/types/database.types";
 
 type IntlWithGame = InternationalTournament & { games: Pick<Game, "id" | "name"> | null };
@@ -7,8 +8,7 @@ export function IntlTournamentCard({ t }: { t: IntlWithGame }) {
     <div className="bg-surface-container flex flex-col">
       <div className="relative aspect-video bg-surface-container-high overflow-hidden">
         {t.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={t.image_url} alt={t.name} className="w-full h-full object-cover" />
+          <Image src={t.image_url} alt={t.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="material-symbols-outlined text-5xl text-outline/20" style={{ fontVariationSettings: "'FILL' 1" }}>

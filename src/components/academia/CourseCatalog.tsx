@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
@@ -138,8 +139,7 @@ export function CourseCatalog({ courses, masters }: Props) {
               }`}
             >
               {m.photo_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.photo_url} alt={m.name} className="w-5 h-5 object-cover rounded-full shrink-0" />
+                <Image src={m.photo_url} alt={m.name} width={20} height={20} className="w-5 h-5 object-cover rounded-full shrink-0" />
               )}
               {m.name}
             </button>
@@ -172,11 +172,12 @@ export function CourseCatalog({ courses, masters }: Props) {
               {/* Image */}
               <div className="aspect-video bg-surface-container-high relative overflow-hidden">
                 {course.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={course.image_url}
                     alt={course.name}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -208,10 +209,11 @@ export function CourseCatalog({ courses, masters }: Props) {
                 {course.master_id && masterMap[course.master_id] && (
                   <div className="flex items-center gap-2 mb-3">
                     {masterMap[course.master_id].photo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={masterMap[course.master_id].photo_url!}
                         alt={masterMap[course.master_id].name}
+                        width={24}
+                        height={24}
                         className="w-6 h-6 object-cover rounded-full shrink-0"
                       />
                     )}

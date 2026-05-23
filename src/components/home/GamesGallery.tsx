@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { GameCategory, Game } from "@/types/database.types";
 
 interface Props {
@@ -44,11 +45,12 @@ export function GamesGallery({ categories, games }: Props) {
 
           return (
             <div key={cat.id} className={`${colSpan} relative group overflow-hidden bg-surface-container cursor-pointer`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={img}
                 alt={cat.name}
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                fill
+                sizes={i === 0 ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 100vw, 25vw"}
+                className="object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80" />
               <div className={`absolute bottom-0 left-0 ${i < 2 ? "p-8" : "p-6"}`}>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Player } from "@/types/database.types";
 import { SOCIAL_ICON } from "@/lib/socialIcons";
 
@@ -25,11 +26,12 @@ export function PlayerCard({ player, index }: Props) {
       {/* Photo */}
       <div className="aspect-[3/4] bg-surface-container-high relative overflow-hidden">
         {player.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={player.photo_url}
             alt={player.gamertag}
-            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+            fill
+            sizes="(max-width: 768px) 50vw, 25vw"
+            className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -48,8 +50,7 @@ export function PlayerCard({ player, index }: Props) {
                 rel="noopener noreferrer"
                 className="hover:scale-110 transition-transform"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={SOCIAL_ICON[platform]} alt={platform} className="w-7 h-7 object-contain" />
+                <Image src={SOCIAL_ICON[platform]} alt={platform} width={28} height={28} className="object-contain" />
               </a>
             ) : null
           )}
