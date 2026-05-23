@@ -44,9 +44,12 @@ export async function GET(
   if (!bracket) return NextResponse.json(null);
 
   const [{ data: participants }, { data: matches }] = await Promise.all([
+    // Join to user_profiles so the public bracket carries avatar_url + username
+    // alongside the seed/display_name fields. Used by the avatar-aware
+    // matchComponent on /torneos/[slug] and /torneos/[slug]/tv.
     supabase
       .from("bracket_participants")
-      .select("*")
+      .select("*, user_profiles(avatar_url, username, nombre, apellidos)")
       .eq("bracket_id", bracket.id)
       .order("seed"),
     supabase

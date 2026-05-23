@@ -71,9 +71,22 @@ export async function generateMetadata(
   };
 }
 
+// Participants come back with `user_profiles` joined (for avatars on the
+// match card), which the Supabase-generated Row type doesn't know about —
+// `BracketParticipantWithProfile` is the narrowed shape `TournamentBracketView`
+// expects via its `BracketData` prop.
+type BracketParticipantWithProfile = BracketParticipant & {
+  user_profiles: {
+    avatar_url: string | null;
+    username:   string | null;
+    nombre:     string | null;
+    apellidos:  string | null;
+  } | null;
+};
+
 async function fetchBracket(tournamentId: number): Promise<{
   bracket: Bracket;
-  participants: BracketParticipant[];
+  participants: BracketParticipantWithProfile[];
   matches: BracketMatch[];
 } | null> {
   // Drafts stay private — only show the bracket once the tournament has started.
@@ -86,12 +99,21 @@ async function fetchBracket(tournamentId: number): Promise<{
   if (!bracket) return null;
 
   const [{ data: participants }, { data: matches }] = await Promise.all([
-    supabase.from("bracket_participants").select("*").eq("bracket_id", bracket.id).order("seed"),
+    // Avatar + username come through here so the bracket's custom matchComponent
+    // can render each participant with their profile picture.
+    supabase.from("bracket_participants")
+      .select("*, user_profiles(avatar_url, username, nombre, apellidos)")
+      .eq("bracket_id", bracket.id).order("seed"),
     supabase.from("bracket_matches").select("*").eq("bracket_id", bracket.id)
       .order("bracket_side").order("round").order("match_number"),
   ]);
 
-  return { bracket, participants: participants ?? [], matches: matches ?? [] };
+  return {
+    bracket,
+    // Cast — the join exists at runtime; the generated Row type doesn't model relations.
+    participants: (participants ?? []) as unknown as BracketParticipantWithProfile[],
+    matches:      matches ?? [],
+  };
 }
 
 // ISR: bracket state + registration counts. Admin bracket-action mutations
