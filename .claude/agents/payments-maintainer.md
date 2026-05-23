@@ -38,21 +38,28 @@ Pass orders: `api/user/pass-orders`, `api/admin/pass-orders`, `api/{user,admin}/
 `npm run build` — zero errors. `npm run test:run` — the `mercadopago` / `discount` test
 files must stay green; add tests for any verification logic you change.
 
-## Known open issues (AUDIT.md, 2026-05-22) — several are Critical
+## Audit status
 
-- 🔴 C-1 — `token-orders` (and `pass-orders`/`course-orders`) accept an attacker-chosen
-  `walletAddress` from the body. Derive it server-side from the user's verified wallet.
-- 🔴 C-2 — `verifyPassTransfer` trusts the client-supplied sender; a known treasury tx can be
-  hijacked. Pin `expectedFrom` to the caller's verified wallet.
-- 🔴 C-3 — the MercadoPago webhook has no idempotency; a retry flips an `approved` enrollment
-  back to `pending`. Add a transition guard + `mp_payment_id` dedupe.
-- 🟠 H-3 — token-order approval does no on-chain verification — verify the transfer before
-  persisting `approved`.
-- 🟠 H-8 — `verifyPassTransfer` has no confirmation-depth check and accepts overpayment.
-- 🟠 H-9 — the webhook HMAC manifest is non-standard — adopt MP's `id;request-id;ts` template
-  and reject stale `ts`.
-- 🟡 Webhook skips signature verification when the secret is unset outside production — fail
-  closed. TOCTOU race on the duplicate-`tx_hash` guard (depends on the DB unique constraint —
-  coordinate with database-maintainer). Comprobante MIME trust; dead `pass` branch in `/api/checkout`.
+**All Area 5 (Payments) findings — Critical + High + Medium — are closed.**
 
-Report what changed, the build/test result, and any verification logic added.
+- C-1 (wallet IDOR): credited wallet derived from `user_profiles.wallet_address` via
+  `src/lib/verifiedWallet.ts` on every order POST.
+- C-2 (pass-transfer hijack): `verifyPassTransfer.expectedFrom` pinned to the verified
+  profile wallet.
+- C-3 (webhook idempotency): allowed-transition map + `mp_payment_id` dedupe in
+  `src/lib/mpWebhookDecision.ts`.
+- H-3 (on-chain verify on token-order approval): `src/lib/tokenTransferVerifier.ts`
+  re-runs the receipt before flipping to `approved`.
+- H-8: `verifyPassTransfer` requires exact-amount equality + `MIN_CONFIRMATIONS = 3`.
+- H-9: MP webhook uses `id;request-id;ts` HMAC manifest with a ±10 min replay window;
+  fails closed when the secret is unset in every environment.
+- M-A5.1 (tx_hash TOCTOU): partial unique index on `enrollments(lower(tx_hash))` mirrors
+  the existing `pass_orders_tx_hash_uniq`; both routes catch `23505` and return 409.
+- M-A5.2 (comprobante MIME): `sniffComprobanteMime` checks magic bytes (JPEG/PNG/WebP/PDF)
+  in `src/lib/blob.ts`; rejects mismatches.
+- M-A5.3 (pending-path guard): `moveComprobanteToOrder` now takes `callerPrivyUserId` and
+  refuses to move objects outside the caller's `userPathPrefix` namespace.
+- M-A5.4: dead `pass` branch in `/api/checkout` removed.
+
+You are on standby for new payments work. When fixing or shipping, report what changed,
+the build/test result, and any verification logic added.

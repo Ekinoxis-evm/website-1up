@@ -98,11 +98,10 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/${CF_STREAM_ACCOUNT_
 
 | File | Change |
 |---|---|
-| `src/db/schema.ts` | Add `streamUid text` to `academiaContent` table |
-| `src/types/database.types.ts` | Add `stream_uid: string | null` to AcademiaContent Row/Insert/Update |
-| `src/components/admin/AdminAcademiaContentClient.tsx` | Add video upload button alongside URL input; show stream_uid status |
-| `src/app/app/(protected)/academia/page.tsx` | Fetch stream token for video content; render Stream iframe |
-| `src/app/api/admin/academia-content/route.ts` | Accept + persist `streamUid` on POST/PUT |
+| `src/types/database.types.ts` | `course_sessions.video_uid` is the canonical column on the new model (intro videos use `courses.intro_video_uid`). |
+| `src/components/admin/AdminCourseEditor.tsx` | Video upload button per session — in the Contenido tab. The legacy `AdminAcademiaContentClient` was removed in 2.29.9. |
+| `src/app/app/(protected)/academia/[courseId]/page.tsx` | Fetch per-session signed token via `/api/user/stream-token-v2` and render Stream iframe. |
+| `src/app/api/admin/course-sessions/route.ts` | Accepts + persists `videoUid` on POST/PUT. The legacy `/api/admin/academia-content` was removed in 2.29.9 — it's no longer the path for new uploads. |
 
 ---
 
@@ -222,16 +221,16 @@ export async function POST(req: NextRequest) {
 
 ## Admin UX — Upload Flow
 
-In `AdminAcademiaContentClient`:
+In `AdminCourseEditor` (Contenido tab, per session):
 
-1. When `content_type === "video"`, show two options:
-   - **URL externa** — plain text input (YouTube, existing)
-   - **Subir a Stream** — file input button
+1. File input on each session card
 2. On file select:
    - Call `POST /api/admin/stream-upload-url { filename }` → get `{ uid, uploadURL }`
    - `POST` the file directly to `uploadURL` as `multipart/form-data` with a `file` field (show progress bar) — `PUT` is NOT supported by Cloudflare's `direct_upload` endpoint and silently fails
-   - On success: set `streamUid = uid`, show "✓ Video subido" badge
-3. On save: persist `stream_uid` to DB via `POST/PUT /api/admin/academia-content`
+   - On success: set `videoUid = uid`, show "✓ Video subido" badge
+3. On save: persist `video_uid` to DB via `POST/PUT /api/admin/course-sessions`
+
+*(Historical: the legacy `AdminAcademiaContentClient` + `/api/admin/academia-content` route handled this before the modules/sessions model landed. Both were removed in 2.29.9.)*
 
 ---
 
@@ -292,8 +291,8 @@ Assumptions: 20 courses × avg 2h each = 2,400 min stored. 100 enrolled users ×
 4. Create `src/lib/stream.ts`
 5. Create `/api/user/stream-token` route
 6. Create `/api/admin/stream-upload-url` route
-7. Update `AdminAcademiaContentClient` — upload button + stream_uid persistence
-8. Update `/api/admin/academia-content` route — accept stream_uid
-9. Update `/app/academia` page — fetch token + render iframe
+7. Add the per-session upload button in `AdminCourseEditor` (Contenido tab) — `videoUid` persistence
+8. `/api/admin/course-sessions` POST/PUT accepts `videoUid`
+9. Update `/app/(protected)/academia/[courseId]` page — fetch per-session token + render iframe
 10. Test end-to-end: upload → enroll → watch → verify non-enrolled user gets 403
-11. Deploy → add to CHANGELOG as v1.4.0 (MINOR — new integration)
+11. Deploy → add to CHANGELOG (PATCH for fixes; MINOR if adding new endpoints)

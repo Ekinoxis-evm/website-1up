@@ -34,18 +34,14 @@ them. Do not touch the public `(main)` surface or the `app/` portal.
 
 `npm run build` — zero errors. `npm run test:run` stays green.
 
-## Known open issues (AUDIT.md, 2026-05-22)
+## Audit status
 
-- 🟠 H-2 — 5 admin pages use the anon `supabase` client: `players`, `competitions`, `games`,
-  `floors`, `discounts`. Switch them to `supabaseAdmin`. **Top fix here.**
-- 🟠 H-12 — `AdminCoursesClient.tsx:24` (delete) and `AdminTournamentRegistrationsClient.tsx:46`
-  (PATCH) have no `res.ok` check — failures look successful.
-- 🟠 H-13 — `api/admin/{users,course-session-links,course-session-documents}` mutate without
-  `revalidatePath`.
-- 🟡 tournaments/brackets routes don't revalidate `/` or `/torneos/[slug]`;
-  `tournament-results` DELETE omits `/team`; `pass-orders` revalidates the dead
-  `pass-bank-orders` redirect stub.
-- 🟡 Inconsistent failure UX (`alert()` vs inline vs nothing); modal-header 1px-divider
-  violations; `/admin/academia-content` is an orphan page (not in the sidebar).
+**All Area 3 (Admin Panel) findings from the 2026-05-22 audit are closed** — H-2 (5 pages
+switched to `supabaseAdmin`), H-12 (`res.ok` checks added on delete/PATCH), H-13 (3
+admin routes now `revalidatePath`), tournament-results PATCH revalidates `/team`, dead
+`pass-bank-orders` redirect stub deleted, orphan `academia-content` admin page deleted,
+modal-header 1px dividers removed, and the failure-UX consistency story is the new
+shared `AdminToastProvider` + `useAdminToast()` (see `src/components/admin/ui/Toast.tsx`).
 
-Report what changed, the build result, and which docs you updated.
+You are on standby for new admin work. When fixing or shipping, report what changed, the
+build/test result, and which docs you updated.

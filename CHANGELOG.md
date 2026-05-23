@@ -5,6 +5,50 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.30.5] — 2026-05-23
+
+### Docs — post-audit sync sweep
+
+Every reference doc cross-checked against the actual codebase after the full audit-+-
+follow-up shipping run. Drift found and fixed in 4 places:
+
+- **`CLAUDE.md` API routes table**
+  - Removed `POST|PUT|DELETE /api/admin/academia-content` — the route + page were deleted
+    in 2.29.9 (the underlying table is DEPRECATED).
+  - Updated `GET /api/bank-accounts` row to reflect masking (audit H-6).
+  - Added `GET /api/bank-accounts/[id]` row for the per-id unmasked detail endpoint
+    that the wizards call on selection.
+  - **Infrastructure Access** table: corrected the Vercel CLI note — `npm i -g vercel`
+    needs sudo on this machine; use `npx vercel@latest` for one-off calls, or the
+    `mcp__claude_ai_Vercel__*` MCP for inspection. Repo is already linked.
+
+- **`.claude/skills/admin-crud.md`** — `/admin/courses` row updated: API column
+  references the modules/sessions endpoints, with a note that `/api/admin/academia-content`
+  was removed in 2.29.9.
+
+- **`.claude/skills/cloudflare-stream.md`** — three references to the deleted
+  `AdminAcademiaContentClient` / `/api/admin/academia-content` updated to point at
+  `AdminCourseEditor` / `/api/admin/course-sessions` (the new modules/sessions model).
+  Historical note kept so future contributors understand the migration.
+
+- **`.claude/agents/*.md` (six maintainer agents)** — every "Known open issues
+  (AUDIT.md, 2026-05-22)" section replaced with an **Audit status** block summarizing
+  what's now closed in that area. Agents now read as "on standby for new work" rather
+  than "carrying open backlog."
+
+- **`README.md` Tech Stack** — added Upstash Ratelimit + Redis (with version pins),
+  Vitest (with test count), the `next/image` + `next/og` story, the ISR strategy, and
+  notes on the C-1 / H-6 / H-9 / M-A5.2 / M-A5.3 / M-A6.3 / M-A6.4 hardening that's now
+  part of the stack.
+
+`AUDIT.md` was already current after 2.29.11 — every finding struck through with the
+version it shipped in; no further edits needed.
+
+Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass). No code
+changes — docs only.
+
+---
+
 ## [2.30.4] — 2026-05-23
 
 ### Fixed — Upstash env var name fallback

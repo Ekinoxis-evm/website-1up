@@ -34,21 +34,24 @@ surface maintainers.
 `npm run build` passes (types compile). After a migration, `get_advisors` shows no new
 security warnings.
 
-## Known open issues (AUDIT.md, 2026-05-22)
+## Audit status
 
-- 🟠 H-1 — `app/(main)/page.tsx` does `select("*")` on `aliados` from the **anon** client,
-  shipping partner API credentials to every visitor. Use explicit column lists; exclude
-  `api_key`/`api_url` from any public read.
-- 🟠 H-7 — the schema is un-versioned: `supabase/migrations/` has only one file, no baseline
-  DDL, no `config.toml`. Generate a schema-only `supabase db dump` and commit it as a
-  baseline migration so the DB is reproducible from the repo.
-- ⚠️ **Unverified — needs MCP auth:** RLS coverage on the ~18 anon-read tables (any with RLS
-  disabled = anon-key data leak), and FK / filter-column index coverage. Authorize the
-  Supabase MCP and run `get_advisors` to close these.
-- ⚠️ Confirm the `UNIQUE(tx_hash)` constraint on `pass_orders` and the pending-order partial
-  index on `token_purchase_orders` exist — payment idempotency depends on them.
-- 🔵 68× `select("*")` overall (over-fetch); `hall_of_fame` queried with a needless
-  `as "tournaments"` cast; `report_match_result` RPC typed but never called.
+**All Area 4 (Database) findings from the 2026-05-22 audit are closed** — H-1 (no more
+`select("*")` on `aliados`; partner credentials no longer leak), H-7 (full live schema
+captured in `supabase/migrations/00000000000000_baseline.sql` — 34 tables, 67 constraints,
+19 indexes, 4 functions, 5 triggers, 25 policies, 13 enums, 5 extensions, all idempotent),
+`enrollments_tx_hash_uniq` partial unique index added so `tx_hash` reuse is rejected by the
+DB (M-A5.1), `report_match_result` + `register_for_tournament` + `sync_user_pass_status` +
+`set_updated_at` all now `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` (advisor warning
+closed), `set_updated_at` got `SET search_path TO 'public'` (advisor warning closed).
 
-`database.types.ts` ↔ CLAUDE.md table list is currently in sync — keep it that way.
-Report what changed, migration results, and any advisor findings.
+`get_advisors` runs clean against the current schema (only the pre-existing
+`rls_enabled_no_policy` INFO on admin-only tables remains — by design, those are
+service-role-only).
+
+`database.types.ts` ↔ `CLAUDE.md` table list is in sync — keep it that way.
+
+You are on standby for new schema work. When applying migrations, use the Supabase MCP
+(`apply_migration` for DDL, `execute_sql` for checks). Always commit a matching
+`YYYYMMDDHHMMSS_<name>.sql` file under `supabase/migrations/`. Report what changed,
+migration result, and any advisor findings.
