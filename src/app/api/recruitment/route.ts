@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { rateLimitByIp, limiters } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  // H-4: anon endpoint — strict per-IP rate limit (5/min) to block form spam.
+  const rl = await rateLimitByIp(req, limiters.anonStrict);
+  if (!rl.success) return rl.response;
+
   try {
     const body = await req.json();
     const { name, email, phone, categoryId, gameId, gamertag, message, source } = body;

@@ -17,6 +17,7 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { revalidatePath } from "next/cache";
 import { sendCourseOrderPlacedEmail, sendCourseOrderConfirmedEmail } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
+import { rateLimitByUser, limiters } from "@/lib/rateLimit";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -53,6 +54,12 @@ function selectBestDiscount(
 export async function POST(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // H-4: authed POST that triggers on-chain RPC calls on the token path. Cap at
+  // 20/min/user — same rationale as pass-orders.
+  const rl = await rateLimitByUser(claims.userId, limiters.authMutate);
+  if (!rl.success) return rl.response;
+
   const email = await resolveUserEmail(claims.userId);
 
   const body = await req.json() as {

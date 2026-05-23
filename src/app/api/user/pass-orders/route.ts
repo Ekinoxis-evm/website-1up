@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { moveComprobanteToOrder } from "@/lib/blob";
 import { sendPassTokenEmails, sendPassBankEmails } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
+import { rateLimitByUser, limiters } from "@/lib/rateLimit";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -51,6 +52,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
   if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // H-4: authed POST that triggers on-chain RPC calls (verifyPassTransfer). Cap
+  // at 20/min/user so a hostile account can't drain RPC quota or DoS the verifier.
+  const rl = await rateLimitByUser(claims.userId, limiters.authMutate);
+  if (!rl.success) return rl.response;
 
   const body = await req.json();
   const { txHash, walletAddress: bodyWallet, paymentMethod, bankAccountId, comprobantePath } =

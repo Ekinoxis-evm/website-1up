@@ -5,6 +5,41 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.29.3] — 2026-05-22
+
+### Security
+
+- **H-4 · Rate limiting added to the 5 most abuse-prone endpoints.** Public POSTs, the
+  course-intro signing oracle, the referral-code enumeration target, and the two
+  authenticated POSTs that fire on-chain RPC verifications now sit behind sliding-window
+  rate limits (Upstash Ratelimit + Upstash Redis). New `src/lib/rateLimit.ts` exposes three
+  pre-tuned named limiters and two convenience wrappers (`rateLimitByIp`, `rateLimitByUser`).
+
+  | Endpoint | Limiter | Key |
+  |---|---|---|
+  | `POST /api/recruitment` | 5 / min | per IP |
+  | `POST /api/public/course-intro-token` | 5 / min | per IP |
+  | `GET /api/user/referral-codes/validate` | 30 / min | per IP |
+  | `POST /api/user/pass-orders` (token path) | 20 / min | per Privy user |
+  | `POST /api/user/course-orders` (token path) | 20 / min | per Privy user |
+
+  Refused requests return `429` with `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`,
+  and `X-RateLimit-Reset` headers, plus a Spanish error body.
+
+  **Safe-by-default:** when `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are absent
+  every limiter is `null` and `checkRateLimit` is a pass-through. The code ships with the
+  rate limits wired but not enforcing — provisioning Upstash via the Vercel Marketplace adds
+  the env vars and rate-limiting activates with no further deploys. A `console.warn` fires
+  once in production if the env vars are missing so the gap is observable.
+
+  Added 7 tests for the IP-extraction helper and the no-op fallback paths
+  (`src/__tests__/lib/rateLimit.test.ts`). Test count: 70 → 77.
+
+  New deps (pinned exact): `@upstash/ratelimit 2.0.8`, `@upstash/redis 1.38.0`. New env vars
+  documented in `CLAUDE.md` Environment Variables table.
+
+---
+
 ## [2.29.2] — 2026-05-22
 
 ### Security
