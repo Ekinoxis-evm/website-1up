@@ -5,6 +5,64 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.11] — 2026-05-24
+
+### Added — Responsive bracket auto-fit + BYE visual polish
+
+(Was queued as v2.36.9 but landed after v2.36.10 — bumped to v2.36.11 so
+chronological merge order matches semver order.)
+
+Two pieces of feedback, both addressed in `TournamentBracketView` + `TournamentMatchCard`:
+
+#### 1. Responsive auto-fit
+The g-loot SVG renders with fixed dimensions (320 / 460 / 280 px per match
+× N rounds). For 16+ player brackets that exceeded most viewports and the
+user had to mouse-pan horizontally. Now wrapped in a new
+**`ResponsiveScale`** component that:
+
+- Measures container width vs. natural bracket width with `ResizeObserver`
+- CSS-scales the SVG via `transform: scale(...)` so it fits the container
+- Tracks scaled height in JS (CSS transform doesn't change layout box —
+  without this the wrapper would reserve full unscaled height and leave
+  a huge whitespace gap underneath)
+- Falls back to horizontal scroll only when scaling would push below
+  `MIN_SCALE = 0.45` (unreadable territory)
+- Re-runs on every container/content resize: window resize, devtools
+  toggle, fullscreen open/close all trigger a re-fit
+
+Result: brackets now fit edge-to-edge on whatever device/viewport opens
+them — public page, admin compact, admin fullscreen, TV view. Clicks
+still register correctly on the scaled SVG (the browser handles
+transformed-element hit-testing).
+
+#### 2. BYE matches no longer look broken
+When the participant count isn't a power of 2 (e.g. 9, 10, 12), some
+first-round matches are BYEs — one player auto-advances. These were
+rendering as `Player A vs TBD ?` with a help-icon avatar, looking like
+the bracket had broken/missing slots.
+
+The matchComponent now detects `match.state === "WALK_OVER"` (the lib's
+BYE state) and renders specially:
+
+- Just the advancing player's avatar + name in a single full-width slot
+- Below it: a small **`Pase libre · BYE`** chip with a forward arrow icon
+- Card background dimmed slightly (`bg-surface-container/60`) so BYEs
+  visually recede behind real matches
+
+No new behaviour — the auto-advance was always happening; this just
+makes it visually obvious to the admin that the slot is intentional, not
+a bug.
+
+#### Restart capability — already there
+For the user's "ability to restart" question: in `draft` state the panel
+shows `Regenerar bracket borrador` (rebuilds from current roster) +
+`Eliminar bracket` (wipe and start over). Both already exposed; no
+change needed.
+
+Build clean, 159/159 tests pass.
+
+---
+
 ## [2.36.10] — 2026-05-24
 
 ### Fixed — Bracket seeding algorithm was producing broken brackets

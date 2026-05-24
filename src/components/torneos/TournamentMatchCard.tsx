@@ -52,9 +52,9 @@ function buildCard(scale: Scale, admin?: AdminCallbacks): Factory {
 
     const matchId      = Number(match.id);
     const isCompleted  = match.state === "PLAYED";
-    // Library state mapping: our DB "ready" → lib "NO_SHOW". Yes, weird,
-    // but that's what the lib expects (per the STATE_MAP in TournamentBracketView).
+    // Library state mapping: our DB "ready" → lib "NO_SHOW", DB "bye" → lib "WALK_OVER".
     const isReady      = match.state === "NO_SHOW" && top.name !== "TBD" && bottom.name !== "TBD";
+    const isBye        = match.state === "WALK_OVER";
 
     function handleSlot(party: ExtendedParty) {
       if (!admin || admin.busy) return;
@@ -72,6 +72,31 @@ function buildCard(scale: Scale, admin?: AdminCallbacks): Factory {
     }
 
     const interactable = !!admin && (isReady || isCompleted);
+
+    // BYE matches: render the single advancing player + an obvious
+    // "PASE LIBRE" footer instead of pretending the empty slot is a TBD.
+    // The player auto-advances; nothing to click here.
+    if (isBye) {
+      const advancer = top.name && top.name !== "TBD" ? top : bottom;
+      return (
+        <div className="w-full h-full bg-surface-container/60 border border-surface-container-high flex flex-col justify-center">
+          <Slot
+            party={advancer}
+            completed={false}
+            padding={padding}
+            fontName={fontName}
+            fontMeta={fontMeta}
+            sizeAvatar={sizeAvatar}
+          />
+          <div className="bg-surface-container-high px-2 py-1.5 flex items-center justify-center gap-1.5">
+            <span className="material-symbols-outlined text-[10px] text-outline">forward</span>
+            <span className="font-headline font-black text-[9px] uppercase tracking-widest text-outline">
+              Pase libre · BYE
+            </span>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className={`w-full h-full bg-surface-container border border-surface-container-high flex flex-col justify-center ${

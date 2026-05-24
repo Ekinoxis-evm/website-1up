@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type {
   MatchType,
@@ -166,13 +166,13 @@ export function TournamentBracketView({
       .map(m => buildMatchType(m, participantMap, winnersLabel(m.round, wRounds)));
 
     return (
-      <div className="w-full overflow-x-auto">
+      <ResponsiveScale>
         <SingleEliminationBracket
           matches={libraryMatches}
           matchComponent={matchComponent}
           options={options}
         />
-      </div>
+      </ResponsiveScale>
     );
   }
 
@@ -201,12 +201,76 @@ export function TournamentBracketView({
   void lRounds;
 
   return (
-    <div className="w-full overflow-x-auto">
+    <ResponsiveScale>
       <DoubleEliminationBracket
         matches={{ upper, lower }}
         matchComponent={matchComponent}
         options={options}
       />
+    </ResponsiveScale>
+  );
+}
+
+// Wraps the bracket SVG in a container that measures its natural width and
+// CSS-scales it down via transform so it fits the parent container. Scale is
+// floored at MIN_SCALE — below that the bracket is unreadable, so we fall back
+// to horizontal scroll on the wrapper. Height is JS-tracked because a CSS
+// transform doesn't change the laid-out box; without this the wrapper would
+// reserve the full unscaled height and leave a huge whitespace gap below.
+//
+// Re-runs on container resize + content resize so the bracket re-fits on
+// window resize, devtools toggle, fullscreen open/close, etc.
+const MIN_SCALE = 0.45;
+
+function ResponsiveScale({ children }: { children: React.ReactNode }) {
+  const wrapRef  = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale]   = useState(1);
+  const [boxHeight, setH]   = useState<number | null>(null);
+
+  useEffect(() => {
+    const wrap  = wrapRef.current;
+    const inner = innerRef.current;
+    if (!wrap || !inner) return;
+
+    function recompute() {
+      if (!wrap || !inner) return;
+      const cw = wrap.clientWidth;
+      const iw = inner.scrollWidth;
+      const ih = inner.scrollHeight;
+      if (cw === 0 || iw === 0) return;
+      const fit  = cw / iw;
+      const next = Math.max(MIN_SCALE, Math.min(1, fit));
+      setScale(next);
+      setH(ih * next);
+    }
+
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(wrap);
+    ro.observe(inner);
+    // The lib renders SVG asynchronously after the first paint; one extra tick
+    // catches the actual content size once g-loot has measured matches.
+    const t = setTimeout(recompute, 60);
+    return () => { ro.disconnect(); clearTimeout(t); };
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="w-full overflow-x-auto"
+      style={{ height: boxHeight ?? undefined }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: "max-content",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
