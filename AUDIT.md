@@ -247,12 +247,53 @@ explicit `claims.appId === NEXT_PUBLIC_PRIVY_APP_ID` check on both `verifyToken`
 9. **H-6, H-10 → H-13** and the Medium items per area.
 10. ~~CHANGELOG patch entry for the `2026-05-22` tournaments-GET fix~~ ✅ **Done in 2.29.1**.
 
-## Open verification items (need user action)
+## Open verification items — ✅ all closed in 2.36.4 (2026-05-24)
 
-- **Supabase MCP** — authorize it (interactive OAuth) so `get_advisors` can confirm RLS
-  coverage on anon-read tables and FK index coverage. Until then, RLS exposure is *unverified*.
-- Confirm the `UNIQUE(tx_hash)` constraint on `pass_orders` and the pending-order partial
-  index on `token_purchase_orders` actually exist in the live DB.
+~~**Supabase MCP** — authorize it (interactive OAuth) so `get_advisors` can confirm RLS
+coverage on anon-read tables and FK index coverage.~~ ✅ **Closed in 2.36.4** — advisors
+run, all findings triaged. Migration `20260524050326_audit_closure_v2_36_4.sql` applied
+4 schema fixes; re-run confirms the 4 actionable findings are clear. Remaining advisor
+items are info-level and documented below as correct-by-design.
+
+~~Confirm the `UNIQUE(tx_hash)` constraint on `pass_orders` and the pending-order partial
+index on `token_purchase_orders` actually exist in the live DB.~~ ✅ **Verified 2026-05-24**:
+- `pass_orders_tx_hash_uniq` — `CREATE UNIQUE INDEX ON pass_orders (lower(tx_hash))` ✓
+- `token_purchase_orders_one_pending_per_user` — pending-status partial unique on
+  `user_profile_id` ✓
+- Bonus: `pass_orders_one_pending_per_user` mirrors the same pattern.
+
+### Fixes shipped in 2.36.4
+
+| # | Finding | Severity | Fix |
+|---|---|---|---|
+| 1 | `hall_of_fame` view was `SECURITY DEFINER` | **ERROR** | `ALTER VIEW SET (security_invoker = on)` — introduced by the v2.31.0 view rebuild; `DROP/CREATE VIEW` doesn't carry forward `security_invoker`. |
+| 2 | `set_updated_at` function had mutable `search_path` | WARN | `ALTER FUNCTION SET search_path = public, pg_temp`. AUDIT had claimed this was closed in 2.29.6 but live `proconfig` was null — never actually applied. |
+| 3 | `report_match_result` was SECURITY DEFINER + executable by PUBLIC / anon / authenticated | WARN | `DROP FUNCTION` — code-grep showed zero callers (only auto-generated in `database.types.ts`). Dropping is simpler than locking down. |
+| 4 | `tournament_registrations` RLS policy re-evaluated `current_setting()` per row | WARN | Wrapped in `(SELECT …)` so it evaluates once per query (auth_rls_initplan optimization). |
+
+### Remaining advisor noise — correct-by-design
+
+- **9× INFO `rls_enabled_no_policy`** on `admin_users`, `course_session_documents`,
+  `course_session_links`, `discount_rules`, `enrollments`, `pass_orders`,
+  `recruitment_submissions`, `referral_codes`, `token_purchase_orders` — RLS enabled
+  with no policies = default deny for the anon role. All reads/writes go through
+  `supabaseAdmin` (service role bypasses RLS). The advisor flags this as "missing
+  policy" but here it's the intended lockdown.
+- **24× INFO `unindexed_foreign_keys`** — mostly low-traffic FKs
+  (recruitment_submissions, international_tournaments, etc.). The hottest one is
+  `bracket_matches.next_match_id` (traversed every bracket render); could be added
+  in a perf pass but bracket tables are small enough this isn't urgent.
+- **5× INFO `unused_index`** — speculative indexes that haven't been hit yet
+  (`bank_accounts_active_idx`, `token_purchase_orders_status_idx` /`_privy_idx`,
+  `idx_tour_reg_user`, `idx_user_profiles_wallet_address`). Cheap to keep; will be
+  exercised as traffic grows.
+
+### Migration-file drift fixed in the same PR
+
+While auditing, found two migrations applied via MCP earlier in this session that
+were never committed to the repo (CLAUDE.md requires both): `add_avatar_url_to_user_profiles`
+(2026-05-23) and `hall_of_fame_view_add_avatar_url` (2026-05-23). Both committed
+in this PR as `supabase/migrations/2026052316*.sql` so the repo and live DB stay in sync.
 
 ---
 
