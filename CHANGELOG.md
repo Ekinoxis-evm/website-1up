@@ -5,6 +5,91 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.13] — 2026-05-24
+
+### Added — Play-in round for non-power-of-2 single-elim tournaments
+
+User asked for R1 to look "complete" instead of mostly-BYEs when the
+participant count isn't a power of 2. Standard tournament seeding puts
+all the byes in R1 (good for top-seed rest, bad-looking visually).
+The play-in approach uses a smaller main bracket + a pre-round that
+absorbs the excess players — keeping R1 visually full.
+
+For N=9:
+- Before: 1 R1 match (seeds 8 vs 9) + 7 BYEs for seeds 1-7
+- After:  1 play-in match (seeds 8 vs 9) + **4 real R1 matches** (no byes)
+
+Same total of 8 real matches, but the structure is much cleaner:
+no player skips multiple rounds straight to the finals.
+
+#### Algorithm
+New module `src/lib/bracket/playIn.ts`:
+- `planPlayIn(n)` returns `null` for power-of-2 N (standard seeding),
+  otherwise computes the play-in plan:
+  - `prevPow2` = largest power-of-2 ≤ N
+  - `excess` = N - prevPow2 (number of play-in matches)
+  - `directSeeds` = prevPow2 - excess (top seeds with direct R1 entry)
+  - `playInPairs` = [[top, bottom], …] pairing the bottom 2×excess seeds
+    (best play-in seed vs worst, second-best vs second-worst, …)
+- Play-in winners advance into specific main R1 slots computed from
+  the standard mirror-pairings of the main bracket.
+
+`seedBracket(n, "single_elimination")` now routes to the play-in path
+for non-pow2 N. Play-in matches have `round = 0` (outside the main
+`rounds_winners` count); main bracket rounds are 1..log2(prevPow2).
+
+`POST /api/admin/brackets`:
+- For single-elim with non-pow2 N, uses `prevPow2` as the main bracket
+  size instead of `nextPow2(N)` — so `rounds_winners` reflects the
+  main bracket's depth (label "Final" / "Semifinal" / "Cuartos" still
+  computes correctly from `rounds_winners`).
+- Power-of-2 N and all double-elim still use `nextPow2(N)` (standard).
+
+`winnersLabel(round, totalRounds)` now returns `"Play-in"` for round 0.
+
+#### What this looks like for N=9 single-elim
+```
+PLAY-IN (round 0, 1 match)
+  M0: seed 8 vs seed 9       → winner advances to main M1 slot 2
+
+MAIN ROUND 1 — "Cuartos" (4 matches, all real)
+  M1: seed 1 vs M0 winner    ← REAL (was originally seed 1 vs seed 8)
+  M2: seed 4 vs seed 5       ← REAL
+  M3: seed 2 vs seed 7       ← REAL
+  M4: seed 3 vs seed 6       ← REAL
+
+MAIN ROUND 2 — "Semifinal" (2 matches)
+MAIN ROUND 3 — "Final"      (1 match)
+
+  · 8 real matches total
+  · No player skips more than 1 round
+  · R1 looks complete: 4 real matches
+```
+
+#### What this fixes about the fatal-fury bracket
+Before regeneration with v2.36.13: 9 participants → 1 real R1 match +
+7 BYE matches (correct standard but ugly). After regeneration: 1
+play-in + 4 R1 + 2 R2 + 1 final. Admin deletes the current draft and
+clicks **Generar bracket** to get the new structure.
+
+#### What's NOT changed in v2.36.13
+Double-elimination with non-pow2 N still uses standard seeding (top
+seeds get byes). Play-in for DE is a real refactor — the losers
+bracket needs a coherent place for play-in losers to drop into, and
+the LR pointer math gets significantly more complex. Tracked as a
+follow-up. For now, fatal-fury (DE) will keep showing standard
+top-seed byes; switch to single-elim if you want play-in.
+
+#### Test coverage
+New `src/__tests__/lib/playInSeeding.test.ts` — **33 tests** covering
+`planPlayIn` correctness for N ∈ {3, 5, 6, 7, 9, 10, 11, 12, 13, 14,
+15, 17}, pointer wiring for the play-in → main R1 advance, and the
+single-elim invariant `total matches = N - 1`.
+
+Total: **192/192 tests pass** (was 159, +33 new). Build clean.
+
+---
+
 ## [2.36.12] — 2026-05-24
 
 ### Fixed — Bracket on the public page now fits without horizontal scroll

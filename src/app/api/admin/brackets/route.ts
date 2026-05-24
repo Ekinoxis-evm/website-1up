@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { seedBracket } from "@/lib/bracket/seed";
 import { nextPow2 } from "@/lib/bracket/byes";
+import { planPlayIn } from "@/lib/bracket/playIn";
 import { derivePodium } from "@/lib/bracket/podium";
 import { pointsFor } from "@/lib/tournamentPoints";
 
@@ -96,9 +97,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Selecciona al menos 2 participantes registrados" }, { status: 400 });
 
   const n = ordered.length;
-  const size = nextPow2(n);
-  const wRounds = Math.log2(size);
-  const lRounds = format === "double_elimination" ? 2 * (wRounds - 1) : 0;
+
+  // For non-pow2 single-elim, the new play-in path uses a smaller MAIN bracket
+  // (size = largest pow2 ≤ N) with a pre-round absorbing the excess players.
+  // `rounds_winners` stored on the bracket reflects the main bracket's depth
+  // — the play-in (round 0) sits outside that count so labels like "Final"
+  // and "Semifinal" still compute correctly from `rounds_winners`.
+  //
+  // Power-of-2 N and all double-elim still use `nextPow2(N)` (standard
+  // seeding via `distributeByes`).
+  const sePlan   = format === "single_elimination" ? planPlayIn(n) : null;
+  const size     = sePlan ? sePlan.prevPow2 : nextPow2(n);
+  const wRounds  = Math.log2(size);
+  const lRounds  = format === "double_elimination" ? 2 * (wRounds - 1) : 0;
 
   const seeds = seedBracket(n, format);
 
