@@ -53,6 +53,7 @@ const STATE_MAP: Record<string, string> = {
 // ── Round label helpers ──────────────────────────────────────
 
 function winnersLabel(round: number, totalRounds: number): string {
+  if (round === 0) return "Play-in";   // pre-round for non-pow2 SE (v2.36.13)
   const remaining = totalRounds - round;
   if (remaining === 0) return "Final";
   if (remaining === 1) return "Semifinal";

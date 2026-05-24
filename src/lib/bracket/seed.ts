@@ -1,7 +1,8 @@
 // Bracket seeding: generates MatchSeed blueprints for insertion into bracket_matches.
 // Supports single and double elimination for up to 64 participants.
 
-import { nextPow2, distributeByes } from "./byes";
+import { nextPow2, distributeByes, buildPairings } from "./byes";
+import { planPlayIn, playInTargetSlot } from "./playIn";
 
 export type BracketSide = "winners" | "losers" | "grand_final";
 
@@ -24,14 +25,124 @@ export interface MatchSeed {
 }
 
 // ─── Single elimination ────────────────────────────────────────────────────────
+//
+// For non-power-of-2 N we use a play-in round (a.k.a. preliminary round /
+// "round 0"). It absorbs the excess players into a smaller main bracket whose
+// R1 has no byes — keeping R1 visually "complete" and giving fewer players
+// the awkward "I sat out the first round" experience.
+//
+// Standard tournament seeding (distributeByes) is still available — power-of-2
+// N goes straight through it with no play-in needed.
 
 function seedSE(n: number): MatchSeed[] {
-  const size = nextPow2(n);
-  const rounds = Math.log2(size);
-  const pairs = distributeByes(n);
+  const plan = planPlayIn(n);
+
+  // Power-of-2 N: no play-in, no excess seeds — render the natural bracket.
+  if (!plan) return seedSEMainBracket(n, nextPow2(n), 0);
+
+  // Non-power-of-2 N: play-in round + main bracket of size `plan.prevPow2`.
   const seeds: MatchSeed[] = [];
 
-  // R1
+  // ── Play-in round (round 0, side="winners", matchNumber 1..excess) ──
+  // Each play-in winner advances into a specific slot of main R1, computed
+  // from the standard pairings of the smaller bracket.
+  const mainPairs = buildPairings(plan.prevPow2);
+  // Build a slot → mainR1 (matchNumber, slot) lookup so we know exactly
+  // which main R1 match each play-in winner advances into.
+  const slotToMainPos = new Map<number, { matchNumber: number; slot: 1 | 2 }>();
+  mainPairs.forEach(([a, b], idx) => {
+    slotToMainPos.set(a, { matchNumber: idx + 1, slot: 1 });
+    if (b !== null) slotToMainPos.set(b, { matchNumber: idx + 1, slot: 2 });
+  });
+
+  plan.playInPairs.forEach(([topSeed, bottomSeed], j) => {
+    const pi = j + 1; // 1-indexed
+    const targetSlot = playInTargetSlot(plan, pi);
+    const mainPos    = slotToMainPos.get(targetSlot)!;
+    seeds.push({
+      side: "winners",
+      round: 0,                         // round 0 = play-in
+      matchNumber: pi,
+      p1Seed: topSeed,
+      p2Seed: bottomSeed,
+      isBye: false,
+      nextSide: "winners",
+      nextRound: 1,
+      nextMatchNum: mainPos.matchNumber,
+      nextMatchSlot: mainPos.slot,
+      loserNextSide: null,
+      loserNextRound: null,
+      loserNextMatchNum: null,
+      loserNextSlot: null,
+    });
+  });
+
+  // ── Main bracket (R1..final), where the prevPow2 - excess top seeds
+  //    enter directly and the play-in winners fill the remaining slots ──
+  // Re-build R1 from mainPairs, replacing slots > directSeeds with nulls
+  // (those slots get filled when the corresponding play-in winner advances).
+  const mainRounds = Math.log2(plan.prevPow2);
+
+  // R1 (always present — main bracket has at least 1 round)
+  mainPairs.forEach(([a, b], idx) => {
+    const matchNumber = idx + 1;
+    const aIsPlayIn = a > plan.directSeeds;
+    const bIsPlayIn = b !== null && b > plan.directSeeds;
+    seeds.push({
+      side: "winners",
+      round: 1,
+      matchNumber,
+      p1Seed: aIsPlayIn ? null : a,
+      p2Seed: b === null ? null : (bIsPlayIn ? null : b),
+      isBye: false,
+      nextSide: mainRounds > 1 ? "winners" : null,
+      nextRound: mainRounds > 1 ? 2 : null,
+      nextMatchNum: mainRounds > 1 ? Math.ceil(matchNumber / 2) : null,
+      nextMatchSlot: mainRounds > 1 ? (matchNumber % 2 === 1 ? 1 : 2) : null,
+      loserNextSide: null,
+      loserNextRound: null,
+      loserNextMatchNum: null,
+      loserNextSlot: null,
+    });
+  });
+
+  // R2+ of main bracket
+  let prevCount = mainPairs.length;
+  for (let r = 2; r <= mainRounds; r++) {
+    const count = prevCount >> 1;
+    const isFinal = r === mainRounds;
+    for (let m = 1; m <= count; m++) {
+      seeds.push({
+        side: "winners",
+        round: r,
+        matchNumber: m,
+        p1Seed: null,
+        p2Seed: null,
+        isBye: false,
+        nextSide: isFinal ? null : "winners",
+        nextRound: isFinal ? null : r + 1,
+        nextMatchNum: isFinal ? null : Math.ceil(m / 2),
+        nextMatchSlot: isFinal ? null : (m % 2 === 1 ? 1 : 2),
+        loserNextSide: null,
+        loserNextRound: null,
+        loserNextMatchNum: null,
+        loserNextSlot: null,
+      });
+    }
+    prevCount = count;
+  }
+
+  return seeds;
+}
+
+// Power-of-2 N → standard SE seeding (the original implementation, kept
+// inline as a small helper now that the play-in path lives above).
+function seedSEMainBracket(n: number, size: number, _unused: number): MatchSeed[] {
+  void _unused;
+  const rounds = Math.log2(size);
+  const pairs  = distributeByes(n);
+  const seeds: MatchSeed[] = [];
+
   pairs.forEach(([a, b], idx) => {
     const m = idx + 1;
     const isBye = b === null;
@@ -39,7 +150,7 @@ function seedSE(n: number): MatchSeed[] {
       side: "winners",
       round: 1,
       matchNumber: m,
-      p1Seed: a <= n ? a : null,
+      p1Seed: a !== null && a <= n ? a : null,
       p2Seed: isBye ? null : b,
       isBye,
       nextSide: rounds > 1 ? "winners" : null,
@@ -53,7 +164,6 @@ function seedSE(n: number): MatchSeed[] {
     });
   });
 
-  // R2+
   let prevCount = pairs.length;
   for (let r = 2; r <= rounds; r++) {
     const count = prevCount >> 1;
