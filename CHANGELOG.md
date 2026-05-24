@@ -5,6 +5,101 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.10] — 2026-05-24
+
+### Fixed — Bracket seeding algorithm was producing broken brackets
+
+User reported brackets opening with empty pairs in round 1 they couldn't
+move past. Investigation showed the **seeding algorithm was broken** —
+not the UI, not the BYE handling. The bug had been silently producing
+incorrect brackets the whole time; tournaments with participant counts
+that weren't powers of 2 ended up with seed 1 missing entirely and
+matches stuck in `pending` with one null slot.
+
+#### Root cause
+`src/lib/bracket/byes.ts` had an "alternating-step" `buildPairings`
+implementation that **overwrote earlier-assigned slots** in the final
+pass for any bracket of size ≥ 16. For a 16-slot bracket it produced:
+
+```
+positions = [9,5,10,3,11,6,12,2,13,7,14,4,15,8,16,0]
+           //  ↑                                  ↑
+           // overwrote seed 1                    last slot never filled
+```
+
+Compounding bug: `distributeByes` only nulled the second slot of each
+pair when the seed was > N, leaving the first slot as a stale
+out-of-range seed. So pairings like `(10, 3)` were kept in the bracket
+as a "real" match with `p1Seed = null`, then created in the DB as a
+`pending` match with one null `p1_id` — looking like a broken slot the
+admin couldn't fill.
+
+For the live bracket (tournament 5, `torneo-fatal-fury-city-of-the-wolves`,
+9 participants):
+- Seed 1 (`santiagosrb`) didn't appear in any round-1 match
+- 6 matches were stuck in `pending` with one null slot
+- 1 match had both slots null
+- Admin couldn't pick winners on pending matches → no way to progress
+
+#### Fix
+Replaced `buildPairings` with the **standard mirror-recursive doubling
+algorithm**:
+
+```
+size 2  →  [1, 2]
+size 4  →  [1, 4, 2, 3]
+size 8  →  [1, 8, 4, 5, 2, 7, 3, 6]
+size 16 →  [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11]
+```
+
+Property: every seed 1..N appears exactly once, the top half of pairs
+plays the bottom half, and a "chalk" tournament (higher seed always
+wins) ends with seed 1 vs seed 2 in the final.
+
+`distributeByes` now correctly nulls **both slots** of a pair when the
+seed exceeds N, so byes are properly marked. For 9 participants:
+
+```
+distributeByes(9) = [
+  [1, null],   // bye for seed 1
+  [8, 9],      // the only real R1 match
+  [4, null],   // bye for seed 4
+  [5, null],
+  [2, null],
+  [7, null],
+  [3, null],
+  [6, null],
+]
+```
+
+#### Test coverage
+New file `src/__tests__/lib/bracketSeeding.test.ts` — **45 tests** pinning:
+- `nextPow2` across 13 values
+- `buildPairings` produces every seed 1..slots with no zeros for
+  slots ∈ {2, 4, 8, 16, 32, 64}
+- Regression-pinned exact output for sizes 2, 4, 8, 16
+- `distributeByes` correctness for N = 2, 3, 5, 8, 9, 10
+- Invariant: for every N ∈ {3, 5..15, 17, 31, 33, 63} the union of all
+  pair slots is exactly the seeds 1..N
+
+Total tests: **159/159 pass** (was 114, +45 new).
+
+#### Live unstick
+Bracket 9 (fatal-fury, was in_progress with broken pairings) deleted
+via MCP — cascades to `bracket_participants` and `bracket_matches`.
+Tournament 5 status reset from `live` → `upcoming` so the cockpit
+lifecycle is coherent. `is_active=true` and `is_registration_open=false`
+are preserved. Admin can now open the Bracket tab and click "Generar
+bracket" to rebuild with the corrected algorithm.
+
+The single completed match from the broken bracket (m63: winner = seed 5
+`justshadow`) is lost — but the rest of the bracket was broken so it
+had to be redone anyway.
+
+Build clean, 159/159 tests pass.
+
+---
+
 ## [2.36.8] — 2026-05-24
 
 ### Fixed — `published` bracket state no longer traps tournaments
