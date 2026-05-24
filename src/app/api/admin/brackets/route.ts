@@ -15,6 +15,76 @@ async function checkAdmin(req: NextRequest) {
   return await isAdmin(await resolveUserEmail(claims.userId));
 }
 
+// ── DE bye-cascading (v2.36.14) ────────────────────────────────────────────
+// When a WB BYE leaves an LB slot with `p_source='bye'`, the LB match has
+// effectively one real seat. As soon as the *other* seat is filled (by the
+// real WB feeder's loser), the LB match auto-completes for the present
+// participant — they advance to the next LB match. That advance can itself
+// land in a slot whose other side is phantom, triggering another cascade.
+// This helper handles the chain.
+//
+// Call after writing the loser into `lbMatchId` slot `arrivedSlot`. Reads
+// the LB match state to decide:
+//   • If the OTHER slot is `p_source='bye'`        → auto-complete + cascade
+//   • If both real participants are present        → mark `state='ready'`
+//   • Otherwise (still waiting for another source) → leave as-is
+async function cascadeLbAdvance(
+  lbMatchId:   number,
+  arrivedId:   number,
+  arrivedSlot: 1 | 2,
+): Promise<void> {
+  const { data: lb } = await supabaseAdmin
+    .from("bracket_matches")
+    .select("id, p1_id, p2_id, p1_source, p2_source, state, next_match_id, next_match_slot")
+    .eq("id", lbMatchId)
+    .single();
+  if (!lb) return;
+
+  const otherSource = arrivedSlot === 1 ? lb.p2_source : lb.p1_source;
+  const otherId     = arrivedSlot === 1 ? lb.p2_id     : lb.p1_id;
+
+  // Case 1 — both real participants are seated: ready to play.
+  if (otherId !== null && otherSource !== "bye") {
+    if (lb.state !== "completed" && lb.state !== "bye") {
+      await supabaseAdmin
+        .from("bracket_matches")
+        .update({ state: "ready" })
+        .eq("id", lbMatchId);
+    }
+    return;
+  }
+
+  // Case 2 — the other side is a phantom: cascade the arrived participant
+  // forward as the de-facto winner of this match.
+  if (otherSource === "bye") {
+    await supabaseAdmin
+      .from("bracket_matches")
+      .update({
+        state: "bye",
+        winner_id: arrivedId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", lbMatchId);
+
+    if (!lb.next_match_id || !lb.next_match_slot) return;
+
+    const nextSlot = lb.next_match_slot as 1 | 2;
+    const slotUpd  = nextSlot === 1
+      ? { p1_id: arrivedId, p1_source: "winner_of" as const, p1_source_match_id: lbMatchId }
+      : { p2_id: arrivedId, p2_source: "winner_of" as const, p2_source_match_id: lbMatchId };
+    await supabaseAdmin
+      .from("bracket_matches")
+      .update(slotUpd)
+      .eq("id", lb.next_match_id);
+
+    // Recurse on the downstream match — it might also be a phantom-chain.
+    await cascadeLbAdvance(lb.next_match_id, arrivedId, nextSlot);
+    return;
+  }
+
+  // Case 3 — other slot still waiting for a non-bye source; no action.
+}
+
 // GET /api/admin/brackets?tournamentId=xxx
 export async function GET(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -225,6 +295,60 @@ export async function POST(req: NextRequest) {
     }
   }));
 
+  // 6b. DE bye-cascading: for each WB BYE match, mark the corresponding LB
+  // slot as `p_source='bye'` (a phantom). Then if any LB match ends up with
+  // BOTH slots marked phantom, the LB match is fully dead — mark it
+  // `state='bye'` and cascade the phantom forward to its `next_match` slot.
+  // Without this, non-pow2 DE brackets (e.g. N=3, N=5) end up with LB
+  // matches stuck pending because the WB BYE side never sends a loser.
+  // Runtime cascading-on-result lives in PATCH `result` below.
+  if (format === "double_elimination") {
+    // Mark LB R1 slots whose WB R1 feeder is a BYE
+    const byeWbR1 = seeds.filter(s =>
+      s.side === "winners" && s.round === 1 && s.isBye &&
+      s.loserNextSide && s.loserNextRound && s.loserNextMatchNum && s.loserNextSlot,
+    );
+    for (const bye of byeWbR1) {
+      const lbId = matchMap.get(matchKey(bye.loserNextSide!, bye.loserNextRound!, bye.loserNextMatchNum!));
+      if (!lbId) continue;
+      const update = bye.loserNextSlot === 1
+        ? { p1_source: "bye" as const }
+        : { p2_source: "bye" as const };
+      await supabaseAdmin.from("bracket_matches").update(update).eq("id", lbId);
+    }
+
+    // Cascade fully-phantom LB matches forward, round by round.
+    for (let r = 1; r <= lRounds; r++) {
+      const { data: lbRoundMatches } = await supabaseAdmin
+        .from("bracket_matches")
+        .select("id, p1_source, p2_source, next_match_id, next_match_slot")
+        .eq("bracket_id", bracket.id)
+        .eq("bracket_side", "losers")
+        .eq("round", r);
+      if (!lbRoundMatches) continue;
+
+      for (const lb of lbRoundMatches) {
+        if (lb.p1_source === "bye" && lb.p2_source === "bye") {
+          // Fully phantom — no participant will ever arrive. Mark state=bye
+          // and propagate the phantom to the next match's slot.
+          await supabaseAdmin
+            .from("bracket_matches")
+            .update({ state: "bye" })
+            .eq("id", lb.id);
+          if (lb.next_match_id && lb.next_match_slot) {
+            const update = lb.next_match_slot === 1
+              ? { p1_source: "bye" as const }
+              : { p2_source: "bye" as const };
+            await supabaseAdmin
+              .from("bracket_matches")
+              .update(update)
+              .eq("id", lb.next_match_id);
+          }
+        }
+      }
+    }
+  }
+
   revalidatePath("/torneos");
   revalidatePath("/torneos/[slug]", "page");
 
@@ -320,16 +444,16 @@ export async function PATCH(req: NextRequest) {
         await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_match_id);
     }
 
-    // Advance loser (double elimination)
+    // Advance loser (double elimination). If the destination LB slot's
+    // *other* side is `p_source='bye'` (a phantom from an upstream WB BYE),
+    // the LB match has effectively a single participant — auto-advance them
+    // through the cascade.
     if (match.next_loser_match_id && match.next_loser_slot) {
       const upd = match.next_loser_slot === 1
         ? { p1_id: loserId, p1_source: "loser_of" as const, p1_source_match_id: matchId }
         : { p2_id: loserId, p2_source: "loser_of" as const, p2_source_match_id: matchId };
       await supabaseAdmin.from("bracket_matches").update(upd).eq("id", match.next_loser_match_id);
-      const { data: lm } = await supabaseAdmin
-        .from("bracket_matches").select("p1_id, p2_id, state").eq("id", match.next_loser_match_id).single();
-      if (lm?.p1_id && lm?.p2_id && lm.state !== "completed")
-        await supabaseAdmin.from("bracket_matches").update({ state: "ready" }).eq("id", match.next_loser_match_id);
+      await cascadeLbAdvance(match.next_loser_match_id, loserId, match.next_loser_slot as 1 | 2);
     }
 
     // Eliminated when knocked out of losers / grand final

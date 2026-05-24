@@ -115,6 +115,31 @@ describe("distributeByes — top seeds get the byes", () => {
   });
 });
 
+describe("DE BYE matches retain loserNext (v2.36.14 cascading-bye prereq)", () => {
+  it("N=3 DE: WB R1 BYE match keeps loserNext populated", async () => {
+    const { seedBracket } = await import("@/lib/bracket/seed");
+    const seeds = seedBracket(3, "double_elimination");
+    const byes = seeds.filter(s => s.side === "winners" && s.round === 1 && s.isBye);
+    expect(byes.length).toBeGreaterThan(0);
+    for (const b of byes) {
+      // Even though no real loser arrives, loserNext is metadata used at
+      // bracket creation to mark the corresponding LB slot as `p_source='bye'`
+      expect(b.loserNextSide).toBe("losers");
+      expect(b.loserNextRound).toBe(1);
+      expect(b.loserNextMatchNum).not.toBeNull();
+      expect(b.loserNextSlot).not.toBeNull();
+    }
+  });
+
+  it("N=5 DE: all 3 WB R1 BYEs have loserNext populated", async () => {
+    const { seedBracket } = await import("@/lib/bracket/seed");
+    const seeds = seedBracket(5, "double_elimination");
+    const byes = seeds.filter(s => s.side === "winners" && s.round === 1 && s.isBye);
+    expect(byes.length).toBe(3);
+    expect(byes.every(b => b.loserNextMatchNum !== null && b.loserNextSlot !== null)).toBe(true);
+  });
+});
+
 describe("distributeByes — invariants", () => {
   it.each([3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 31, 33, 63])(
     "N=%d: every seed 1..N appears exactly once across all pairs",
