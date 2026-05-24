@@ -154,10 +154,13 @@ export function TournamentBracketView({
   // Box dimensions scale with the avatar size in the custom card. TV mode is
   // significantly bigger so a venue screen can read it from across the room.
   // Admin mode is between the two — has room for the per-match undo button.
+  // Regular (public page) is the densest — tighter columns + shorter boxes
+  // so the tree fits more screens at full scale before the ResponsiveScale
+  // wrapper has to shrink it further.
   const options =
     scale === "tv"    ? { style: { width: 460, boxHeight: 200, spaceBetweenColumns: 80, spaceBetweenRows: 32 } }
   : scale === "admin" ? { style: { width: 320, boxHeight: 152, spaceBetweenColumns: 56, spaceBetweenRows: 24 } }
-  :                     { style: { width: 280, boxHeight: 120 } };
+  :                     { style: { width: 240, boxHeight: 100, spaceBetweenColumns: 40, spaceBetweenRows: 16 } };
 
   if (bracket.format === "single_elimination") {
     const wRounds = bracket.rounds_winners;
@@ -220,7 +223,13 @@ export function TournamentBracketView({
 //
 // Re-runs on container resize + content resize so the bracket re-fits on
 // window resize, devtools toggle, fullscreen open/close, etc.
-const MIN_SCALE = 0.45;
+//
+// MIN_SCALE was 0.45 — too aggressive for wide double-elim brackets on
+// narrow viewports, which forced horizontal scrolling on phones / portrait
+// tablets. Lowered to 0.25 so the bracket always fits the container; text
+// gets smaller but users can pinch-zoom natively if they need detail. The
+// admin's Pantalla completa button (v2.36.7) gives a larger view on demand.
+const MIN_SCALE = 0.25;
 
 function ResponsiveScale({ children }: { children: React.ReactNode }) {
   const wrapRef  = useRef<HTMLDivElement>(null);
