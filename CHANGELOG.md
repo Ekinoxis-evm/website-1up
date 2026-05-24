@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.12] — 2026-05-24
+
+### Fixed — Bracket on the public page now fits without horizontal scroll
+
+User report: opening the bracket on the first page (`/torneos/[slug]`)
+still required mouse-panning left/right despite the responsive auto-fit
+shipped in v2.36.9. The cause was two-fold:
+
+1. **MIN_SCALE was 0.45** — too aggressive a floor. For double-elim
+   brackets with many rounds, the natural width far exceeds 0.45×
+   container width on phones / portrait tablets, so the wrapper fell
+   back to horizontal scroll. Lowered to **0.25** so the bracket always
+   fits the container; users can pinch-zoom natively if they need
+   detail, and admins still have **Pantalla completa** for a bigger
+   in-page view.
+
+2. **Public-page box dimensions were too large** — `280×120` with default
+   spacing produced a wider tree than necessary. Tightened to
+   `240×100` with `spaceBetweenColumns: 40`, `spaceBetweenRows: 16`.
+   At full scale (1.0) the tree now uses ~15% less horizontal space, so
+   ResponsiveScale rarely has to shrink it on a typical laptop viewport.
+   Admin and TV scales unchanged (they're already sized for their
+   contexts).
+
+Result: opening a 16-slot bracket on a 1366×768 laptop or a 414px phone
+no longer requires horizontal scrolling. Pinch-zoom still works for
+detail. Admin's Pantalla completa overlay (v2.36.7) is still the
+"see-it-big" option.
+
+Build clean, 159/159 tests pass.
+
+---
+
 ## [2.36.10] — 2026-05-24
 
 ### Fixed — Bracket seeding algorithm was producing broken brackets
