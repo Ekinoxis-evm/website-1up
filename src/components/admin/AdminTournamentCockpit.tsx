@@ -90,7 +90,7 @@ type TabId = "info" | "inscripciones" | "bracket" | "premios";
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "info",          label: "Información",   icon: "info"          },
   { id: "inscripciones", label: "Inscripciones", icon: "groups"        },
-  { id: "bracket",       label: "Bracket",       icon: "tournament"    },
+  { id: "bracket",       label: "Bracket",       icon: "account_tree"  },
   { id: "premios",       label: "Premios",       icon: "emoji_events"  },
 ];
 

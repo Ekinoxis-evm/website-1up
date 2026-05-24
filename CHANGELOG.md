@@ -35,6 +35,10 @@ Fix is pure UI inside `AdminTournamentBracketPanel`:
 - **Step 3 panel header** now reads "Paso 3 · Enfrentamientos iniciales"
   + a one-line reminder: "Revisa los pares. Si todo se ve bien, dale a
   Iniciar Torneo al final."
+- **Tab icon swap** — Bracket tab icon changed from `tournament` (busy
+  multi-line bracket diagram) to `account_tree` (clean single-stroke
+  branching diagram). Matches the visual weight of the other three tab
+  icons (`info`, `groups`, `emoji_events`).
 
 No behaviour or API changes — purely clarification of an already-correct flow.
 Build clean, 114/114 tests pass.
