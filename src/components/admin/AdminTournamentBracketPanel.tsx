@@ -8,8 +8,11 @@
 //   • SETUP / DRAFT — participant picker (toggle, shuffle, reorder),
 //     format selector, "Crear / Regenerar bracket", initial pairings preview,
 //     "Iniciar Torneo", "Eliminar bracket"
-//   • RUNNING / COMPLETED — round-grouped match grid with click-to-pick winner
-//     and per-match undo
+//   • RUNNING / COMPLETED — interactive bracket tree (TournamentBracketView
+//     with scale="admin"). Click a participant on a "ready" match to pick
+//     them as winner. Click "Deshacer" at the foot of a completed match
+//     to undo. Visualization matches the public + TV views — same tree,
+//     same avatars — so the admin sees exactly what spectators see.
 //
 // The consumer wraps this panel with whatever framing it likes
 // (header / stage banner / page chrome).
@@ -18,6 +21,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import type { Bracket, BracketMatch, BracketParticipant } from "@/types/database.types";
+import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
 
 export type BracketTournament = {
   id: number;
@@ -27,22 +31,24 @@ export type BracketTournament = {
   max_participants: number | null;
 };
 
+// The admin GET endpoint joins user_profiles for avatar/username — match that
+// shape so the interactive tree can render avatar match cards.
+type ParticipantWithProfile = BracketParticipant & {
+  user_profiles: {
+    avatar_url: string | null;
+    username:   string | null;
+    nombre:     string | null;
+    apellidos:  string | null;
+  } | null;
+};
+
 type BracketData = {
   bracket:      Bracket;
-  participants: BracketParticipant[];
+  participants: ParticipantWithProfile[];
   matches:      BracketMatch[];
 } | null;
 
 type RosterEntry = { userProfileId: number; name: string; included: boolean };
-
-const SIDE_ORDER: Record<string, number> = { winners: 0, losers: 1, grand_final: 2, gf_reset: 3 };
-const SIDE_LABEL: Record<string, string> = {
-  winners: "Winners", losers: "Losers", grand_final: "Gran Final", gf_reset: "Reset",
-};
-const STATE_LABEL: Record<string, string> = {
-  pending: "Pendiente", ready: "Por jugar", in_progress: "En curso",
-  completed: "Finalizado", bye: "BYE",
-};
 
 const FORMATS = [
   {
@@ -482,14 +488,36 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
         </div>
       )}
 
-      {/* ── RUNNING / COMPLETED ────────────────────────────────────────── */}
+      {/* ── RUNNING / COMPLETED — interactive tree ──────────────────── */}
       {bracketData && isRunning && (
-        <RunningView
-          data={bracketData}
-          busy={busy}
-          onPickWinner={pickWinner}
-          onUndo={undoMatch}
-        />
+        <div className="space-y-4">
+          <div className="bg-surface-container p-3 flex flex-wrap items-center gap-3">
+            <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${
+              bracketData.bracket.status === "completed"
+                ? "bg-surface-container-high text-on-surface"
+                : "bg-primary text-background animate-pulse"
+            }`}>
+              {bracketData.bracket.status === "completed" ? "Torneo finalizado" : "Torneo en curso"}
+            </span>
+            <span className="font-body text-xs text-outline">
+              {bracketData.bracket.format === "double_elimination" ? "Doble eliminación" : "Eliminación simple"}
+              {" · "}
+              {bracketData.bracket.participant_count} participantes
+            </span>
+            <span className="font-body text-xs text-outline ml-auto">
+              Haz clic en el ganador de cada partida. Para deshacer una partida finalizada,
+              usa el botón <strong className="text-on-surface">Deshacer</strong> al pie de la tarjeta.
+            </span>
+          </div>
+
+          <TournamentBracketView
+            data={bracketData}
+            scale="admin"
+            onPickWinner={pickWinner}
+            onUndo={undoMatch}
+            busy={busy}
+          />
+        </div>
       )}
     </div>
   );
@@ -524,123 +552,3 @@ function FlowStep({
   );
 }
 
-// ── Running view ──────────────────────────────────────────────────────────
-
-function RunningView({
-  data, busy, onPickWinner, onUndo,
-}: {
-  data: NonNullable<BracketData>;
-  busy: boolean;
-  onPickWinner: (matchId: number, winnerId: number) => void;
-  onUndo: (matchId: number) => void;
-}) {
-  const participantMap = new Map(data.participants.map(p => [p.id, p]));
-  const completed = data.bracket.status === "completed";
-
-  const grouped = Object.entries(
-    data.matches.reduce<Record<string, BracketMatch[]>>((acc, m) => {
-      (acc[`${m.bracket_side}-${m.round}`] ??= []).push(m);
-      return acc;
-    }, {}),
-  ).sort(([a], [b]) => {
-    const [sa, ra] = a.split("-"); const [sb, rb] = b.split("-");
-    const so = (SIDE_ORDER[sa] ?? 9) - (SIDE_ORDER[sb] ?? 9);
-    return so !== 0 ? so : parseInt(ra) - parseInt(rb);
-  });
-
-  const champion = completed
-    ? data.participants.find(p => !p.eliminated && data.matches.some(m =>
-        m.winner_id === p.id && (m.bracket_side === "grand_final" || (data.bracket.format === "single_elimination" && m.next_match_id === null))))
-    : null;
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-surface-container p-4 flex flex-wrap items-center gap-4">
-        <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${
-          completed ? "bg-surface-container-high text-on-surface" : "bg-primary text-background animate-pulse"
-        }`}>
-          {completed ? "Torneo finalizado" : "Torneo en curso"}
-        </span>
-        <span className="font-body text-sm text-outline">
-          {data.bracket.format === "double_elimination" ? "Doble eliminación" : "Eliminación simple"} ·{" "}
-          {data.bracket.participant_count} participantes
-        </span>
-        {champion && (
-          <span className="font-headline font-black text-sm text-primary-container ml-auto flex items-center gap-1">
-            <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>trophy</span>
-            {champion.display_name}
-          </span>
-        )}
-      </div>
-
-      {grouped.map(([key, matches]) => {
-        const [side, round] = key.split("-");
-        return (
-          <div key={key}>
-            <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline mb-3">
-              {SIDE_LABEL[side] ?? side} — Ronda {round}
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {matches.sort((a, b) => a.match_number - b.match_number).map(m => {
-                const p1 = m.p1_id ? participantMap.get(m.p1_id) : null;
-                const p2 = m.p2_id ? participantMap.get(m.p2_id) : null;
-                const canPick = m.state === "ready" && p1 && p2;
-                const isCompleted = m.state === "completed";
-
-                return (
-                  <div key={m.id} className="bg-surface-container">
-                    {(["p1", "p2"] as const).map(slot => {
-                      const p = slot === "p1" ? p1 : p2;
-                      const isWinner = isCompleted && m.winner_id === (slot === "p1" ? m.p1_id : m.p2_id);
-                      const isLoser  = isCompleted && !isWinner;
-                      return (
-                        <button
-                          key={slot}
-                          disabled={!canPick || busy}
-                          onClick={() => canPick && p && onPickWinner(m.id, p.id)}
-                          className={`w-full flex items-center gap-2 px-4 py-3 text-left transition-colors ${
-                            canPick ? "hover:bg-primary-container/20 cursor-pointer" : "cursor-default"
-                          } ${slot === "p1" ? "border-b border-surface-container-low" : ""} ${
-                            isWinner ? "bg-primary-container/15" : isLoser ? "opacity-40" : ""
-                          }`}
-                        >
-                          {isWinner && (
-                            <span className="material-symbols-outlined text-sm text-primary-container"
-                              style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          )}
-                          <span className={`font-body text-sm flex-1 truncate ${isWinner ? "text-primary-container font-bold" : "text-on-surface"}`}>
-                            {p?.display_name ?? (m.state === "bye" ? "BYE" : "Por definir")}
-                          </span>
-                          {canPick && (
-                            <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline">
-                              Ganó
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                    <div className="px-4 py-1.5 bg-surface-container-high flex items-center justify-between">
-                      <span className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline">
-                        {STATE_LABEL[m.state] ?? m.state}
-                      </span>
-                      {isCompleted && !completed && (
-                        <button
-                          onClick={() => onUndo(m.id)}
-                          disabled={busy}
-                          className="font-headline font-bold text-[9px] uppercase tracking-widest text-outline hover:text-error disabled:opacity-40 flex items-center gap-0.5"
-                        >
-                          <span className="material-symbols-outlined text-xs">undo</span>
-                          Deshacer
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}

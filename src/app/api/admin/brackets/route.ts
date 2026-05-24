@@ -31,9 +31,11 @@ export async function GET(req: NextRequest) {
   if (!bracket) return NextResponse.json(null);
 
   const [{ data: participants }, { data: matches }] = await Promise.all([
+    // Same shape as the public bracket endpoint — joining user_profiles so
+    // the admin's interactive tree can render avatar match cards.
     supabaseAdmin
       .from("bracket_participants")
-      .select("*")
+      .select("*, user_profiles(avatar_url, username, nombre, apellidos)")
       .eq("bracket_id", bracket.id)
       .order("seed"),
     supabaseAdmin

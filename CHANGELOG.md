@@ -39,9 +39,27 @@ Fix is pure UI inside `AdminTournamentBracketPanel`:
   multi-line bracket diagram) to `account_tree` (clean single-stroke
   branching diagram). Matches the visual weight of the other three tab
   icons (`info`, `groups`, `emoji_events`).
+- **Running view becomes the real bracket tree** — `AdminTournamentBracketPanel`
+  used to show running tournaments as a grouped match-by-round list.
+  Replaced with the same `TournamentBracketView` tree the public page +
+  TV view use, with `scale="admin"` enabling interactivity:
+  - Click a participant on a "ready" match → pick them as winner
+  - Each completed match grows a small "Deshacer" button at the foot →
+    confirms + calls the existing `PATCH /api/admin/brackets {action:"undo"}`
+  - For double-elimination tournaments, the lib naturally renders the
+    winners-bracket path on top and the losers-bracket path below the
+    same tree, with the Grand Final at the join — exactly like a
+    real-world tournament TV graphic
+  - Avatar match cards (admin scale: 40px avatars, base-size names) match
+    the visual language of the public bracket — same atoms, different
+    box dimensions
+- **`/api/admin/brackets` GET endpoint** now joins
+  `bracket_participants → user_profiles(avatar_url, username, nombre,
+  apellidos)`, same shape as the public endpoint, so the admin tree gets
+  avatar data on first paint.
 
-No behaviour or API changes — purely clarification of an already-correct flow.
-Build clean, 114/114 tests pass.
+No behaviour or API changes on the server beyond the GET join — purely
+UI clarification + visualization upgrade. Build clean, 114/114 tests pass.
 
 ---
 
