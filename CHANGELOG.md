@@ -5,6 +5,92 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.14] — 2026-05-24
+
+### Fixed — DE bye-cascading: losers bracket no longer traps phantom slots
+
+User reported a 3-player double-elim bracket where the LB Final was stuck
+forever showing `lyca2206 vs TBD` and `jef182` couldn't advance from LB
+Round 1. Root cause: when a winners-bracket match is a BYE (no real
+loser), the LB slot that should have received that loser sits empty
+forever, and any LB match downstream waiting for that slot is stuck.
+
+This was the **DE play-in / DE bye-handling** follow-up I'd flagged at
+the time of v2.36.13. Now fully shipped.
+
+#### What was broken
+For N=3 DE (seeds 1, 2, 3 = visual1up, lyca2206, jef182):
+
+```
+W R1 M1: visual1up vs BYE     ← BYE, visual1up auto-advances. NO LOSER.
+W R1 M2: lyca2206 vs jef182   ← real, lyca2206 wins; jef182 → LB R1 slot 2
+W R2:    visual1up vs lyca2206 ← visual1up wins; lyca2206 → LB Final slot 2
+
+L R1:    TBD ← was supposed to be W R1 M1's loser (but it's a BYE — no loser)
+         jef182 (filled from W R1 M2 loser)
+         → state stuck "pending"; jef182 can never advance
+
+L Final: TBD ← waiting for L R1 winner (which can never resolve)
+         lyca2206 (filled from W R2 loser)
+         → state stuck "pending"
+```
+
+Bracket dead-ends. Same issue would affect any N ∈ {3, 5, 6, 7, 9, 10,
+11, 12, 13, 14, 15} in double-elim (any non-pow2 count).
+
+#### Fix
+**1. Seed layer — `seedDE` keeps `loserNext` populated for BYE WB matches.**
+   Previously the loserNext fields were nulled for byes (no loser → no
+   target). Now they're kept as metadata so the API can find the LB slot
+   that *would* have received the phantom loser.
+
+**2. Bracket creation (`POST /api/admin/brackets` step 6b) — DE bye-cascading.**
+   - For each WB BYE match, mark the corresponding LB slot with
+     `p_source = 'bye'` (phantom).
+   - Topological pass through LB rounds: if both slots of an LB match are
+     phantom (e.g. when 2 adjacent WB BYEs feed the same LB R1 match),
+     mark the LB match `state='bye'` and propagate the phantom forward
+     to its `next_match` slot. Cascades through LB R2, R3, … as deep as
+     needed.
+
+**3. Runtime cascading (`PATCH /api/admin/brackets` action `result`) —
+   `cascadeLbAdvance()`.**
+   When a WB loser arrives in an LB slot whose other side is `p_source='bye'`:
+   - LB match has effectively one real participant → mark `state='bye'`,
+     `winner_id = the arrived participant`.
+   - Advance them to `next_match` via `winner_of` source.
+   - Recurse on the downstream match in case it also has a phantom slot
+     waiting (covers chains for N=5, N=11, etc.).
+
+#### Live unstick (already applied before this code shipped)
+The `rivals-of-aether` bracket (the tournament that surfaced the bug)
+was patched directly via MCP so the tournament could finish that night:
+- Match 126 (LB R1) → `state='bye'`, `winner_id=jef182`, `p1_source='bye'`
+- Match 127 (LB Final) → `p1_id=jef182`, `p1_source='winner_of'`, `state='ready'`
+
+#### Tests
+`bracketSeeding.test.ts` extended with a section pinning that WB R1 BYE
+matches retain populated `loserNext` for N=3 and N=5 DE (the cascading-
+bye prerequisite). Full suite still passes: **194/194**.
+
+Runtime cascade logic isn't unit-testable cheaply without a DB mock —
+it's exercised by the manual fatal-fury / rivals smoke tests and by the
+self-healing fact that any DE tournament where the user creates a fresh
+bracket goes through the cascading-bye path at creation. Future broken
+brackets won't happen; existing in-progress brackets need a manual unstick
+like the one applied to rivals-of-aether.
+
+#### What's left
+- Single-elim non-pow2 still uses the **play-in round** (v2.36.13) — that
+  path is unchanged and remains the cleaner option for SE.
+- Double-elim non-pow2 now works end-to-end with the cascade.
+- If you regenerate `fatal-fury` (DE, 9 players) after this lands, the
+  bracket will be playable without manual intervention.
+
+Build clean, 113/113 pages, 194/194 tests pass.
+
+---
+
 ## [2.36.13] — 2026-05-24
 
 ### Added — Play-in round for non-power-of-2 single-elim tournaments

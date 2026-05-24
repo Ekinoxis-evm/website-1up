@@ -225,10 +225,17 @@ function seedDE(n: number): MatchSeed[] {
       nextRound: 2,
       nextMatchNum: Math.ceil(m / 2),
       nextMatchSlot: m % 2 === 1 ? 1 : 2,
-      loserNextSide: isBye ? null : "losers",
-      loserNextRound: isBye ? null : 1,
-      loserNextMatchNum: isBye ? null : lrMatchNum,
-      loserNextSlot: isBye ? null : lrSlot,
+      // loserNext is kept populated even for BYE matches — the cascading-bye
+      // step in `/api/admin/brackets` POST uses it to find the LB slot that
+      // would have received this match's loser (so the slot can be marked
+      // `p_source='bye'` and auto-collapse cleanly). The PATCH `result`
+      // handler doesn't use loserNext on BYE matches at runtime (no loser
+      // arrives there), so this is metadata only — but it's the metadata
+      // the cascading-bye logic needs.
+      loserNextSide: "losers",
+      loserNextRound: 1,
+      loserNextMatchNum: lrMatchNum,
+      loserNextSlot: lrSlot,
     });
   });
 
