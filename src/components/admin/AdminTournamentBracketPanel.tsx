@@ -538,13 +538,12 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
           </div>
 
           {/*
-            Compact, contained view. `min-w-0` is the key bit — without it,
-            the flex/grid ancestor in the cockpit would let the SVG-rendered
-            bracket push the tab content (and the whole page) wider than the
-            viewport. With `min-w-0` + `overflow-x-auto` the bracket scrolls
-            horizontally INSIDE this card instead of dragging the layout.
+            Compact view. The TournamentBracketView's own ResponsiveScale
+            wrapper handles CSS-scaling the SVG down to fit the container
+            and falls back to horizontal scroll only if scaling would make
+            the bracket unreadable (below MIN_SCALE).
           */}
-          <div className="min-w-0 max-w-full overflow-x-auto bg-surface-container/30 p-3">
+          <div className="min-w-0 bg-surface-container/30 p-3">
             <TournamentBracketView
               data={bracketData}
               scale="admin"
