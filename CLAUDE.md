@@ -323,7 +323,7 @@ https://auth.privy.io/api/v1/oauth/callback
 Do NOT use `https://privy.1upesports.org/api/v1/oauth/callback` — Privy always sends the `auth.privy.io` callback to Google regardless of the custom domain.
 
 ### Privy Dashboard (one-time)
-- **Allowed origins**: `https://1upesports.org`, `https://app.1upesports.org`, `https://admin.1upesports.org`
+- **Allowed origins**: `https://1upesports.org`, `https://www.1upesports.org`, `https://app.1upesports.org`, `https://admin.1upesports.org` *(www is required because Vercel auto-redirects the apex to www — login attempts from the public marketing site would otherwise hit an origin Privy doesn't recognize)*
 - **Allowed OAuth redirect URLs**: `https://app.1upesports.org/login` (this is the `redirect_to` Privy sends to its own `/oauth/init` endpoint — must be an exact match, no trailing slash)
 
 ### Debugging checklist
