@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.6] — 2026-05-24
+
+### Fixed — "Iniciar Torneo" now also flips `is_active = true`
+
+Bug discovered in prod: a tournament with `status = "live"` (admin already
+clicked Iniciar Torneo) but `is_active = false` (admin kept Visible toggle
+off while configuring) was **invisible on every public route** —
+`/torneos/[slug]`, `/torneos/[slug]/checkin`, **and** `/torneos/[slug]/tv`
+all 404 because each filters on `is_active = true`. Result: the admin
+started the tournament, opened the TV view to cast to the venue screen,
+and got a 404. Trap.
+
+Fix: the bracket PATCH `start` action now also sets `is_active = true`.
+
+Rationale: `status = "live"` + `is_active = false` is an incoherent state.
+The admin explicitly clicked Iniciar Torneo — that's the unambiguous signal
+to publish. We treat it as the moment the tournament transitions from
+"configuring privately" to "running publicly", and the visibility flag
+follows the lifecycle, same way `is_registration_open` already does.
+
+One-line change in `/api/admin/brackets` PATCH action="start" — the
+update now writes `{ status: "live", is_registration_open: false,
+is_active: true }` instead of just the first two.
+
+The tournament that hit this trap in prod (id=5,
+`torneo-fatal-fury-city-of-the-wolves`) was unblocked manually via MCP
+before this patch landed; subsequent tournaments are protected by the
+code change.
+
+Build clean, 114/114 tests pass.
+
+---
+
 ## [2.36.5] — 2026-05-24
 
 ### Fixed — Bracket tab now self-documents the 3-step start flow

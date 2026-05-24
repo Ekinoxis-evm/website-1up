@@ -246,11 +246,17 @@ export async function PATCH(req: NextRequest) {
       .update({ status: "in_progress", updated_at: new Date().toISOString() })
       .eq("id", bracket.id);
 
-    // Starting the bracket puts the tournament live AND closes registration —
-    // after this point no new entries are accepted and the structure is locked.
+    // Starting the bracket puts the tournament live, closes registration,
+    // AND makes it publicly visible. The `is_active` flag is the "Visible"
+    // toggle on the admin edit form — admins typically keep it off while
+    // configuring (private setup) and forget to flip it back on once the
+    // tournament is ready. If they explicitly clicked "Iniciar Torneo",
+    // we treat that as a clear signal to publish: status=live + is_active=true
+    // is the only coherent state for a tournament that's about to start
+    // accepting check-ins and broadcasting on the TV view.
     await supabaseAdmin
       .from("tournaments")
-      .update({ status: "live", is_registration_open: false })
+      .update({ status: "live", is_registration_open: false, is_active: true })
       .eq("id", tournamentId)
       .neq("status", "completed");
 
