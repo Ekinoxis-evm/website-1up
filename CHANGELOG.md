@@ -5,6 +5,36 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.4] — 2026-05-24
+
+### Fixed — Database audit closure pass (4 advisor findings)
+
+Re-ran Supabase advisors (security + performance) for the first time since
+the MCP was authorized. Triaged the lints: 4 actionable findings, the rest
+were info-level noise that's correct-by-design (see `AUDIT.md` for the full
+breakdown).
+
+| # | Severity | Fix |
+|---|---|---|
+| 1 | **ERROR** — `hall_of_fame` view was `SECURITY DEFINER` | `ALTER VIEW SET (security_invoker = on)`. Regression I introduced in the v2.31.0 view rebuild (the `DROP/CREATE VIEW` pattern doesn't carry forward `security_invoker`). |
+| 2 | WARN — `set_updated_at()` mutable `search_path` | `ALTER FUNCTION SET search_path = public, pg_temp`. AUDIT.md claimed this was fixed in 2.29.6 but the live `proconfig` was null — never actually applied. |
+| 3 | WARN — `report_match_result()` was SECURITY DEFINER + executable by PUBLIC / anon / authenticated | `DROP FUNCTION` (zero callers; only present in auto-generated `database.types.ts`). |
+| 4 | WARN — `tournament_registrations` RLS policy re-evaluated `current_setting()` per row | Wrapped in `(SELECT …)` for once-per-query evaluation. |
+
+Single migration: `supabase/migrations/20260524050326_audit_closure_v2_36_4.sql`.
+
+Also committed two prior migrations that had been applied via MCP earlier in
+this session but never made it into the repo — drift caught while auditing:
+- `20260523161035_add_avatar_url_to_user_profiles.sql`
+- `20260523161959_hall_of_fame_view_add_avatar_url.sql`
+
+`AUDIT.md` updated: "Open verification items" section closed; remaining
+advisor info-level items documented as correct-by-design.
+
+Verification: post-fix advisor re-run confirms all 4 target findings cleared.
+
+---
+
 ## [2.36.3] — 2026-05-23
 
 ### Fixed — Phase stepper on narrow viewports
