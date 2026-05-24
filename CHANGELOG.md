@@ -5,64 +5,6 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
-## [2.36.11] — 2026-05-24
-
-### Added — Responsive bracket auto-fit + BYE visual polish
-
-(Was queued as v2.36.9 but landed after v2.36.10 — bumped to v2.36.11 so
-chronological merge order matches semver order.)
-
-Two pieces of feedback, both addressed in `TournamentBracketView` + `TournamentMatchCard`:
-
-#### 1. Responsive auto-fit
-The g-loot SVG renders with fixed dimensions (320 / 460 / 280 px per match
-× N rounds). For 16+ player brackets that exceeded most viewports and the
-user had to mouse-pan horizontally. Now wrapped in a new
-**`ResponsiveScale`** component that:
-
-- Measures container width vs. natural bracket width with `ResizeObserver`
-- CSS-scales the SVG via `transform: scale(...)` so it fits the container
-- Tracks scaled height in JS (CSS transform doesn't change layout box —
-  without this the wrapper would reserve full unscaled height and leave
-  a huge whitespace gap underneath)
-- Falls back to horizontal scroll only when scaling would push below
-  `MIN_SCALE = 0.45` (unreadable territory)
-- Re-runs on every container/content resize: window resize, devtools
-  toggle, fullscreen open/close all trigger a re-fit
-
-Result: brackets now fit edge-to-edge on whatever device/viewport opens
-them — public page, admin compact, admin fullscreen, TV view. Clicks
-still register correctly on the scaled SVG (the browser handles
-transformed-element hit-testing).
-
-#### 2. BYE matches no longer look broken
-When the participant count isn't a power of 2 (e.g. 9, 10, 12), some
-first-round matches are BYEs — one player auto-advances. These were
-rendering as `Player A vs TBD ?` with a help-icon avatar, looking like
-the bracket had broken/missing slots.
-
-The matchComponent now detects `match.state === "WALK_OVER"` (the lib's
-BYE state) and renders specially:
-
-- Just the advancing player's avatar + name in a single full-width slot
-- Below it: a small **`Pase libre · BYE`** chip with a forward arrow icon
-- Card background dimmed slightly (`bg-surface-container/60`) so BYEs
-  visually recede behind real matches
-
-No new behaviour — the auto-advance was always happening; this just
-makes it visually obvious to the admin that the slot is intentional, not
-a bug.
-
-#### Restart capability — already there
-For the user's "ability to restart" question: in `draft` state the panel
-shows `Regenerar bracket borrador` (rebuilds from current roster) +
-`Eliminar bracket` (wipe and start over). Both already exposed; no
-change needed.
-
-Build clean, 159/159 tests pass.
-
----
-
 ## [2.36.10] — 2026-05-24
 
 ### Fixed — Bracket seeding algorithm was producing broken brackets
@@ -156,8 +98,69 @@ had to be redone anyway.
 
 Build clean, 159/159 tests pass.
 
----
 
+---
+## [2.36.9] — 2026-05-24 *(landed after v2.36.10, see note)*
+
+### Added — Responsive bracket auto-fit + BYE visual polish
+
+> *Note: this PR was prepared as v2.36.9 (cosmetic UX) before v2.36.10
+> (the seeding-algorithm fix) was branched. v2.36.10 was the critical
+> hotfix and merged first; v2.36.9 then rebased on top and merged after.
+> The CHANGELOG lists v2.36.10 above v2.36.9 (newest version number on
+> top, per project convention) even though v2.36.9 has the more recent
+> merge timestamp.*
+
+Two pieces of feedback, both addressed in `TournamentBracketView` + `TournamentMatchCard`:
+
+#### 1. Responsive auto-fit
+The g-loot SVG renders with fixed dimensions (320 / 460 / 280 px per match
+× N rounds). For 16+ player brackets that exceeded most viewports and the
+user had to mouse-pan horizontally. Now wrapped in a new
+**`ResponsiveScale`** component that:
+
+- Measures container width vs. natural bracket width with `ResizeObserver`
+- CSS-scales the SVG via `transform: scale(...)` so it fits the container
+- Tracks scaled height in JS (CSS transform doesn't change layout box —
+  without this the wrapper would reserve full unscaled height and leave
+  a huge whitespace gap underneath)
+- Falls back to horizontal scroll only when scaling would push below
+  `MIN_SCALE = 0.45` (unreadable territory)
+- Re-runs on every container/content resize: window resize, devtools
+  toggle, fullscreen open/close all trigger a re-fit
+
+Result: brackets now fit edge-to-edge on whatever device/viewport opens
+them — public page, admin compact, admin fullscreen, TV view. Clicks
+still register correctly on the scaled SVG (the browser handles
+transformed-element hit-testing).
+
+#### 2. BYE matches no longer look broken
+When the participant count isn't a power of 2 (e.g. 9, 10, 12), some
+first-round matches are BYEs — one player auto-advances. These were
+rendering as `Player A vs TBD ?` with a help-icon avatar, looking like
+the bracket had broken/missing slots.
+
+The matchComponent now detects `match.state === "WALK_OVER"` (the lib's
+BYE state) and renders specially:
+
+- Just the advancing player's avatar + name in a single full-width slot
+- Below it: a small **`Pase libre · BYE`** chip with a forward arrow icon
+- Card background dimmed slightly (`bg-surface-container/60`) so BYEs
+  visually recede behind real matches
+
+No new behaviour — the auto-advance was always happening; this just
+makes it visually obvious to the admin that the slot is intentional, not
+a bug.
+
+#### Restart capability — already there
+For the user's "ability to restart" question: in `draft` state the panel
+shows `Regenerar bracket borrador` (rebuilds from current roster) +
+`Eliminar bracket` (wipe and start over). Both already exposed; no
+change needed.
+
+Build clean, 159/159 tests pass.
+
+---
 ## [2.36.8] — 2026-05-24
 
 ### Fixed — `published` bracket state no longer traps tournaments
@@ -204,7 +207,6 @@ here so future "can't create bracket" reports have a quick reference:
 Build clean, 114/114 tests pass.
 
 ---
-
 ## [2.36.7] — 2026-05-24
 
 ### Added — Bracket panel: compact contained view + Fullscreen mode
@@ -238,7 +240,6 @@ the admin wants the whole bracket at once during a live event.
 Build clean, 114/114 tests pass.
 
 ---
-
 ## [2.36.6] — 2026-05-24
 
 ### Fixed — "Iniciar Torneo" now also flips `is_active = true`
@@ -271,7 +272,6 @@ code change.
 Build clean, 114/114 tests pass.
 
 ---
-
 ## [2.36.5] — 2026-05-24
 
 ### Fixed — Bracket tab now self-documents the 3-step start flow
@@ -329,7 +329,6 @@ No behaviour or API changes on the server beyond the GET join — purely
 UI clarification + visualization upgrade. Build clean, 114/114 tests pass.
 
 ---
-
 ## [2.36.4] — 2026-05-24
 
 ### Fixed — Database audit closure pass (4 advisor findings)
@@ -359,7 +358,6 @@ advisor info-level items documented as correct-by-design.
 Verification: post-fix advisor re-run confirms all 4 target findings cleared.
 
 ---
-
 ## [2.36.3] — 2026-05-23
 
 ### Fixed — Phase stepper on narrow viewports
@@ -373,7 +371,6 @@ En curso / Finalizado) shown via `sm:hidden` on mobile; full labels stay on
 get the complete name. Pure presentational tweak — no logic changed.
 
 ---
-
 ## [2.36.2] — 2026-05-23
 
 ### Fixed — Post-shipment compliance pass on the cockpit refactor
@@ -414,7 +411,6 @@ four blockers, all closed in this patch.
 - The tab bar gains `role="tablist"` + `aria-selected` per tab.
 
 ---
-
 ## [2.36.1] — 2026-05-23
 
 ### Changed — Cockpit information architecture polish
@@ -439,7 +435,6 @@ four blockers, all closed in this patch.
   inline-editable Info tab, stats strip, phase stepper, and Share button.
 
 ---
-
 ## [2.36.0] — 2026-05-23
 
 ### Changed — Tournament cockpit becomes the single source of truth
@@ -504,7 +499,6 @@ happens inline inside the cockpit.
   cockpit's Info tab.
 
 ---
-
 ## [2.35.0] — 2026-05-23
 
 ### Added — TV bracket view + avatar match cards (PR E)
@@ -558,7 +552,6 @@ Verification — `npm run build` clean (TV route registered, 115/115 static
 + 1 dynamic), `npm test --run` 114/114 pass.
 
 ---
-
 ## [2.34.0] — 2026-05-23
 
 ### Changed — Tournament cockpit becomes fully embedded tab UI (PR D)
@@ -601,7 +594,6 @@ Verification — `npm run build` clean (115/115 pages), `npm test --run`
 114/114 pass.
 
 ---
-
 ## [2.33.0] — 2026-05-23
 
 ### Added — Unified admin tournament cockpit `/admin/torneos/[slug]/manage` (PR C)
@@ -666,7 +658,6 @@ Build clean (`/admin/torneos/[slug]/manage` registered, 115/115 pages),
 114/114 tests pass.
 
 ---
-
 ## [2.32.0] — 2026-05-23
 
 ### Added — Auto-podium from bracket completion (PR B)
@@ -715,7 +706,6 @@ can show "Podium derivado: 3 posiciones" feedback.
 Build clean.
 
 ---
-
 ## [2.31.1] — 2026-05-23
 
 ### Added — Avatar step in onboarding wizard (PR A.5, fast-follow to PR A)
@@ -744,7 +734,6 @@ refactor risk — no existing step numbers shift.
 Build clean, 107/107 tests still pass.
 
 ---
-
 ## [2.31.0] — 2026-05-23
 
 ### Added — User avatars (PR A of the tournament UX overhaul)
@@ -796,7 +785,6 @@ gradient fallback so the surface always looks finished.
 Build clean, 107/107 tests pass.
 
 ---
-
 ## [2.30.5] — 2026-05-23
 
 ### Docs — post-audit sync sweep
@@ -840,7 +828,6 @@ Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass). No c
 changes — docs only.
 
 ---
-
 ## [2.30.4] — 2026-05-23
 
 ### Fixed — Upstash env var name fallback
@@ -877,7 +864,6 @@ against the now-present credentials and the limits start enforcing.
 Verified: `npm run build` clean, `npm run test:run` 100/100.
 
 ---
-
 ## [2.30.3] — 2026-05-23
 
 ### Fixed — OG images at 1200×630 (replacing the 512² square)
@@ -919,7 +905,6 @@ the-audit-text, every Area-1 deferred SEO/perf item, plus the Area-3 failure-UX 
 follow-up: closed.
 
 ---
-
 ## [2.30.2] — 2026-05-23
 
 ### Changed — admin failure UX consistency
@@ -948,7 +933,6 @@ itself. New admin code uses the toast.
 Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass).
 
 ---
-
 ## [2.30.1] — 2026-05-23
 
 ### Performance — ISR (`revalidate`) on every public Server Component page
@@ -982,7 +966,6 @@ Verified: `npm run build` (zero errors, all routes regenerated),
 - Admin failure-UX consistency (shared toast component)
 
 ---
-
 ## [2.30.0] — 2026-05-23
 
 ### Performance — `next/image` migration on public content
@@ -1031,7 +1014,6 @@ Verified: `npm run build` (zero errors, all routes regenerated),
 - Admin failure-UX consistency (shared toast component)
 
 ---
-
 ## [2.29.11] — 2026-05-23
 
 ### Security (audit Mediums — Payments batch)
@@ -1075,7 +1057,6 @@ regen, `next/image` migration, ISR strategy — were also deferred). For practic
 **the audit-driven work is done.**
 
 ---
-
 ## [2.29.10] — 2026-05-23
 
 ### Security (audit Mediums — Security/Validation batch)
@@ -1110,7 +1091,6 @@ regen, `next/image` migration, ISR strategy — were also deferred). For practic
 Verified: `npm run build` (zero errors), `npm run test:run` (100/100 pass).
 
 ---
-
 ## [2.29.9] — 2026-05-23
 
 ### Fixed (audit Mediums — Admin Panel batch)
@@ -1149,7 +1129,6 @@ Verified: `npm run build` (114 routes — 3 dead routes removed, zero errors),
 `npm run test:run` (98/98 pass).
 
 ---
-
 ## [2.29.8] — 2026-05-22
 
 ### Fixed (audit Mediums — User Portal batch)
@@ -1177,7 +1156,6 @@ Verified: `npm run build` (114 routes — 3 dead routes removed, zero errors),
 Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 pass).
 
 ---
-
 ## [2.29.7] — 2026-05-22
 
 ### Fixed (audit Mediums — Public Web batch)
@@ -1211,7 +1189,6 @@ Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 p
 Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (98/98 pass).
 
 ---
-
 ## [2.29.6] — 2026-05-22
 
 ### Security
@@ -1259,7 +1236,6 @@ This closes the last 🟠 High. The audit is now: **3/3 Critical + 13/13 High cl
 Remaining: ~20 🟡 Medium + 🔵 Low/Info items.
 
 ---
-
 ## [2.29.5] — 2026-05-22
 
 ### Security
@@ -1307,7 +1283,6 @@ Remaining: ~20 🟡 Medium + 🔵 Low/Info items.
 Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (77/77 pass).
 
 ---
-
 ## [2.29.4] — 2026-05-22
 
 ### Security
@@ -1361,7 +1336,6 @@ a replay window.
   Verified: `npm run build` (118 routes, zero TS errors), `npm run test:run` (98/98 pass).
 
 ---
-
 ## [2.29.3] — 2026-05-22
 
 ### Security
@@ -1396,7 +1370,6 @@ a replay window.
   documented in `CLAUDE.md` Environment Variables table.
 
 ---
-
 ## [2.29.2] — 2026-05-22
 
 ### Security
@@ -1440,7 +1413,6 @@ Verified: `npm run build` (117 routes, zero errors), `npm run test:run` (70/70 p
   table.
 
 ---
-
 ## [2.29.1] — 2026-05-22
 
 ### Changed
@@ -1552,7 +1524,6 @@ manifest) remain open.
   tournaments are returned. Found during the 2026-05-22 website security audit (see `AUDIT.md`).
 
 ---
-
 ## [2.29.0] — 2026-05-21
 
 ### Changed
@@ -1569,7 +1540,6 @@ manifest) remain open.
 - **Bracket match boxes no longer show a raw timestamp.** `TournamentBracketView` was passing `created_at` as the match `startTime`, rendering `2026-05-21T23:55:07...`. Match boxes now show only the round label.
 
 ---
-
 ## [2.28.1] — 2026-05-21
 
 ### Fixed
@@ -1581,7 +1551,6 @@ manifest) remain open.
 - **Course preview layout** (`/academia/[courseId]`) — the intro video now occupies the main hero slot; the course cover image moves into the details card. Courses without an intro video keep the cover image in the hero.
 
 ---
-
 ## [2.28.0] — 2026-05-21
 
 ### Added
@@ -1595,7 +1564,6 @@ manifest) remain open.
 - **Admin "Conceder 1UP Pass" no longer errors.** The grant modal sent an empty `walletAddress` and the API hard-rejected it. The wallet is now auto-filled from the user's `user_profiles.wallet_address`, shown in the modal, and the API treats it as optional for admin grants (no on-chain transaction occurs).
 
 ---
-
 ## [2.27.1] — 2026-05-21
 
 ### Fixed
@@ -1605,7 +1573,6 @@ manifest) remain open.
 - **`createUploadUrl` now surfaces the real Cloudflare error.** It previously threw with only the HTTP status; the CF response body (which explains *why* — bad token, account mismatch, missing permissions) was discarded. The error body is now logged and returned, and `/api/admin/stream-upload-url` returns `502` with the message instead of an opaque `500`.
 
 ---
-
 ## [2.27.0] — 2026-05-21
 
 ### Added
@@ -1625,7 +1592,6 @@ manifest) remain open.
   - Updated `.claude/skills/cloudflare-stream.md` so future code doesn't reintroduce the bug.
 
 ---
-
 ## [2.26.0] — 2026-05-19
 
 ### Added
@@ -1641,7 +1607,6 @@ manifest) remain open.
   - Type shim `src/types/g-loot-brackets.d.ts` — fixes missing type declarations for the library.
 
 ---
-
 ## [2.25.1] — 2026-05-19
 
 ### Changed
@@ -1650,7 +1615,6 @@ manifest) remain open.
 - **`/admin/courses` page** — removed unused `masters` and `academia_content` data fetches; now fetches courses only.
 
 ---
-
 ## [2.25.0] — 2026-05-19
 
 ### Added
@@ -1664,7 +1628,6 @@ manifest) remain open.
 - **Pass benefits not syncing to home page** — `POST|PUT|DELETE /api/admin/pass-benefits` now calls `revalidatePath("/")` in addition to `/gaming-tower`, so home page `AcademiaSection` and `TorneosSection` benefit cards update immediately after admin changes.
 
 ---
-
 ## [2.24.0] — 2026-05-19
 
 ### Added
@@ -1690,7 +1653,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.23.0] — 2026-05-19
 
 ### Added
@@ -1712,7 +1674,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.22.2] — 2026-05-12
 
 ### Security
@@ -1727,7 +1688,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.22.1] — 2026-05-12
 
 ### Security
@@ -1747,7 +1707,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.22.2] — 2026-05-12
 
 ### Changed
@@ -1760,7 +1719,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.22.0] — 2026-05-12
 
 ### Added
@@ -1784,7 +1742,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.21.0] — 2026-05-12
 
 ### Added
@@ -1801,7 +1758,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.20.1] — 2026-05-12
 
 ### Added
@@ -1817,7 +1773,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.20.0] — 2026-05-12
 
 ### Added
@@ -1848,7 +1803,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.19.0] — 2026-05-12
 
 ### Added
@@ -1876,7 +1830,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.18.0] — 2026-05-12
 
 ### Added
@@ -1887,7 +1840,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.17.1] — 2026-05-12
 
 ### Fixed
@@ -1898,7 +1850,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.17.0] — 2026-05-12
 
 ### Added
@@ -1917,7 +1868,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.16.1] — 2026-05-12
 
 ### Changed
@@ -1928,7 +1878,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.16.0] — 2026-05-12
 
 ### Added
@@ -1950,7 +1899,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.15.0] — 2026-05-12
 
 ### Added
@@ -1965,7 +1913,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.14.2] — 2026-05-11
 
 ### Added
@@ -1982,7 +1929,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.14.1] — 2026-05-11
 
 ### Fixed
@@ -2000,7 +1946,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.14.0] — 2026-05-11
 
 ### Added
@@ -2037,7 +1982,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.13.0] — 2026-05-11
 
 ### Added
@@ -2061,7 +2005,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.12.0] — 2026-05-11
 
 ### Added
@@ -2076,7 +2019,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.11.0] — 2026-05-10
 
 ### Added
@@ -2094,7 +2036,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.10.0] — 2026-05-10
 
 ### Added
@@ -2110,7 +2051,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.9.0] — 2026-05-10
 
 ### Added
@@ -2133,7 +2073,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.8.0] — 2026-05-10
 
 ### Added
@@ -2159,7 +2098,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.7.1] — 2026-05-10
 
 ### Added
@@ -2182,7 +2120,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.7.0] — 2026-05-10
 
 ### Added
@@ -2200,7 +2137,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.6.0] — 2026-05-10
 
 ### Added
@@ -2217,7 +2153,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.5.0] — 2026-05-10
 
 ### Added
@@ -2244,7 +2179,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.4.0] — 2026-05-10
 
 ### Changed
@@ -2260,7 +2194,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.3.1] — 2026-05-10
 
 ### Fixed
@@ -2273,7 +2206,6 @@ manifest) remain open.
 - Ekinoxis
 
 ---
-
 ## [2.3.0] — 2026-05-06
 
 ### Added
@@ -2306,7 +2238,6 @@ manifest) remain open.
 - `pass_orders_bank_transfer_support` — `ALTER TYPE pass_order_status ADD VALUE 'pending_bank'; ALTER TABLE pass_orders ALTER COLUMN tx_hash DROP NOT NULL; ADD COLUMN payment_method text NOT NULL DEFAULT 'token'; ADD COLUMN bank_account_id integer REFERENCES bank_accounts(id); ADD COLUMN comprobante_url text; ADD COLUMN rejection_reason text;`
 
 ---
-
 ## [2.2.3] — 2026-04-26
 
 ### Changed
@@ -2316,7 +2247,6 @@ manifest) remain open.
   - `AdminSidebar.tsx` — removed `/admin/academia-content` nav item.
 
 ---
-
 ## [2.2.2] — 2026-04-26
 
 ### Changed
@@ -2325,7 +2255,6 @@ manifest) remain open.
 - **Admin token orders — gas sponsored** — `AdminTokenOrdersClient.tsx` `handleSendApprove` now passes `sponsor: true`, consistent with user-side sends. Admin embedded wallet shares the same Privy app and TEE infrastructure.
 
 ---
-
 ## [2.2.1] — 2026-04-26
 
 ### Changed
@@ -2337,7 +2266,6 @@ manifest) remain open.
 - **Wallet card — removed Red Base L2 badge and contract row** — the "RED / Base — L2" network chip and the "CONTRATO:" truncated address link have been removed from the balance card for a cleaner UI.
 
 ---
-
 ## [2.2.0] — 2026-04-26
 
 ### Added
@@ -2361,7 +2289,6 @@ manifest) remain open.
 - `birth_date_replace_birth_year` — `ALTER TABLE user_profiles RENAME COLUMN birth_year TO birth_date; ALTER TABLE user_profiles ALTER COLUMN birth_date TYPE DATE USING NULL; UPDATE ... SET birth_date = (birth_year::text || '-01-01')::date WHERE birth_year IS NOT NULL;` (best-effort backfill).
 
 ---
-
 ## [2.1.0] — 2026-04-26
 
 ### Changed
@@ -2369,7 +2296,6 @@ manifest) remain open.
   - `AdminTokenOrdersClient.tsx` — new `handleSendApprove`, wallet selector, send step indicator (`idle → sending → waiting → done`).
 
 ---
-
 ## [2.0.0] — 2026-04-26
 
 ### Added
@@ -2396,7 +2322,6 @@ manifest) remain open.
 - `add_onboarding_fields_to_user_profiles` — adds `barrio`, `birth_year`, `onboarding_completed_at`, `referred_by_code` to `user_profiles`; backfills `onboarding_completed_at = now()` for existing users with `nombre IS NOT NULL`.
 
 ---
-
 ## [1.9.1] — 2026-04-26
 
 ### Changed
@@ -2404,7 +2329,6 @@ manifest) remain open.
 - **Admin sidebar** — "Pass Benefits" link removed from "Academia & App" group. Benefits are managed from "1UP Pass".
 
 ---
-
 ## [1.9.0] — 2026-04-26
 
 ### Added
@@ -2431,7 +2355,6 @@ manifest) remain open.
 - **TypeScript types** — `database.types.ts` updated with `pass_config`, `pass_orders`, `pass_order_status` enum; new aliases `PassConfig`, `PassOrder`, `PassOrderStatus`.
 
 ---
-
 ## [1.8.0] — 2026-04-24
 
 ### Added
@@ -2461,7 +2384,6 @@ manifest) remain open.
 - `src/types/database.types.ts` regenerated with new tables + convenience type aliases `BankAccount`, `TokenPurchaseOrder`, `TokenPurchaseStatus`
 
 ---
-
 ## [1.7.0] — 2026-04-25
 
 ### Added
@@ -2473,7 +2395,6 @@ manifest) remain open.
 - **Token Utility bars** — mocked "Cursos Academia 45% / Entrada Torneos 35% / Beneficios 1UP Pass 20%" distribution chart removed from WalletTab. Right column now shows only the transaction history.
 
 ---
-
 ## [1.6.0] — 2026-04-24
 
 ### Added
@@ -2493,7 +2414,6 @@ manifest) remain open.
 - Unique partial index: `CREATE UNIQUE INDEX user_profiles_username_uq ON user_profiles(username) WHERE username IS NOT NULL`
 
 ---
-
 ## [1.5.0] — 2026-04-23
 
 ### Added
@@ -2507,7 +2427,6 @@ manifest) remain open.
 - Seeded: `equipment_highlight`, `learning_path`
 
 ---
-
 ## [1.4.0] — 2026-04-23
 
 ### Added
@@ -2516,7 +2435,6 @@ manifest) remain open.
 - **Real Google Maps embed** — `LocationMap` component replaced placeholder with a real Google Maps iframe centered on Cra. 34 # 5A-19, Barrio 3 de Julio, Cali (beside Estadio Pascual Guerrero). Includes address block, schedule, landmark reference, and GET DIRECTIONS link.
 
 ---
-
 ## [1.3.10] — 2026-04-23
 
 ### Fixed
@@ -2528,7 +2446,6 @@ manifest) remain open.
 - **`categories/` added as valid image folder** — `ImageFolder` type and `ALLOWED_FOLDERS` in the upload route now include `"categories"`. `AdminGamesClient` uses `folder="categories"` + `entityId={cat.id}` for category images (was incorrectly using `"games"`).
 
 ---
-
 ## [1.3.9] — 2026-04-23
 
 ### Fixed
@@ -2538,7 +2455,6 @@ manifest) remain open.
 - **Drizzle ORM** — `drizzle-orm`, `postgres`, and `drizzle-kit` packages removed; `src/db/` folder and `drizzle.config.ts` deleted. Nothing in the app imported from `src/db/` — all pages and API routes use the Supabase JS client directly. `DATABASE_URL` env var is no longer needed.
 
 ---
-
 ## [1.3.8] — 2026-04-08
 
 ### Changed
@@ -2546,7 +2462,6 @@ manifest) remain open.
 - **MasterGrid padding aligned** — section now uses `py-20 px-8 md:px-16 bg-surface-container-lowest`, matching `PlayerGrid` and `CourseCatalog`. Removed inner `max-w-5xl mx-auto` wrapper — consistent with all other grid sections.
 
 ---
-
 ## [1.3.7] — 2026-04-08
 
 ### Added
@@ -2561,7 +2476,6 @@ manifest) remain open.
 - Table modified: `masters` — added `kick_url`, `twitch_url`, `github_url` (text nullable), `categories` (text[] default '{}')
 
 ---
-
 ## [1.3.6] — 2026-04-08
 
 ### Fixed
@@ -2579,7 +2493,6 @@ manifest) remain open.
 - **`drizzle-orm` updated to 0.45.2** — fixes CVE: SQL injection via improperly escaped identifiers (GHSA-gpj5-g38j-94v9); was on 0.45.1
 
 ---
-
 ## [1.3.5] — 2026-04-07
 
 ### Added
@@ -2592,7 +2505,6 @@ manifest) remain open.
 - `create_social_links` — `social_links` table with 6 rows pre-seeded (instagram, tiktok, kick, youtube, x, twitch)
 
 ---
-
 ## [1.3.4] — 2026-04-07
 
 ### Added
@@ -2601,7 +2513,6 @@ manifest) remain open.
 - **QR scanner on Send modal** — scan button opens camera using `BarcodeDetector` (native browser API, no extra runtime); scans QR code and fills the recipient address field automatically. Graceful error shown on unsupported browsers.
 
 ---
-
 ## [1.3.3] — 2026-04-07
 
 ### Added
@@ -2619,7 +2530,6 @@ manifest) remain open.
 - Vercel Blob dependency (`@vercel/blob`) — no longer used
 
 ---
-
 ## [1.3.2] — 2026-04-07
 
 ### Fixed
@@ -2640,7 +2550,6 @@ manifest) remain open.
 - **AdminSidebar regrouped** — sidebar reorganized into 3 labeled sections: *Sitio Web* (Dashboard, Juegos, Gaming Tower, Jugadores, Competiciones, Masters), *Academia & App* (Cursos, Contenido, 1UP Pass, Pass Benefits, Descuentos, Inscripciones), *Sistema* (Usuarios, Aliados, Solicitudes, Admins). Active link shows pink left border + filled icon.
 
 ---
-
 ## [1.3.1] — 2026-04-07
 
 ### Fixed
@@ -2662,7 +2571,6 @@ manifest) remain open.
 Enable **HttpOnly cookies** in Privy Dashboard (Configuration → App settings → Domains → set domain to `1upesports.org`). Once active, a single login on any subdomain works across all three — `1upesports.org`, `app.`, and `admin.`.
 
 ---
-
 ## [1.3.0] — 2026-04-07
 
 ### Added
@@ -2693,7 +2601,6 @@ Enable **HttpOnly cookies** in Privy Dashboard (Configuration → App settings �
 - `ImageUpload` — added `"masters"` and `"aliados"` to allowed folder types
 
 ---
-
 ## [1.2.0] — 2026-03-30
 
 ### Added
@@ -2747,7 +2654,6 @@ Ekinoxis
 - Los usuarios pueden verificar su cédula y estado de afiliación Comfenalco desde su perfil (`/perfil` → pestaña IDENTIDAD)
 
 ---
-
 ## [1.1.0] — 2026-03-24
 
 ### Added
@@ -2762,7 +2668,6 @@ Ekinoxis
 Ekinoxis
 
 ---
-
 ## [1.0.0] — 2026-03-24
 
 ### Added
