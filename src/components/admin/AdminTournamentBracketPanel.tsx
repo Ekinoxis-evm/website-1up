@@ -177,7 +177,11 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
 
   const includedIds = roster.filter(e => e.included).map(e => e.userProfileId);
   const status = bracketData?.bracket.status;
-  const isDraft   = status === "draft";
+  // `published` is a vestigial enum value never written by the current code
+  // but a few legacy brackets sit in it. Treat it as `draft` everywhere on
+  // the client so the panel renders the setup UI (and the API guards in
+  // /api/admin/brackets PATCH start + DELETE accept it the same way).
+  const isDraft   = status === "draft" || status === "published";
   const isRunning = status === "in_progress" || status === "completed";
 
   async function createBracket() {

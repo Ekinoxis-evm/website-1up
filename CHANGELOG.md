@@ -5,6 +5,53 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.8] — 2026-05-24
+
+### Fixed — `published` bracket state no longer traps tournaments
+
+User reported that some tournaments couldn't have their bracket created
+or edited. Diagnosis via `get_advisors` + a per-tournament audit query:
+two tournaments (`torneo-2xko-3` id=8, `torneo-rivals-of-aether-ii-1`
+id=9) had brackets sitting in `status = 'published'`.
+
+`bracket_status` is a Postgres enum with values `draft / published /
+in_progress / completed`. The active code path only ever writes `draft →
+in_progress → completed` — `published` is a vestigial value the current
+code never produces, likely written by an older code path or a manual
+SQL edit. But:
+
+- `POST /api/admin/brackets` refused with 409 (a bracket already exists)
+- `DELETE` refused (only `draft` was deletable)
+- `PATCH { action: "start" }` refused (only `draft` was startable)
+- Net effect: **the two tournaments had a bracket they could neither
+  start, delete, nor regenerate from the UI** — fully stuck.
+
+Two-part fix:
+
+1. **Live DB unstick** — both stuck brackets converted to `draft` via
+   `UPDATE brackets SET status='draft' WHERE status='published'`. Admins
+   can now edit / regenerate / delete them normally from the UI.
+2. **Code hardening** — `published` is now treated as equivalent to
+   `draft` in three places so the trap can never reappear:
+   - `PATCH { action: "start" }` guard accepts draft OR published
+   - `DELETE` guard accepts draft OR published
+   - `AdminTournamentBracketPanel.isDraft` accepts draft OR published
+     so the UI renders the setup view for either state
+
+Per-tournament diagnosis surfaced as part of triage — also documented
+here so future "can't create bracket" reports have a quick reference:
+
+| Cause | Failure | Fix |
+|---|---|---|
+| `regs_eligible < 2` | 400 "Selecciona al menos 2 participantes registrados" | Get players to register, or admin-add them via Inscripciones |
+| Existing bracket in `draft` / `published` | 409 "Ya existe un bracket" | Delete then recreate, or regenerate in place |
+| Existing bracket in `in_progress` / `completed` | 409 (intentional — locked structure) | Already running; use the running view |
+| Tournament `status = "completed"` | Allowed by API but pointless | Use a fresh tournament |
+
+Build clean, 114/114 tests pass.
+
+---
+
 ## [2.36.7] — 2026-05-24
 
 ### Added — Bracket panel: compact contained view + Fullscreen mode

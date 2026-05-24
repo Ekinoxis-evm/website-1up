@@ -238,7 +238,10 @@ export async function PATCH(req: NextRequest) {
     const { data: bracket } = await supabaseAdmin
       .from("brackets").select("id, status").eq("tournament_id", tournamentId).maybeSingle();
     if (!bracket) return NextResponse.json({ error: "No existe bracket" }, { status: 404 });
-    if (bracket.status !== "draft")
+    // `published` is a vestigial enum value the current code never writes but
+    // some legacy brackets still sit in. Treat it as equivalent to `draft` so
+    // a bracket created by an older code path can still be started.
+    if (bracket.status !== "draft" && bracket.status !== "published")
       return NextResponse.json({ error: "El torneo ya fue iniciado" }, { status: 400 });
 
     await supabaseAdmin
@@ -512,7 +515,9 @@ export async function DELETE(req: NextRequest) {
     .from("brackets").select("id, status").eq("tournament_id", tournamentId).maybeSingle();
   if (!bracket) return NextResponse.json({ error: "No existe bracket para este torneo" }, { status: 404 });
 
-  if (bracket.status !== "draft") {
+  // Same logic as the `start` guard above — `published` is treated as `draft`
+  // for deletion so a stuck-legacy bracket isn't orphaned forever.
+  if (bracket.status !== "draft" && bracket.status !== "published") {
     return NextResponse.json(
       { error: "No se puede eliminar un bracket que ya inició. Una vez iniciado el torneo, los enfrentamientos quedan bloqueados." },
       { status: 409 },
