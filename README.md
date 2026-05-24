@@ -26,7 +26,9 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Image optimization | `next/image` on all public content + `next/og` for 1200×630 OG cards (every section has its own `opengraph-image.tsx`) |
 | ISR | `revalidate` declared on every public page; admin mutations bust the cache via `revalidatePath` |
 | QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
-| Testing | Vitest — 100 tests, all green (`npm run test:run`) |
+| User avatars | `users/{user_profile_id}/avatar` in Supabase Storage `images` bucket; deterministic initials-gradient fallback via `<Avatar />`. Surfaced on Hall of Fame, admin participant lists, top app bar, bracket match cards (regular + TV + admin scales) — v2.31.0 |
+| Tournament brackets | `@g-loot/react-tournament-brackets 1.0.31-rc` with a custom avatar-aware `matchComponent` (regular / TV / admin scales). Standard mirror-recursive seeding (v2.36.10) for power-of-2 N. Single-elim non-pow2 uses a **play-in round** (v2.36.13). Double-elim non-pow2 uses **bye-cascading** (v2.36.14) so phantom losers-bracket slots auto-collapse. Responsive `ResponsiveScale` wrapper fits any viewport (v2.36.9) + admin Pantalla completa overlay (v2.36.7). |
+| Testing | Vitest — **194 tests**, all green (`npm run test:run`) |
 | Runtime | Node.js 24 |
 
 ---
@@ -178,6 +180,9 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 17. `add_pass_status_to_user_profiles` — adds `pass_status_enum` (`never | active | expired`) + `pass_status` column to `user_profiles` (default `'never'`, indexed); trigger `trg_sync_pass_status` auto-syncs on every `pass_orders` INSERT/UPDATE; existing users backfilled
 18. `schedule_pass_status_nightly_expiry` — enables `pg_cron`; schedules `expire-1up-passes` job at `0 4 * * *` UTC to flip `active → expired` for lapsed passes
 19. `create_tournament_brackets` — `brackets` (one per tournament, unique), `bracket_matches` (with self-referential next_match_id / next_loser_match_id), `bracket_participants` tables; enums `bracket_format`, `bracket_status`, `match_state`, `slot_source`
+20. `20260523161035_add_avatar_url_to_user_profiles.sql` — adds `avatar_url text` column (v2.31.0)
+21. `20260523161959_hall_of_fame_view_add_avatar_url.sql` — rebuilds `hall_of_fame` view to expose `avatar_url` (v2.31.0)
+22. `20260524050326_audit_closure_v2_36_4.sql` — `hall_of_fame` view → `security_invoker = on`, `set_updated_at` search_path pinned, dead `report_match_result` function dropped, `tournament_registrations` RLS policy wrapped in `(SELECT …)` (v2.36.4)
 
 ### 4. Start the dev server
 
@@ -211,6 +216,7 @@ npm run dev
 | `/torneos` | Tournament list — Hall of Fame leaderboard, upcoming/live/completed cards with prizes, registration CTA, month+game filters. International tournaments section. HallOfFame team competition history at bottom. Recruitment form. |
 | `/torneos/[slug]` | Tournament detail — cover image, status/game/location badges, prize podium, sponsor strip, `RegisterButton` CTA. Dynamic OG metadata per tournament. Numeric ID fallback for old QR codes/bookmarks. |
 | `/torneos/[slug]/checkin` | QR check-in — inline Privy login (modal, no redirect), validates registration status, marks attendance via API. Numeric ID fallback for old QR codes. |
+| `/torneos/[slug]/tv` | **TV / venue display view (v2.35.0).** Fullscreen, no chrome (lives in `(bare)` route group — sibling of `(main)`). Huge tournament title, avatar-aware bracket scaled to viewport (`scale="tv"`), sponsor strip at bottom. Polls `/api/tournaments/[slug]/bracket` every 15 s for live updates as the cockpit records winners. |
 | `/gaming-tower` | 6-floor breakdown, 1UP Pass benefits, per-category games showcase (category image + game cards), Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Redirects to `/` — roster removed; Masters live on `/academia` |
@@ -299,7 +305,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired) |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired), **avatar_url** (Supabase Storage URL, v2.31.0; null → UI shows initials gradient) |
 | `aliados` | Partner organizations AND banner sponsors — name, NIT, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active. `show_in_banner = true` → appears in home marquee. Replaces the former `brand_logos` table. |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |
@@ -338,6 +344,7 @@ Entity uploads use `{folder}/{entityId}/cover` (no extension — MIME stored in 
 | `images/aliados/{id}/cover` | Partner logos and banner sponsor logos |
 | `images/tournaments/{id}/cover` | Tournament cover images |
 | `images/site/{key}/cover` | Site-level images (equipment-highlight, learning-path) |
+| `images/users/{user_profile_id}/avatar` | User profile avatars (v2.31.0) — JPEG/PNG/WebP, ≤5 MB, magic-byte sniffed |
 
 ### `comprobantes` bucket — **private**, 5 MB, jpg/png/webp/pdf
 

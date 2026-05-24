@@ -55,5 +55,35 @@ instead. The cockpit uses a 4-step phase stepper (Inscripciones → Borrador →
 Finalizado) driven by `bracket.status`/`tournament.status` — phases are *visualised*, not
 clickable navigation.
 
+### Bracket flow (v2.36.10 → v2.36.15)
+
+When extending the bracket flow, know the moving parts:
+
+- **Seeding** — `src/lib/bracket/byes.ts` uses the **mirror-recursive doubling** algorithm
+  (not the old alternating-step variant — that one silently dropped seed 1 for ≥16 slots).
+  Tests in `src/__tests__/lib/bracketSeeding.test.ts` pin every N from 2..64.
+- **Non-power-of-2 single-elim** routes through `src/lib/bracket/playIn.ts` and produces a
+  round-0 play-in stage feeding into the main `prevPow2`-sized bracket. Tests in
+  `playInSeeding.test.ts`.
+- **Non-power-of-2 double-elim** uses **bye-cascading**: WB BYE → LB slot gets
+  `p_source='bye'`. Fully-phantom LB matches cascade their phantom forward at creation
+  time; runtime is handled by `cascadeLbAdvance()` in `/api/admin/brackets` PATCH `result`.
+  Recursive — works for chains across multiple LB rounds.
+- **Roster default** is `status='attended'` only (other registrations visible but
+  unchecked). The QR check-in flow at `/torneos/[slug]/checkin` is the canonical "this
+  player is here" signal.
+- **Manual pairing override** before tournament start: PATCH `swap_slots` action with
+  `{ matchId1, slot1, matchId2, slot2 }`. Bracket must be `draft`, both slots must hold
+  real participants.
+- **`published` bracket state** is vestigial — treat it as equivalent to `draft` in any
+  new code. The `start` and `DELETE` guards already do.
+- **`is_active` follows the lifecycle.** When the admin clicks Iniciar Torneo, the start
+  action sets `is_active=true` along with `status='live'`. Don't decouple — they were
+  decoupled before v2.36.6 and it produced TV-view 404s.
+- **Avatar match cards** — `src/components/torneos/TournamentMatchCard.tsx` exports three
+  variants (regular / TV / admin via `makeAdminTournamentMatchCard`). The admin variant is
+  click-aware (pick winner / undo). All three share the same render path via
+  `<TournamentBracketView scale="regular|tv|admin" />`.
+
 You are on standby for new admin work. When fixing or shipping, report what changed, the
 build/test result, and which docs you updated.

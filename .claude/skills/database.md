@@ -38,7 +38,7 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 | `floor_info` | `id`, `floor_label` (01\|02-03\|04-05\|06), `title`, `description`, `accent_color`, `image_url`, `sort_order`, `created_at` |
 | `discount_rules` | `id`, `trigger_type`, `discount_pct`, `applies_to`, `aliado_id` → aliados (SET NULL), `is_active`, `valid_from`, `valid_until`, `created_at` |
 | `enrollments` | `id`, `user_profile_id` → user_profiles, `course_id` → courses (SET NULL), `final_price_cop`, `payment_status`, `mp_payment_id`, `created_at` |
-| `user_profiles` | `id`, `privy_user_id`, `tipo_documento`, `numero_documento`, `comfenalco_afiliado`, `verified_aliados` (text[]), `created_at` |
+| `user_profiles` | `id`, `privy_user_id`, `tipo_documento`, `numero_documento`, `comfenalco_afiliado`, `verified_aliados` (text[]), `avatar_url` (Supabase Storage URL, v2.31.0; null → UI shows initials gradient), `created_at` |
 | `recruitment_submissions` | `id`, `name`, `email`, `phone`, `category_id`, `game_id`, `gamertag`, `portfolio_url`, `message`, `source`, `created_at` |
 | `admin_users` | `id`, `email`, `added_by`, `created_at` |
 | `brand_logos` | `id`, `name`, `logo_url`, `website_url` (nullable), `sort_order`, `is_active`, `created_at` |
