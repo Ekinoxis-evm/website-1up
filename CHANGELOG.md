@@ -5,6 +5,40 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.7] — 2026-05-24
+
+### Added — Bracket panel: compact contained view + Fullscreen mode
+
+The interactive bracket tree that landed in v2.36.5 is great for showing
+the path-to-victory at a glance, but for any bracket with more than 4
+participants (especially double-elimination) the SVG ended up wider than
+the cockpit's tab content. The bracket was pushing the whole page wider
+than the viewport, breaking layout balance.
+
+Two-part fix in `AdminTournamentBracketPanel`:
+
+1. **Compact contained view (default)** — the bracket now renders inside
+   a `min-w-0 max-w-full overflow-x-auto` card. The bracket stays inside
+   the cockpit panel and scrolls horizontally **within itself** instead
+   of dragging the layout. The `min-w-0` is critical — without it the
+   flex/grid ancestor in the cockpit would let the SVG-sized bracket
+   override the viewport constraint.
+
+2. **Fullscreen mode** — new "Pantalla completa" button in the running-
+   state header. Click → bracket opens in a fixed-position full-viewport
+   overlay (`fixed inset-0 z-50`) with its own header showing tournament
+   name + format + status pill and a `Salir (Esc)` exit button. Escape
+   key closes it; body scroll is locked while open so nothing scrolls
+   behind. Click-to-pick + Deshacer still work in fullscreen (same admin
+   scale, same callbacks).
+
+The compact view stays interactive too — fullscreen is opt-in for when
+the admin wants the whole bracket at once during a live event.
+
+Build clean, 114/114 tests pass.
+
+---
+
 ## [2.36.6] — 2026-05-24
 
 ### Fixed — "Iniciar Torneo" now also flips `is_active = true`

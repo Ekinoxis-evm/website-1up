@@ -80,6 +80,21 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
   const [loading, setLoading]         = useState(true);
   const [busy, setBusy]               = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [fullscreen, setFullscreen]   = useState(false);
+
+  // Escape closes the fullscreen overlay; body scroll is also locked while open
+  // so the page underneath doesn't scroll behind the bracket.
+  useEffect(() => {
+    if (!fullscreen) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setFullscreen(false); }
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [fullscreen]);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessToken();
@@ -504,19 +519,79 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
               {" · "}
               {bracketData.bracket.participant_count} participantes
             </span>
-            <span className="font-body text-xs text-outline ml-auto">
-              Haz clic en el ganador de cada partida. Para deshacer una partida finalizada,
-              usa el botón <strong className="text-on-surface">Deshacer</strong> al pie de la tarjeta.
+            <span className="font-body text-xs text-outline ml-auto hidden md:inline">
+              Haz clic en el ganador de cada partida. <strong className="text-on-surface">Deshacer</strong> al pie para revertir.
             </span>
+            <button
+              type="button"
+              onClick={() => setFullscreen(true)}
+              className="flex items-center gap-1.5 bg-surface-container-high hover:bg-primary-container/20 text-on-surface font-headline font-bold text-[10px] uppercase tracking-widest px-3 py-1.5 transition-colors"
+              title="Ver bracket en pantalla completa"
+            >
+              <span className="material-symbols-outlined text-sm">open_in_full</span>
+              Pantalla completa
+            </button>
           </div>
 
-          <TournamentBracketView
-            data={bracketData}
-            scale="admin"
-            onPickWinner={pickWinner}
-            onUndo={undoMatch}
-            busy={busy}
-          />
+          {/*
+            Compact, contained view. `min-w-0` is the key bit — without it,
+            the flex/grid ancestor in the cockpit would let the SVG-rendered
+            bracket push the tab content (and the whole page) wider than the
+            viewport. With `min-w-0` + `overflow-x-auto` the bracket scrolls
+            horizontally INSIDE this card instead of dragging the layout.
+          */}
+          <div className="min-w-0 max-w-full overflow-x-auto bg-surface-container/30 p-3">
+            <TournamentBracketView
+              data={bracketData}
+              scale="admin"
+              onPickWinner={pickWinner}
+              onUndo={undoMatch}
+              busy={busy}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Fullscreen overlay ─────────────────────────────────────── */}
+      {fullscreen && bracketData && isRunning && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <div className="flex items-center justify-between bg-surface-container px-6 py-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${
+                bracketData.bracket.status === "completed"
+                  ? "bg-surface-container-high text-on-surface"
+                  : "bg-primary text-background animate-pulse"
+              }`}>
+                {bracketData.bracket.status === "completed" ? "Finalizado" : "En curso"}
+              </span>
+              <p className="font-headline font-black text-base uppercase tracking-tighter text-on-surface truncate">
+                {tournament.name}
+              </p>
+              <span className="font-body text-xs text-outline shrink-0 hidden sm:inline">
+                {bracketData.bracket.format === "double_elimination" ? "Doble eliminación" : "Eliminación simple"}
+                {" · "}
+                {bracketData.bracket.participant_count} participantes
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFullscreen(false)}
+              className="flex items-center gap-1.5 bg-surface-container-high hover:bg-error/20 hover:text-error text-on-surface font-headline font-bold text-[10px] uppercase tracking-widest px-3 py-1.5 transition-colors shrink-0"
+              title="Salir de pantalla completa (Esc)"
+            >
+              <span className="material-symbols-outlined text-sm">close_fullscreen</span>
+              Salir (Esc)
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto px-6 py-4">
+            <TournamentBracketView
+              data={bracketData}
+              scale="admin"
+              onPickWinner={pickWinner}
+              onUndo={undoMatch}
+              busy={busy}
+            />
+          </div>
         </div>
       )}
     </div>
