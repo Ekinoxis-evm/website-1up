@@ -5,6 +5,42 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.5] — 2026-05-24
+
+### Fixed — Bracket tab now self-documents the 3-step start flow
+
+Cockpit Bracket tab had a real UX gap: an admin landed on the tab, saw a
+participant picker + a format selector + a button labelled
+"Crear bracket (borrador)" and assumed the tab was incomplete because no
+"Iniciar Torneo" button was visible. In reality the start button only
+appeared *after* clicking Crear — the flow was implicit.
+
+Fix is pure UI inside `AdminTournamentBracketPanel`:
+
+- **Numbered step banner at the top** (visible until the tournament starts):
+  `1. Elige participantes + formato` → `2. Genera el bracket borrador` →
+  `3. Inicia el torneo (va EN VIVO)`. Current step highlighted, finished
+  steps get a green check. New `<FlowStep>` helper component.
+- **Contextual hints under the banner** — adapt to state:
+  - No participants in the roster yet → "Aún no hay jugadores inscritos.
+    Agrégalos desde Inscripciones o pídeles que se registren en la página
+    pública."
+  - Fewer than 2 included → "Marca al menos 2 participantes con la casilla
+    a la izquierda antes de generar el bracket."
+  - Draft created → "✔ Bracket borrador listo. Revisa los enfrentamientos
+    a la derecha y dale a Iniciar Torneo cuando todo se vea bien."
+- **Button copy clarified**:
+  - "Crear bracket (borrador)" → "Generar bracket (paso 2)"
+  - Helper text mentions "paso 3" explicitly
+- **Step 3 panel header** now reads "Paso 3 · Enfrentamientos iniciales"
+  + a one-line reminder: "Revisa los pares. Si todo se ve bien, dale a
+  Iniciar Torneo al final."
+
+No behaviour or API changes — purely clarification of an already-correct flow.
+Build clean, 114/114 tests pass.
+
+---
+
 ## [2.36.4] — 2026-05-24
 
 ### Fixed — Database audit closure pass (4 advisor findings)

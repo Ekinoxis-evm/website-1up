@@ -280,9 +280,52 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
     );
   }
 
+  // Which step of the 3-step bracket flow we're on. Drives the explainer
+  // banner so an admin landing on the Bracket tab knows exactly what to do next.
+  //   1 — pick participants + format (no bracket exists yet)
+  //   2 — review pairings + start (draft exists, hasn't been started)
+  //   3 — running (started or finished — no setup actions remain)
+  const flowStep: 1 | 2 | 3 = isRunning ? 3 : (bracketData && isDraft ? 2 : 1);
+
   return (
     <div className="space-y-6">
       {error && <p className="font-body text-sm text-error bg-error/10 p-3">{error}</p>}
+
+      {/* ── Flow explainer — three numbered steps, current highlighted ─── */}
+      {!isRunning && (
+        <div className="bg-surface-container p-4">
+          <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-3">
+            Cómo iniciar el torneo
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <FlowStep n={1} active={flowStep === 1} done={flowStep > 1}
+              label="Elige participantes + formato" />
+            <FlowStep n={2} active={flowStep === 2} done={flowStep > 2}
+              label="Genera el bracket borrador" />
+            <FlowStep n={3} active={false} done={false}
+              label="Inicia el torneo (va EN VIVO)" />
+          </div>
+          {flowStep === 1 && roster.length === 0 && (
+            <p className="font-body text-xs text-outline mt-3">
+              Aún no hay jugadores inscritos. Agrégalos desde la pestaña{" "}
+              <strong className="text-on-surface">Inscripciones</strong>{" "}
+              o pídeles que se registren en la página pública del torneo.
+            </p>
+          )}
+          {flowStep === 1 && roster.length > 0 && includedIds.length < 2 && (
+            <p className="font-body text-xs text-outline mt-3">
+              Marca al menos 2 participantes con la casilla a la izquierda antes de generar el bracket.
+            </p>
+          )}
+          {flowStep === 2 && (
+            <p className="font-body text-xs text-outline mt-3">
+              ✔ Bracket borrador listo. Revisa los enfrentamientos a la derecha y dale a{" "}
+              <strong className="text-on-surface">Iniciar Torneo</strong> cuando todo se vea bien.
+              Si necesitas cambiar algo, regenera el bracket o elimínalo y vuelve a empezar.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── SETUP / DRAFT ──────────────────────────────────────────────── */}
       {(bracketData === null || isDraft) && (
@@ -380,18 +423,26 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
                 disabled={busy || includedIds.length < 2}
                 className="w-full bg-primary text-background font-headline font-black text-xs uppercase tracking-widest py-3 hover:bg-primary/80 disabled:opacity-40 transition-colors"
               >
-                {busy ? "Procesando…" : bracketData ? "Regenerar bracket" : "Crear bracket (borrador)"}
+                {busy
+                  ? "Procesando…"
+                  : bracketData
+                    ? "Regenerar bracket borrador"
+                    : "Generar bracket (paso 2)"}
               </button>
               <p className="font-body text-xs text-outline">
-                El bracket se crea como <span className="text-on-surface">borrador</span>: ajusta participantes y orden
-                las veces que necesites. No es visible al público hasta iniciar el torneo.
+                El bracket se genera como <span className="text-on-surface">borrador privado</span>: puedes
+                regenerarlo o ajustar participantes las veces que necesites antes de iniciar.
+                No es visible al público hasta el paso 3.
               </p>
             </div>
 
             {isDraft && bracketData && (
               <div className="bg-surface-container p-5 space-y-4">
-                <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">
-                  Enfrentamientos iniciales
+                <p className="font-headline font-bold text-xs uppercase tracking-widest text-primary-container">
+                  Paso 3 · Enfrentamientos iniciales
+                </p>
+                <p className="font-body text-xs text-outline -mt-2">
+                  Revisa los pares. Si todo se ve bien, dale a <strong className="text-on-surface">Iniciar Torneo</strong> al final.
                 </p>
                 <div className="space-y-1">
                   {bracketData.matches
@@ -440,6 +491,35 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
           onUndo={undoMatch}
         />
       )}
+    </div>
+  );
+}
+
+// ── Flow explainer step ──────────────────────────────────────────────────
+
+function FlowStep({
+  n, label, active, done,
+}: {
+  n: number; label: string; active: boolean; done: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-3 p-3 ${
+      active ? "bg-primary-container/15 ring-2 ring-primary-container ring-inset"
+      : done   ? "bg-tertiary/10"
+      :          "bg-surface-container-high/50"
+    }`}>
+      <span className={`w-7 h-7 shrink-0 flex items-center justify-center font-headline font-black text-sm ${
+        active ? "bg-primary-container text-white"
+        : done   ? "bg-tertiary text-background"
+        :          "bg-surface-container-high text-outline"
+      }`}>
+        {done ? <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check</span> : n}
+      </span>
+      <p className={`font-headline font-bold text-xs uppercase tracking-tight pt-1 ${
+        active ? "text-on-surface" : done ? "text-on-surface/70" : "text-outline"
+      }`}>
+        {label}
+      </p>
     </div>
   );
 }
