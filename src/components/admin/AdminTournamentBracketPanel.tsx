@@ -74,6 +74,10 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
   const { getAccessToken } = usePrivy();
   const router = useRouter();
 
+  // Selected slot for the click-to-swap UX in the draft pairings preview.
+  // First click sets this; second click on a different slot triggers the swap.
+  const [swapSelection, setSwapSelection] = useState<{ matchId: number; slot: 1 | 2 } | null>(null);
+
   const [bracketData, setBracketData] = useState<BracketData>(null);
   const [roster, setRoster]           = useState<RosterEntry[]>([]);
   const [format, setFormat]           = useState<"double_elimination" | "single_elimination">("single_elimination");
@@ -138,7 +142,16 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
         setFormat(bracket.bracket.format);
         setBracketData(bracket);
       } else {
-        setRoster(eligible.map(r => ({ userProfileId: r.user_profile_id, name: nameOf(r), included: true })));
+        // Default-check only participants who have CHECKED IN (status='attended').
+        // Players still in 'registered' status remain visible in the roster but
+        // unchecked — admin can manually include them if the tournament isn't
+        // using the QR check-in flow. Asistió=attended is the canonical "this
+        // player is here and ready to play" signal.
+        setRoster(eligible.map(r => ({
+          userProfileId: r.user_profile_id,
+          name: nameOf(r),
+          included: r.status === "attended",
+        })));
         setBracketData(null);
       }
     } catch {
@@ -259,6 +272,51 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
     }
   }
 
+  // Click-to-swap on the draft pairings preview. First click on a slot
+  // selects it; second click on a different slot triggers the swap via
+  // PATCH `swap_slots`. Same-slot click cancels the selection.
+  async function handleSlotClick(matchId: number, slot: 1 | 2, hasParticipant: boolean) {
+    if (!hasParticipant) {
+      // Can't select a BYE / empty slot — only real participants can be swapped
+      setSwapSelection(null);
+      return;
+    }
+    if (swapSelection && swapSelection.matchId === matchId && swapSelection.slot === slot) {
+      setSwapSelection(null);
+      return;
+    }
+    if (!swapSelection) {
+      setSwapSelection({ matchId, slot });
+      return;
+    }
+
+    // Second slot picked — execute the swap
+    setBusy(true); setError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/brackets", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          action:    "swap_slots",
+          matchId1:  swapSelection.matchId,
+          slot1:     swapSelection.slot,
+          matchId2:  matchId,
+          slot2:     slot,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "No se pudo intercambiar los participantes");
+      await load();
+      onChange?.();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSwapSelection(null);
+      setBusy(false);
+    }
+  }
+
   async function pickWinner(matchId: number, winnerId: number) {
     setBusy(true); setError(null);
     try {
@@ -371,6 +429,14 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
               </button>
             </div>
 
+            {bracketData === null && roster.length > 0 && (
+              <p className="font-body text-[11px] text-outline -mt-2">
+                Por defecto se marcan solo los que ya{" "}
+                <strong className="text-on-surface">asistieron</strong> (check-in con QR).
+                Marca también a los inscritos pendientes si quieres incluirlos.
+              </p>
+            )}
+
             {roster.length === 0 ? (
               <p className="font-body text-sm text-outline">
                 No hay participantes registrados en este torneo.
@@ -467,22 +533,58 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
                   Paso 3 · Enfrentamientos iniciales
                 </p>
                 <p className="font-body text-xs text-outline -mt-2">
-                  Revisa los pares. Si todo se ve bien, dale a <strong className="text-on-surface">Iniciar Torneo</strong> al final.
+                  Revisa los pares. {" "}
+                  <strong className="text-on-surface">Haz clic en dos jugadores</strong> para intercambiarlos
+                  si quieres ajustar manualmente los enfrentamientos. Luego dale a{" "}
+                  <strong className="text-on-surface">Iniciar Torneo</strong>.
                 </p>
+                {swapSelection && (
+                  <p className="font-body text-xs text-primary-container bg-primary-container/10 px-3 py-2">
+                    Slot seleccionado — haz clic en otro jugador para intercambiar, o haz clic de nuevo en el mismo para cancelar.
+                  </p>
+                )}
                 <div className="space-y-1">
                   {bracketData.matches
-                    .filter(m => m.bracket_side === "winners" && m.round === 1)
-                    .sort((a, b) => a.match_number - b.match_number)
+                    .filter(m =>
+                      // Play-in round (round 0 for SE) + WB R1 — every slot
+                      // where the admin can manually override the seeding.
+                      (m.bracket_side === "winners" && (m.round === 0 || m.round === 1))
+                    )
+                    .sort((a, b) => (a.round - b.round) || (a.match_number - b.match_number))
                     .map(m => {
                       const p1 = bracketData.participants.find(p => p.id === m.p1_id);
                       const p2 = bracketData.participants.find(p => p.id === m.p2_id);
+                      const isPlayIn = m.round === 0;
+                      const isSelected = (slot: 1 | 2) =>
+                        swapSelection?.matchId === m.id && swapSelection.slot === slot;
+                      const slotClass = (slot: 1 | 2, hasP: boolean) =>
+                        `flex-1 truncate text-left px-2 py-1 transition-colors ${
+                          hasP ? "hover:bg-primary-container/20 cursor-pointer" : "cursor-default opacity-50"
+                        } ${isSelected(slot) ? "ring-2 ring-primary-container ring-inset bg-primary-container/15" : ""}`;
                       return (
-                        <div key={m.id} className="bg-surface-container-high px-3 py-2 flex items-center gap-2 text-sm">
-                          <span className="font-body text-on-surface flex-1 truncate">{p1?.display_name ?? "—"}</span>
-                          <span className="font-headline font-black text-[10px] text-outline">VS</span>
-                          <span className="font-body text-on-surface flex-1 truncate text-right">
+                        <div key={m.id} className="bg-surface-container-high flex items-center gap-1 text-sm">
+                          {isPlayIn && (
+                            <span className="font-headline font-black text-[9px] uppercase tracking-widest text-secondary px-2">
+                              Play-in
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleSlotClick(m.id, 1, !!p1)}
+                            disabled={busy}
+                            className={`font-body text-on-surface ${slotClass(1, !!p1)}`}
+                          >
+                            {p1?.display_name ?? "—"}
+                          </button>
+                          <span className="font-headline font-black text-[10px] text-outline px-1">VS</span>
+                          <button
+                            type="button"
+                            onClick={() => handleSlotClick(m.id, 2, !!p2)}
+                            disabled={busy}
+                            className={`font-body text-on-surface text-right ${slotClass(2, !!p2)}`}
+                          >
                             {p2?.display_name ?? (m.state === "bye" ? "BYE" : "—")}
-                          </span>
+                          </button>
                         </div>
                       );
                     })}

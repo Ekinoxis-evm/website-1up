@@ -632,6 +632,79 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // ── SWAP SLOTS (manual override of draft pairings) ────────────────────
+  // Lets the admin re-arrange specific matchups before starting. Useful when
+  // the random seeding produced a pair the admin wants to swap manually
+  // (e.g. a player just dropped out, or two friends ended up in R1).
+  //
+  // Body: { matchId1, slot1, matchId2, slot2 }  (slots are 1 or 2)
+  //
+  // Constraints:
+  //   • bracket must be `draft` (no re-arranging a running tournament)
+  //   • both source slots must contain real participants (no BYE / phantom)
+  //   • both matches must be in the same bracket
+  // The swap is purely a participant-id swap — `p_source` stays as it was
+  // (typically 'seed' for R1 matches), `winner_id` is null on draft matches
+  // anyway, and `bracket_participants.seed` is left alone (it reflects the
+  // original ranking; the swap is a manual override on top).
+  if (action === "swap_slots") {
+    const { matchId1, slot1, matchId2, slot2 } = body as {
+      matchId1: number; slot1: 1 | 2; matchId2: number; slot2: 1 | 2;
+    };
+    if (matchId1 == null || matchId2 == null || ![1, 2].includes(slot1) || ![1, 2].includes(slot2))
+      return NextResponse.json({ error: "matchId1, slot1, matchId2, slot2 son requeridos" }, { status: 400 });
+
+    if (matchId1 === matchId2 && slot1 === slot2)
+      return NextResponse.json({ error: "Ambos slots son el mismo — nada que intercambiar" }, { status: 400 });
+
+    const { data: matches } = await supabaseAdmin
+      .from("bracket_matches")
+      .select("*")
+      .in("id", [matchId1, matchId2]);
+    if (!matches || matches.length !== 2)
+      return NextResponse.json({ error: "Match(es) no encontrado(s)" }, { status: 404 });
+
+    const m1 = matches.find(m => m.id === matchId1)!;
+    const m2 = matches.find(m => m.id === matchId2)!;
+    if (m1.bracket_id !== m2.bracket_id)
+      return NextResponse.json({ error: "Los matches deben pertenecer al mismo bracket" }, { status: 400 });
+
+    const { data: bracketRow } = await supabaseAdmin
+      .from("brackets").select("status").eq("id", m1.bracket_id).single();
+    if (bracketRow?.status !== "draft")
+      return NextResponse.json(
+        { error: "Solo se pueden intercambiar participantes mientras el bracket es borrador." },
+        { status: 400 },
+      );
+
+    const idA = slot1 === 1 ? m1.p1_id : m1.p2_id;
+    const idB = slot2 === 1 ? m2.p1_id : m2.p2_id;
+    if (idA == null || idB == null)
+      return NextResponse.json(
+        { error: "Ambos slots deben tener un participante real. Los BYE no se pueden intercambiar." },
+        { status: 400 },
+      );
+
+    // Atomic swap — apply both updates regardless of order
+    const updateA = slot1 === 1 ? { p1_id: idB } : { p2_id: idB };
+    const updateB = slot2 === 1 ? { p1_id: idA } : { p2_id: idA };
+
+    if (matchId1 === matchId2) {
+      // Same match — combine into one update so we don't read the in-between state
+      const combined = { ...updateA, ...updateB };
+      await supabaseAdmin.from("bracket_matches").update(combined).eq("id", matchId1);
+    } else {
+      await Promise.all([
+        supabaseAdmin.from("bracket_matches").update(updateA).eq("id", matchId1),
+        supabaseAdmin.from("bracket_matches").update(updateB).eq("id", matchId2),
+      ]);
+    }
+
+    revalidatePath("/admin/torneos");
+    revalidatePath("/torneos/[slug]", "page");
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
 }
 

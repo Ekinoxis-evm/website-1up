@@ -5,6 +5,69 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.15] — 2026-05-24
+
+### Added — Roster defaults to attended-only + click-to-swap pairings
+
+Two pieces of admin-flow feedback addressed in `AdminTournamentBracketPanel`
++ the brackets PATCH route:
+
+#### 1. Roster defaults to status="attended"
+Before: the bracket roster pre-checked every player with status
+`registered` OR `attended`. This meant players who registered online but
+never showed up to the event could still be auto-included when the admin
+clicked Generar bracket.
+
+Now: only **status="attended"** players are pre-checked. Pending-
+registered players are still listed (so admin can manually include them
+for tournaments that don't use the QR check-in flow), but they start
+unchecked. The QR check-in becomes the authoritative "this person is
+here and ready to play" signal.
+
+UI hint added next to the roster:
+> *Por defecto se marcan solo los que ya **asistieron** (check-in con QR).
+> Marca también a los inscritos pendientes si quieres incluirlos.*
+
+#### 2. Click-to-swap pairings in draft state
+Before: after random generation the admin could regenerate the whole
+bracket or delete it, but couldn't adjust specific pairings. So if a
+player dropped out at the last minute, the cleanest path was a full
+regenerate (losing any manual seed ordering).
+
+Now: each slot in the draft pairings preview is a clickable button.
+- **First click** selects a slot (visual ring highlight)
+- **Second click** on a different slot swaps the two participants
+- **Same-slot click** cancels the selection
+- **Same-match swap** allowed too (e.g. swap p1 and p2 within one match)
+
+Both **play-in matches (round 0)** and **WB R1 matches** are swap-able.
+BYE / empty slots are not selectable.
+
+#### Backend
+New `PATCH /api/admin/brackets` action `swap_slots`:
+
+```
+POST PATCH body: {
+  action:   "swap_slots",
+  matchId1, slot1,    // 1 | 2
+  matchId2, slot2,    // 1 | 2
+}
+```
+
+Guards:
+- bracket must be in `draft` state (no manual re-arranging once started)
+- both matches must belong to the same bracket
+- both source slots must contain real participants (no BYE / phantom)
+
+The swap is purely a `p1_id` / `p2_id` exchange — `p_source` stays as
+written (typically `seed` for R1), `winner_id` is `null` on draft
+matches anyway, and `bracket_participants.seed` is untouched (it
+reflects the original ranking; the swap is a manual override on top).
+
+Build clean, 113/113 pages, 194/194 tests pass.
+
+---
+
 ## [2.36.14] — 2026-05-24
 
 ### Fixed — DE bye-cascading: losers bracket no longer traps phantom slots
