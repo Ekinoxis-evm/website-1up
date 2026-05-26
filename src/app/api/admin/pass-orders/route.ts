@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { sendPassBankApprovedEmail, sendPassBankRejectedEmail } from "@/lib/email";
 import { getComprobanteSignedUrl } from "@/lib/blob";
+import { isValidPassOrderAmount } from "@/lib/passOrders";
 
 async function checkAdmin(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -44,6 +45,11 @@ export async function POST(req: NextRequest) {
   const expiresAt = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
   const now = new Date();
 
+  const tokenAmountPaid = 0;
+  if (!isValidPassOrderAmount("admin_grant", tokenAmountPaid)) {
+    return NextResponse.json({ error: "Monto de token inválido para grant administrativo." }, { status: 400 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("pass_orders")
     .insert({
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
       wallet_address:         walletAddress || "",
       recipient_address:      config?.recipient_address ?? "",
       payment_method:         "admin_grant",
-      token_amount_paid:      0,
+      token_amount_paid:      tokenAmountPaid,
       token_price_at_purchase: config?.price_token ?? 0,
       duration_days:          durationDays,
       status:                 "confirmed",
