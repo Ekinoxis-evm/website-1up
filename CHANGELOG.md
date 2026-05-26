@@ -5,6 +5,73 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.36.16] — 2026-05-26
+
+### Fixed — Admin pass grant silently rejected by DB CHECK
+
+**Bug.** Since the admin-grant feature shipped in v2.25.0, every attempt to
+grant a 1UP Pass to a player via `/admin/pass-orders` → Admin Grant tab failed
+silently. Zero rows with `payment_method = 'admin_grant'` ever made it into the
+`pass_orders` table — the operator clicked Save, got a 500, and nothing
+happened. The bug was confirmed in production by inspecting the live table:
+all 15 rows were `token` or `bank`.
+
+**Root cause.** The `pass_orders` table carried a CHECK constraint that
+predated the admin-grant feature:
+
+```sql
+CHECK ((token_amount_paid > (0)::numeric))
+```
+
+The route at `src/app/api/admin/pass-orders/route.ts` correctly inserts
+`token_amount_paid: 0` for admin grants (no payment changed hands), so every
+grant insert tripped SQLSTATE 23514 and the route returned a 500 with the raw
+Postgres error.
+
+**Fix.** Migration `20260526131000_pass_orders_allow_zero_token_amount_for_admin_grant.sql`
+relaxes the CHECK to allow zero amounts for grants while preserving the
+invariant for paid purchases:
+
+```sql
+CHECK (
+  payment_method = 'admin_grant'
+  OR token_amount_paid > 0
+)
+```
+
+- `token` / `bank` orders with `amount = 0` → still rejected (verified)
+- `admin_grant` orders with `amount = 0` → now accepted (verified)
+
+The migration was applied to the live DB via Supabase MCP and the matching
+`.sql` file is committed for repo / fresh-DB parity.
+
+**Defense in depth.** New helper `src/lib/passOrders.ts` exports
+`isValidPassOrderAmount()` which mirrors the DB CHECK in code. The route now
+calls it as a fail-fast guard, so any future refactor that violates the
+predicate returns a clear 400 instead of a 500. The test file
+`src/__tests__/lib/passOrders.test.ts` pins the predicate (3 admin_grant cases,
+3 paid-purchase cases, 1 regression case for this exact bug).
+
+**Tests.** 194 → **201 passing** (+7).
+
+### Files
+
+- `supabase/migrations/20260526131000_pass_orders_allow_zero_token_amount_for_admin_grant.sql` *(new)*
+- `src/lib/passOrders.ts` *(new)*
+- `src/__tests__/lib/passOrders.test.ts` *(new)*
+- `src/app/api/admin/pass-orders/route.ts` — pre-insert validation guard
+- `CHANGELOG.md`
+
+### Verification
+
+- Confirmed in DB that the `admin_grant` insert path now succeeds with
+  `token_amount_paid = 0`
+- Confirmed the negative path (`token` with amount=0) still rejects
+- `npm run build` clean
+- `npm test --run` 201/201
+
+---
+
 ## [2.36.15] — 2026-05-24
 
 ### Added — Roster defaults to attended-only + click-to-swap pairings
