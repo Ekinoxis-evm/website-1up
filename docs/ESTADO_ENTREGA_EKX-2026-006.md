@@ -2,7 +2,8 @@
 ## 1UP Gaming Tower × Ekinoxis Labs
 
 **Fecha de corte:** 23 de mayo de 2026
-**Versión en producción:** v2.30.5
+**Versión en producción al corte:** v2.30.5
+**Versión vigente al 24 mayo:** v2.36.15 *(trabajo post-cierre — ver Anexo A)*
 **Referencia contractual:** EKX-2026-005 (Cuenta de Cobro firmada — 8 de abril, 2026)
 
 ---
@@ -610,6 +611,38 @@ Auditorías, mejoras y endurecimientos absorbidos por Ekinoxis. Se documenta par
 
 ---
 
-*Preparado por Ekinoxis Labs — 23 de mayo de 2026*
+## ANEXO A — TRABAJO POST-CIERRE (23-24 mayo 2026)
+
+Después de la fecha de corte de este documento (23/05/2026, v2.30.5) se ejecutó una iteración adicional que dejó la suite de gestión de torneos lista para operación en vivo. **Este trabajo NO está incluido en la facturación de esta cuenta** — se documenta aquí únicamente para transparencia del estado actual de la plataforma. La negociación sobre el alcance y la facturación de estas piezas se hace en un anexo separado.
+
+### A.1 Tournament Management Overhaul — v2.31.0 → v2.36.15
+
+13 PRs, 15 versiones, 134 archivos modificados, +5,800 / −1,100 líneas netas.
+
+| Pieza | Versión |
+|---|---|
+| Avatares de usuario en toda la plataforma | v2.31.0 + v2.31.1 |
+| Auto-podio derivado del bracket cuando completa el match final | v2.32.0 |
+| Cockpit unificado `/admin/torneos/[slug]/manage` | v2.33.0 → v2.36.3 |
+| Vista TV `/torneos/[slug]/tv` con polling 15s | v2.35.0 |
+| Cierre de auditoría DB (4 advisor findings) | v2.36.4 |
+| Algoritmo de seeding corregido (mirror-recursive doubling) | v2.36.10 |
+| Round play-in para single-elim no-power-of-2 | v2.36.13 |
+| Bye-cascading para double-elim no-power-of-2 | v2.36.14 |
+| Click-to-swap pairings + filtro de roster a `attended` | v2.36.15 |
+
+Detalle completo del overhaul: ver `docs/SEGUIMIENTO-FEEDBACK.md` §8 y `CHANGELOG.md` entradas v2.31.0 → v2.36.15.
+
+### A.2 Estado de tests
+
+| Antes (v2.30.5) | Después (v2.36.15) |
+|---:|---:|
+| 100/100 passing | **194/194 passing** |
+
+Tests nuevos: 7 (sniff de avatar), 7 (podium derivation), 45 (bracket seeding correctness — regression-pin del bug v2.36.10), 33 (play-in seeding), 2 (DE bye-cascading prerequisite).
+
+---
+
+*Preparado por Ekinoxis Labs — 23 de mayo de 2026 (cuerpo principal) · 24 de mayo de 2026 (Anexo A)*
 *Referencia contractual: EKX-2026-005 (Cuenta de Cobro firmada el 8 de abril de 2026)*
 *Documento de estado de entrega para cierre y facturación.*

@@ -190,9 +190,11 @@ H-7 (schema un-versioned — generate a `supabase db dump` baseline migration). 
 overall — over-fetch risk. `hall_of_fame` queried with an unnecessary `as "tournaments"` cast.
 `report_match_result` RPC is typed but never called — possibly dead.
 
-**⚠️ Needs the Supabase MCP (interactive OAuth) to close:** RLS status of ~18 anon-read
-tables (any with RLS disabled = anon-key data leak), FK/filter-column index coverage. Run
-`get_advisors` for security + performance once authorized.
+~~**⚠️ Needs the Supabase MCP (interactive OAuth) to close:** RLS status of ~18 anon-read
+tables, FK/filter-column index coverage.~~ ✅ **Closed in v2.36.4 (2026-05-24)** — advisors
+run, 4 actionable findings fixed (hall_of_fame view security_invoker, set_updated_at
+search_path, dropped dead `report_match_result`, RLS init-plan optimization). Remaining
+advisor info-level items documented as correct-by-design. See `CHANGELOG.md` § 2.36.4.
 
 ## Area 5 · Payments *(owner: payments-maintainer)*
 

@@ -7,9 +7,10 @@ Documento único que consolida **todo** el feedback de revisión, testing y audi
 - **Tech Review #5 del 15 de mayo de 2026** (Cloudflare Starter + estructura de cursos)
 - **Testing del 21 de mayo de 2026** (reportes de bugs)
 - **Auditoría de seguridad del 22 de mayo de 2026** (38 hallazgos)
+- **Tournament UX Overhaul del 23-24 de mayo de 2026** (sesión completa de operación de torneos)
 
-**Última actualización:** 23 de mayo de 2026
-**Versión en producción:** v2.30.5
+**Última actualización:** 24 de mayo de 2026
+**Versión en producción:** v2.36.15
 
 **Leyenda:** ✅ resuelto · ⏳ en diagnóstico · ⬜ pendiente (decisión de diseño / tweak visual) · 🔒 bloqueo externo
 
@@ -24,7 +25,8 @@ Documento único que consolida **todo** el feedback de revisión, testing y audi
 | Tech Review #5 — 15 mayo | 5 | 5 | 0 |
 | Testing 21 mayo — bugs | 7 | 5 | 2 (en diagnóstico — requieren traza de consola) |
 | Auditoría seguridad 22 mayo | 38 | 38 | 0 ✅ **completamente cerrada** |
-| **Total** | **97** | **89** | **8** |
+| Tournament UX Overhaul 23-24 mayo | 18 | 18 | 0 ✅ **completamente cerrada** |
+| **Total** | **115** | **107** | **8** |
 
 Los 8 pendientes son: 3 tweaks visuales del navbar/banner, 2 bugs en diagnóstico (requieren traza de consola del navegador), 1 toggle de servicios para Home, 1 sesión de battle-testing con family & friends, y MercadoPago automático (🔒 bloqueo externo).
 
@@ -319,7 +321,69 @@ Auditoría integral de 6 áreas (Web pública · Portal usuario · Admin panel �
 
 ---
 
-## 8. Mejoras entregadas — Historial completo
+## 8. Tournament UX Overhaul — 23-24 de mayo de 2026 ✅ COMPLETAMENTE CERRADO
+
+Sesión de revisión continua del operador del torneo. **18 piezas de feedback identificadas, todas resueltas en producción** entre las v2.31.0 y v2.36.15.
+
+### 8.1 Avatares de usuario
+
+| # | Reporte | Estado | Versión |
+|---|---------|--------|---------|
+| 1 | Usuarios no tienen foto en torneos/admin/hall-of-fame | ✅ | v2.31.0 — `users/{user_profile_id}/avatar` en bucket público + `<Avatar />` con fallback de iniciales-gradiente |
+| 2 | Onboarding debería pedir foto (opcional, skippable) | ✅ | v2.31.1 — paso 7 al final del wizard con "Saltar y entrar" |
+
+### 8.2 Cockpit unificado de torneos
+
+| # | Reporte | Estado | Versión |
+|---|---------|--------|---------|
+| 3 | Admin tiene que abrir 3 páginas para gestionar un torneo (brackets, registrations, results) | ✅ | v2.33.0 → v2.36.3 — `/admin/torneos/[slug]/manage` con 4 tabs en una sola página |
+| 4 | Entrega de premio $1UP debería estar en el mismo lugar que el podio | ✅ | v2.36.0 — botón "Enviar on-chain" en tab Premios usa Privy gas-sponsored |
+| 5 | Necesito poder cancelar/eliminar un torneo desde su página | ✅ | v2.33.0 — toolbar con Pública/TV/QR/Editar/Cancelar/Eliminar |
+| 6 | Necesito visualizar las etapas del torneo claramente | ✅ | v2.36.1 — phase stepper de 4 pasos (Inscripciones → Borrador → En curso → Finalizado) |
+
+### 8.3 Vista TV / pantalla completa
+
+| # | Reporte | Estado | Versión |
+|---|---------|--------|---------|
+| 7 | Necesito poder mostrar el bracket en una TV en el venue | ✅ | v2.35.0 — `/torneos/[slug]/tv` fullscreen, sin chrome, polling 15s |
+| 8 | TV view 404 incluso después de iniciar el torneo | ✅ | v2.36.6 — Iniciar Torneo ahora flipea `is_active=true` además de `status='live'` |
+| 9 | Bracket todavía se extiende horizontalmente, quiero verlo compacto | ✅ | v2.36.7 — modo compact contained + botón "Pantalla completa" |
+| 10 | Bracket en la página pública requiere scroll lateral con el mouse | ✅ | v2.36.12 — `MIN_SCALE = 0.25` + box dims más densos para que siempre quepa |
+
+### 8.4 Bracket — algoritmo y rendering
+
+| # | Reporte | Estado | Versión |
+|---|---------|--------|---------|
+| 11 | Quiero ver el bracket como árbol (Merkle tree), no como lista | ✅ | v2.36.5 — tree interactivo con tarjetas de avatar; click-pick para ganador, "Deshacer" al pie de match completado |
+| 12 | Algunos brackets están atorados en estado `published` y no puedo eliminarlos | ✅ | v2.36.8 — `published` tratado como `draft` en DELETE y PATCH start |
+| 13 | El cuadro tiene round 1 con casi todos BYEs cuando hay 9 jugadores | ✅ | v2.36.10 — algoritmo de seeding corregido (mirror-recursive). Para SE no-pow2, v2.36.13 agregó round Play-in: 4 matches reales R1 + 1 play-in entre seeds 8 vs 9 |
+| 14 | Tarjetas BYE se ven rotas (TBD con ícono de help) | ✅ | v2.36.9 — render especial "Pase libre · BYE" con chip dedicado |
+| 15 | DE con 3 jugadores se atora — LB Final muestra "lyca2206 vs TBD" | ✅ | v2.36.14 — bye-cascading: slots LB cuyos feeders WB son BYE se marcan `p_source='bye'`, `cascadeLbAdvance()` avanza recursivamente |
+
+### 8.5 Operación día-del-evento
+
+| # | Reporte | Estado | Versión |
+|---|---------|--------|---------|
+| 16 | Roster del bracket debería incluir solo los que asistieron (check-in QR), no todos los inscritos | ✅ | v2.36.15 — pre-check solo `attended`; registered se ven pero unchecked |
+| 17 | Si un jugador no llega, quiero mover los pares manualmente antes de iniciar | ✅ | v2.36.15 — click en dos slots de la preview del draft los intercambia |
+| 18 | Necesito poder regenerar el bracket si quiero rehacer las parejas | ✅ | Ya soportado — botón "Regenerar bracket borrador" siempre disponible en estado draft (también "Eliminar bracket") |
+
+### 8.6 Live unsticks aplicados durante la sesión
+
+Cuando un bracket en producción quedó atascado, se patcharon datos vía MCP en tiempo real para no perder el momento:
+
+| Torneo | Síntoma | Fix MCP |
+|---|---|---|
+| `torneo-2xko-3`, `torneo-rivals-of-aether-ii-1` | Bracket `status='published'` → ningún UI action funciona | `UPDATE brackets SET status='draft' WHERE status='published'` |
+| `torneo-fatal-fury-…` | Bracket con 9 jugadores generado con algoritmo viejo → seed 1 ausente, 6 matches stuck pending | `DELETE FROM brackets WHERE tournament_id=5` + `UPDATE tournaments SET status='upcoming'` → admin regenera |
+| `torneo-rivals-of-aether-ii-1` | LB Final atorado con phantom slot | `UPDATE bracket_matches` setting `state='bye'`, `winner_id`, `p1_source='bye'` en match 126; `state='ready'` con `p1_id` en match 127 |
+| Tournament id=5 | `is_active=false` después de iniciar → TV view 404 | `UPDATE tournaments SET is_active=true WHERE id=5` |
+
+Las 4 situaciones tienen ahora un fix permanente en código (v2.36.6, .8, .10, .14) — el live patch ya no es necesario para futuros torneos.
+
+---
+
+## 9. Mejoras entregadas — Historial completo
 
 | Versión | Entrega | Hrs |
 |---------|---------|---:|
@@ -345,24 +409,43 @@ Auditoría integral de 6 áreas (Web pública · Portal usuario · Admin panel �
 | v2.30.3 | OG images 1200×630 via `next/og` | 4h |
 | v2.30.4 | Upstash env var fallback + smoke test 429 verificado | 1h |
 | v2.30.5 | Sync de docs (CLAUDE.md / README.md / skills / agents) | 2h |
+| v2.31.0 | **Avatares de usuario** — DB column, `<Avatar />`, POST/DELETE `/api/user/avatar`, surfaced en 5 contextos | 6h |
+| v2.31.1 | Paso de avatar en onboarding wizard (skippable) | 1h |
+| v2.32.0 | **Auto-podio desde bracket** — `derivePodium()` corre cuando completa el último match | 4h |
+| v2.33.0 | Cockpit unificado `/admin/torneos/[slug]/manage` (shell) | 4h |
+| v2.34.0 | Cockpit con 4 tabs embebidos (Info / Inscripciones / Bracket / Premios) | 5h |
+| v2.35.0 | **Vista TV** `/torneos/[slug]/tv` con `(bare)` route group + polling 15s + matchComponent con avatares | 4h |
+| v2.36.0–3 | Consolidación del cockpit + entrega on-chain de premios + Share button + phase stepper + mobile labels | 8h |
+| v2.36.4 | Cierre de auditoría DB — 4 advisor findings de Supabase resueltos | 2h |
+| v2.36.5 | Step banner del bracket + tree interactivo (reemplaza grouped-list) + icon swap | 4h |
+| v2.36.6 | Fix TV-view 404 — Iniciar Torneo ahora flipea `is_active=true` | 1h |
+| v2.36.7 | Modo compact contained + Pantalla completa del bracket | 3h |
+| v2.36.8 | Estado `published` ya no atrapa tournaments | 1h |
+| v2.36.9 | Auto-fit responsivo del bracket + polish visual del BYE | 3h |
+| v2.36.10 | **Algoritmo de seeding corregido** (mirror-recursive doubling) + 45 tests | 5h |
+| v2.36.12 | Bracket público cabe sin scroll horizontal | 1h |
+| v2.36.13 | **Round Play-in** para single-elim no-pow2 + 33 tests | 5h |
+| v2.36.14 | **DE bye-cascading** — losers bracket no atrapa phantom slots | 4h |
+| v2.36.15 | Roster default a `attended` + click-to-swap pairings en draft | 3h |
 
-**Total mejoras desde v2.27.0:** ~136 horas adicionales (ver `docs/ESTADO_ENTREGA_EKX-2026-006.md` para detalle financiero).
+**Total mejoras desde v2.27.0:** ~200 horas adicionales (ver `docs/ESTADO_ENTREGA_EKX-2026-006.md` para detalle financiero).
 
 ---
 
-## 9. Estado del sistema
+## 10. Estado del sistema
 
 | Capa | Estado | Detalles |
 |------|--------|---------|
-| Producción | ✅ Estable | `1upesports.org` + `app.*` + `admin.*` — 117 rutas, build limpio |
-| Tests automatizados | ✅ | 100/100 Vitest passing (52 originales + 48 nuevos en auditoría) |
+| Producción | ✅ Estable | `1upesports.org` + `app.*` + `admin.*` — 113 rutas (cockpit reemplazó 4 páginas standalone), build limpio |
+| Tests automatizados | ✅ | 194/194 Vitest passing (100 originales + 48 auditoría + 7 sniff + 7 podium + 45 bracket-seeding + 33 play-in + 2 cascading-bye prereq) |
 | Rate limiting | ✅ Activo | Upstash live — verificado con smoke test 429 |
 | Cloudflare Stream | ✅ Activo | Tokens RS256 1h bind a IP del caller via `accessRules` |
 | Backups | ✅ Automático | Supabase managed |
-| Schema versionado | ✅ | `supabase/migrations/00000000000000_baseline.sql` + 2 incrementales |
-| Auditoría externa | — | No requerida — auditoría interna 22 mayo cerrada al 100% |
+| Schema versionado | ✅ | `supabase/migrations/00000000000000_baseline.sql` + 6 migraciones incrementales (3 nuevas para avatar/hall_of_fame/audit-closure) |
+| Auditoría externa | — | No requerida — auditoría interna 22 mayo cerrada al 100% + advisor de Supabase re-corrido el 24 mayo (4 hallazgos adicionales resueltos en v2.36.4) |
+| Tournament suite | ✅ Lista para operación en vivo | Cockpit + TV + click-to-swap + bye-cascading + play-in + on-chain prize delivery — verificada en `rivals-of-aether` (3p DE), `fatal-fury` (9p DE), `2xko-3` (8p DE) |
 
 ---
 
-*Preparado por Ekinoxis Labs — 23 de mayo de 2026*
+*Preparado por Ekinoxis Labs — 24 de mayo de 2026*
 *Referencia: EKX-2026-005 + ESTADO_ENTREGA_EKX-2026-006*

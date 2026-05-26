@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.10 |
+| **Versión** | 2.11 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 23 de mayo de 2026 |
-| **Versión en producción** | v2.30.5 |
+| **Última actualización** | 24 de mayo de 2026 |
+| **Versión en producción** | v2.36.15 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -20,7 +20,9 @@
 
 **1UP Gaming Tower** es la plataforma tecnológica que soporta la operación del primer hub profesional de esports en Colombia. El sistema fue construido íntegramente por **Ekinoxis** como software a medida (sin CMS ni plantillas) y se encuentra en producción activa en `1upesports.org`.
 
-La plataforma comprende tres frentes de cara al usuario — portal público, panel de usuario y consola de administración — todos servidos desde una única base de código en **Next.js 16** sobre infraestructura serverless de **Vercel**. La persistencia de datos corre en **Supabase (PostgreSQL)** con Row-Level Security habilitado y el **esquema completo versionado en el repositorio** (migración baseline de 1097 líneas idempotente). La autenticación es gestionada por **Privy** con verificación de `appId` y JWT firmado server-side. Los pagos se procesan a través de **MercadoPago** con verificación HMAC-SHA256 canónica (`id;request-id;ts`) + ventana ±10 min de freshness + idempotencia por `mp_payment_id`. Los endpoints abusables están protegidos por **Upstash Ratelimit** (live en producción desde 23/05/2026, verificado con smoke test 429). El streaming de video usa **Cloudflare Stream** con tokens RS256 atados al IP del caller via `accessRules`.
+La plataforma comprende tres frentes de cara al usuario — portal público, panel de usuario y consola de administración — todos servidos desde una única base de código en **Next.js 16** sobre infraestructura serverless de **Vercel**. La persistencia de datos corre en **Supabase (PostgreSQL)** con Row-Level Security habilitado y el **esquema completo versionado en el repositorio** (migración baseline de 1097 líneas idempotente + 3 migraciones incrementales). La autenticación es gestionada por **Privy** con verificación de `appId` y JWT firmado server-side. Los pagos se procesan a través de **MercadoPago** con verificación HMAC-SHA256 canónica (`id;request-id;ts`) + ventana ±10 min de freshness + idempotencia por `mp_payment_id`. Los endpoints abusables están protegidos por **Upstash Ratelimit** (live en producción desde 23/05/2026, verificado con smoke test 429). El streaming de video usa **Cloudflare Stream** con tokens RS256 atados al IP del caller via `accessRules`.
+
+A partir de la **v2.31.0** (mayo 24, 2026) se completó la **suite de gestión de torneos**: avatares de usuario en todas las superficies (Hall of Fame, brackets, admin), **cockpit unificado** (`/admin/torneos/[slug]/manage`) que reemplaza tres páginas admin separadas, **vista TV de pantalla completa** (`/torneos/[slug]/tv`) con polling de 15s para casting en pantalla del venue, **entrega on-chain de premios** vía Privy gas-sponsored desde el panel, **algoritmo de seeding correcto** (mirror-recursive doubling), **round play-in** para single-elim con conteos no-pow2, y **bye-cascading** en double-elim que evita slots fantasma atorados en losers.
 
 Adicionalmente, la plataforma cuenta con una **capa blockchain construida y lista para integración**: contratos Solidity en Base (L2), Foundry, suite de tests completa. La capa no está activa en producción a la fecha por decisión presupuestal — representa capacidad técnica instalada disponible para activación.
 
@@ -125,8 +127,8 @@ Contratos Solidity en Base (L2 sobre Ethereum) que habilitarán: identidad on-ch
 | 7 | ¿APIs propias o de terceros? | **Ambas.** Next.js API Routes interna + integraciones: Privy, Supabase, MercadoPago, Resend, Blockscout v2, Base L2 RPC, **Cloudflare Stream**, **Upstash Redis**. |
 | 8 | ¿Usa autenticación? ¿Cómo? | **Sí — Privy como IdP.** JWT Bearer verificado server-side. Email + Google. Tres niveles: público / usuario registrado / administrador. Adicionalmente se valida el claim `appId` para prevenir tokens cross-tenant. |
 | 9 | ¿Es responsive? | **Sí — mobile-first.** Tailwind CSS v3 con breakpoints estándar. Bottom nav móvil; top bar / sidebar desktop. |
-| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 100 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, **verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier**). Smart contracts: **suite completa con Foundry**. |
-| 11 | ¿Schema versionado en el repo? | **Sí.** `supabase/migrations/00000000000000_baseline.sql` (1097 líneas, idempotente) — toda la DB reproducible desde el código. |
+| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 194 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime**). Smart contracts: **suite completa con Foundry**. |
+| 11 | ¿Schema versionado en el repo? | **Sí.** `supabase/migrations/00000000000000_baseline.sql` (1097 líneas, idempotente) + 3 migraciones incrementales (avatar_url, hall_of_fame view, audit closure) — toda la DB reproducible desde el código. |
 | 12 | ¿Rate limiting? | **Sí — live en producción.** Upstash Ratelimit + sliding window. 5 endpoints protegidos (recruitment, course-intro-token, referral-validate, pass-orders, course-orders). Verificado con smoke test 429 el 23/05/2026. |
 
 ---
@@ -498,7 +500,7 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 | Tipado estático | TypeScript 5 (strict) | Activo — cero errores requerido |
 | Linting | ESLint | Activo |
 | Build verification | `next build` | Antes de cada entrega |
-| Tests unitarios / integración | **Vitest — 100 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, **verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier** |
+| Tests unitarios / integración | **Vitest — 194 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime** |
 | Tests E2E | Playwright | Pendiente |
 | QA manual | Checklist por release | Activo |
 
@@ -514,15 +516,17 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 ### 14.3 Flujo de QA pre-release
 
 ```
-[ ] npm run test:run      — cero tests fallidos (100 tests)
+[ ] npm run test:run      — cero tests fallidos (194 tests)
 [ ] npm run build         — cero errores
 [ ] npx tsc --noEmit      — cero errores TypeScript
 [ ] npm run lint          — cero advertencias
 [ ] Smoke test manual:
       ✓ Home + Torneos cargan con caché edge
-      ✓ Registro completo (onboarding)
+      ✓ Registro completo (onboarding + foto de perfil)
       ✓ Inscripción torneo + email + .ics
-      ✓ Admin login + CRUD + toast
+      ✓ Admin cockpit → 4 tabs funcionan, click-to-swap en bracket draft
+      ✓ Bracket en vivo escribe ganadores, auto-podium en match final
+      ✓ Vista TV /torneos/[slug]/tv refresca cada 15 s
       ✓ Rate limit responde 429 tras 5 reqs
       ✓ Páginas públicas reflejan cambios tras mutación admin
 ```
@@ -551,6 +555,25 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 | **Wallet** | TEE (Privy) | Claves privadas nunca salen del TEE |
 | **Gas** | EIP-7702 paymaster | Sponsoring de Privy en Base |
 | **Dependencias** | Exact-pin | `@privy-io/*`, `@upstash/*` pinned (audit H-5) |
+
+### 15.1.1 Tournament Management Overhaul — 23-24 de mayo de 2026 (v2.31.0 → v2.36.15)
+
+Tras la auditoría de seguridad, se ejecutó una segunda iteración que dejó la suite de gestión de torneos lista para operación en vivo:
+
+| Pieza | Versión | Detalle |
+|---|---|---|
+| Avatares de usuario | v2.31.0 / v2.31.1 | Upload en `users/{user_profile_id}/avatar`, magic-byte sniffed. Surfaceado en Hall of Fame, brackets, top app bar, listas admin. Paso opcional en wizard de onboarding. |
+| Auto-podio desde bracket | v2.32.0 | `derivePodium(format, matches, participants)` corre cuando el último match completa; respeta overrides manuales (insert-only, never overwrite). |
+| Cockpit unificado | v2.33.0 – v2.34.0 | `/admin/torneos/[slug]/manage` con 4 tabs (Info / Inscripciones / Bracket / Premios) reemplaza tres páginas admin separadas. Persistencia de tab en URL hash. |
+| Consolidación + entrega on-chain | v2.36.0 – v2.36.3 | Editor de info inline, envío Privy gas-sponsored ($1UP via `useSendTransaction` + `value: BigInt(0)` + `sponsor: true`), share-button. Standalone pages eliminadas. |
+| Vista TV | v2.35.0 | `(bare)` route group para `/torneos/[slug]/tv`. Bracket escalado, polling 15s, sponsor strip. |
+| Cierre de auditoría DB | v2.36.4 | 4 hallazgos de `get_advisors` cerrados: `hall_of_fame` → `security_invoker`, `set_updated_at` search_path pinned, `report_match_result` dropped, RLS `(SELECT …)` wrap. |
+| Algoritmo de seeding correcto | v2.36.10 | Reemplazo del `buildPairings` alternating-step (que sobrescribía seed 1 y dejaba slot 16=0) con mirror-recursive doubling. 45 tests pinning regression. |
+| Play-in round (single-elim) | v2.36.13 | Para N no-pow2: pre-round con `excess` matches + bracket principal de `prevPow2`. R1 visualmente "completo", ningún jugador salta más de 1 ronda. 33 tests adicionales. |
+| Bye-cascading (double-elim) | v2.36.14 | Slots LB cuyos feeders WB son BYE se marcan `p_source='bye'` (fantasma). `cascadeLbAdvance()` propaga al runtime — non-pow2 DE no se atora más. |
+| Roster attended-only + click-to-swap | v2.36.15 | Roster pre-marca solo `attended`. Admin puede intercambiar dos slots del draft con dos clics antes de iniciar. |
+
+**Total piezas:** 13 PRs · 15 versiones · 134 archivos modificados · +5,800 / −1,100 líneas netas.
 
 ### 15.2 Auditoría integral de seguridad — 22-23 de mayo de 2026 ✅ CERRADA
 
@@ -645,11 +668,12 @@ Todas las credenciales gestionadas en **Vercel Env Vars** (producción, preview,
 
 | Mejora | Estado |
 |--------|--------|
-| Suite de tests automatizados (Vitest) | **Implementado — 100 tests** |
+| Suite de tests automatizados (Vitest) | **Implementado — 194 tests** |
 | Tests E2E (Playwright) | Pendiente |
 | Auditoría externa de smart contracts | Pendiente |
 | Battle test con Family & Friends | Pendiente — coordinación 1UP |
 | Preguntas adicionales de caracterización en onboarding | Pendiente — 1UP define |
+| Play-in round para double-elim no-pow2 | Pendiente — DE actualmente usa bye-cascading (v2.36.14); play-in DE requiere reescritura del cross-pairing de LB |
 
 ---
 
@@ -695,8 +719,8 @@ Todas las credenciales gestionadas en **Vercel Env Vars** (producción, preview,
 
 ---
 
-*Documento generado para presentación institucional. La información técnica refleja el estado de la plataforma a la fecha de la última actualización indicada (23 de mayo de 2026, versión 2.30.5 en producción). Cualquier modificación sustancial de arquitectura o stack deberá ser reflejada en una nueva versión del documento.*
+*Documento generado para presentación institucional. La información técnica refleja el estado de la plataforma a la fecha de la última actualización indicada (24 de mayo de 2026, versión 2.36.15 en producción). Cualquier modificación sustancial de arquitectura o stack deberá ser reflejada en una nueva versión del documento.*
 
 ---
 
-**Versión 2.10 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
+**Versión 2.11 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
