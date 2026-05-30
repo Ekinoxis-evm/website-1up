@@ -64,17 +64,14 @@ const PRIZE_STATUS_PILL: Record<string, string> = {
 
 function fmtPrize(p: TournamentPrize | undefined): string {
   if (!p) return "—";
-  if (p.prize_type === "tokens" && p.amount_tokens)
-    return `${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`;
-  if (p.prize_type === "cop" && p.amount_cop)
-    return `$${p.amount_cop.toLocaleString("es-CO")} COP`;
-  if (p.prize_type === "both") {
-    const parts: string[] = [];
-    if (p.amount_tokens) parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
-    if (p.amount_cop)    parts.push(`$${p.amount_cop.toLocaleString("es-CO")} COP`);
-    return parts.join(" + ");
-  }
-  return "—";
+  const parts: string[] = [];
+  if ((p.prize_type === "tokens" || p.prize_type === "both") && p.amount_tokens)
+    parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
+  if ((p.prize_type === "cop" || p.prize_type === "both") && p.amount_cop)
+    parts.push(`$${p.amount_cop.toLocaleString("es-CO")} COP`);
+  if (p.includes_pass && p.pass_days)
+    parts.push(`Pase ${p.pass_days}d`);
+  return parts.length ? parts.join(" + ") : "—";
 }
 
 export function AdminTournamentResultsPanel({
@@ -252,6 +249,27 @@ export function AdminTournamentResultsPanel({
     }
   }
 
+  async function deliverPass(resultId: number) {
+    if (!confirm("¿Entregar Pase 1UP al ganador? Esto crea una orden admin_grant automáticamente.")) return;
+    setBusy(resultId); setError(null);
+    try {
+      const res = await fetch("/api/admin/tournament-results/deliver-pass", {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ resultId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "No se pudo entregar el pase.");
+        return;
+      }
+      router.refresh();
+      onChange?.();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function revertSent(resultId: number) {
     if (!confirm("¿Revertir entrega? El estado volverá a 'pendiente'.")) return;
     setBusy(resultId); setError(null);
@@ -386,6 +404,31 @@ export function AdminTournamentResultsPanel({
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
                   </div>
+
+                  {/* ── Pase 1UP — separate from the tokens/COP delivery ─────────── */}
+                  {prize?.includes_pass && prize.pass_days && (
+                    <div className="mt-2 bg-surface-container-high p-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base text-primary-container">card_membership</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-on-surface">
+                          Pase 1UP · {prize.pass_days} días
+                        </p>
+                      </div>
+                      {result.pass_order_id ? (
+                        <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-tertiary/20 text-tertiary">
+                          Entregado
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => deliverPass(result.id)}
+                          disabled={busy === result.id}
+                          className="bg-primary-container text-white font-headline font-black text-[10px] uppercase tracking-widest px-3 py-1.5 hover:opacity-90 disabled:opacity-40 transition-opacity"
+                        >
+                          Entregar pase
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : (
                 <button

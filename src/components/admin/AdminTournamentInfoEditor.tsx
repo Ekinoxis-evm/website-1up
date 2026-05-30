@@ -21,9 +21,10 @@ type TournamentRich = Tournament & {
 };
 
 interface Props {
-  tournament: TournamentRich;
-  games:      Pick<Game, "id" | "name">[];
-  onSaved?:   () => void;
+  tournament:      TournamentRich;
+  games:           Pick<Game, "id" | "name">[];
+  defaultPassDays: number;
+  onSaved?:        () => void;
 }
 
 // Colombia is always UTC-5 (no DST). Formats a stored UTC ISO string for datetime-local input.
@@ -36,19 +37,21 @@ function toColombiaInput(utcIso: string | null): string {
   }).format(new Date(utcIso)).replace(" ", "T");
 }
 
-function prizeToFormRow(p: TournamentPrize): PrizeFormRow {
+function prizeToFormRow(p: TournamentPrize, fallbackPassDays: number): PrizeFormRow {
   return {
     position:     p.position as 1 | 2 | 3,
-    prizeType:    p.prize_type as "cop" | "tokens" | "both",
+    prizeType:    p.prize_type as PrizeFormRow["prizeType"],
     amountTokens: p.amount_tokens ? String(p.amount_tokens) : "",
     amountCop:    p.amount_cop    ? String(p.amount_cop)    : "",
+    includesPass: !!p.includes_pass,
+    passDays:     p.pass_days != null ? String(p.pass_days) : (p.includes_pass ? String(fallbackPassDays) : ""),
   };
 }
 
 const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" } as const;
 const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary-container", completed: "text-outline" } as const;
 
-export function AdminTournamentInfoEditor({ tournament, games, onSaved }: Props) {
+export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, onSaved }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -63,7 +66,9 @@ export function AdminTournamentInfoEditor({ tournament, games, onSaved }: Props)
   const [isRegistrationOpen, setIsRegOpen]    = useState(tournament.is_registration_open);
   const [sortOrder, setSortOrder]             = useState(tournament.sort_order);
   const [prizes, setPrizes]                   = useState<PrizeFormRow[]>(
-    [...(tournament.tournament_prizes ?? [])].sort((a, b) => a.position - b.position).map(prizeToFormRow),
+    [...(tournament.tournament_prizes ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((p) => prizeToFormRow(p, defaultPassDays)),
   );
   const [sponsorName, setSponsorName]           = useState(tournament.sponsor_name ?? "");
   const [sponsorWebsiteUrl, setSponsorWebUrl]   = useState(tournament.sponsor_website_url ?? "");
@@ -264,7 +269,7 @@ export function AdminTournamentInfoEditor({ tournament, games, onSaved }: Props)
       {/* ── Right: prizes + sponsor ────────────────────────────────── */}
       <div className="space-y-4">
         <div className="bg-surface-container p-5">
-          <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} />
+          <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} />
         </div>
 
         <div className="bg-surface-container p-5 space-y-3">

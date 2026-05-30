@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.11 |
+| **Versión** | 2.12 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 24 de mayo de 2026 |
-| **Versión en producción** | v2.36.15 |
+| **Última actualización** | 30 de mayo de 2026 |
+| **Versión en producción** | v2.37.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -332,6 +332,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/admin/tournaments` | GET, POST, PUT, DELETE | CRUD de torneos (status derivado del bracket) |
 | `/api/admin/tournament-registrations` | GET, PATCH | Listado + cambio de estado |
 | `/api/admin/tournament-results` | POST, DELETE | Upsert podio + delete |
+| `/api/admin/tournament-results/deliver-pass` | POST | Entrega de Pase 1UP como premio — crea orden `admin_grant`, idempotente |
 | `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets — generación, start, result, undo |
 | `/api/admin/international-tournaments` | GET, POST, PUT, DELETE | CRUD de torneos internacionales |
 
@@ -358,9 +359,9 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `masters` | Instructores con redes (8 plataformas) |
 | `enrollments` | Inscripciones — partial UNIQUE en `lower(tx_hash)` (no duplicación de transferencias on-chain) |
 | `tournaments` | Torneos — status derivado del bracket (no editable directamente) |
-| `tournament_prizes` | Premios por posición 1-3 con CHECK de consistencia type/amount |
+| `tournament_prizes` | Premios por posición 1-3 con CHECK de consistencia type/amount — soporta tokens/COP/ambos/**Pase 1UP** (`includes_pass` + `pass_days`, add-on o premio único) |
 | `tournament_registrations` | Inscripciones — UNIQUE (tournament_id, user_profile_id), RPC `register_for_tournament` con check `status = 'upcoming'` |
-| `tournament_results` | Podio (1-3) + entrega de premios (tx_hash, comprobante) |
+| `tournament_results` | Podio (1-3) + entrega de premios (tx_hash, comprobante) + `pass_order_id` (Pase 1UP entregado, partial UNIQUE para idempotencia) |
 | `brackets` | Bracket por torneo (UNIQUE per tournament): formato (single/double_elimination), status, conteos |
 | `bracket_participants` | Participantes — UNIQUE (bracket, seed) + UNIQUE (bracket, user_profile_id) |
 | `bracket_matches` | Matches — punteros next_match_id / next_loser_match_id (DE), source pointers |

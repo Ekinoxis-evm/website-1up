@@ -38,6 +38,7 @@ export default async function AdminTournamentManagePage({
     { data: bracket },
     { data: results },
     { data: games },
+    { data: passConfig },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -56,6 +57,8 @@ export default async function AdminTournamentManagePage({
       .order("position"),
     // Needed by the inline-editable Info tab's game selector.
     supabaseAdmin.from("games").select("id, name").order("name"),
+    // Default duration for the "Incluir Pase 1UP" toggle in the prize editor.
+    supabaseAdmin.from("pass_config").select("duration_days").eq("id", 1).maybeSingle(),
   ]);
 
   return (
@@ -65,6 +68,7 @@ export default async function AdminTournamentManagePage({
       bracket={bracket ?? null}
       results={results ?? []}
       games={games ?? []}
+      defaultPassDays={passConfig?.duration_days ?? 30}
     />
   );
 }

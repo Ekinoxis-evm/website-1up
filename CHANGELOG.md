@@ -5,6 +5,91 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.37.0] — 2026-05-30
+
+### Added — 1UP Pass as a tournament prize
+
+Tournaments can now award a **1UP Pass** as a podium prize, either on its own or
+stacked on top of a tokens/COP prize, and the admin can grant the won pass to the
+winner in a single click from the tournament cockpit.
+
+**Prize editor (`AdminTorneoPrizesEditor`).** Each podium row gains:
+- a new `Pase 1UP (solo)` option in the prize-type selector (a pass-only prize —
+  no tokens, no COP), and
+- an `Incluir Pase 1UP` add-on toggle available on `tokens` / `cop` / `both`
+  rows, with an editable **duración (días)** field.
+
+The duration defaults to the configured `pass_config.duration_days` (loaded by the
+manage page and threaded down as `defaultPassDays`, falling back to 30). For a
+pass-only prize the toggle is implicit and locked on.
+
+**One-click delivery.** The Premios panel (`AdminTournamentResultsPanel`) shows a
+dedicated `Pase 1UP · N días` strip per winning position with an **Entregar pase**
+button. It POSTs to the new route:
+
+- `POST /api/admin/tournament-results/deliver-pass` *(new, isAdmin)* — verifies
+  the position's prize has `includes_pass + pass_days`, computes `started_at`
+  (stacking onto any currently-active confirmed pass, else now), inserts a
+  `pass_orders` row with `payment_method = 'admin_grant'` /
+  `token_amount_paid = 0` / `status = 'confirmed'`, links it back on
+  `tournament_results.pass_order_id`, and fires a best-effort winner email. The
+  `trg_sync_pass_status` trigger flips the winner's `user_profiles.pass_status`
+  to `active` on insert — the same path as a manual admin grant.
+
+**Idempotent.** `tournament_results.pass_order_id` carries a partial UNIQUE index;
+the link step uses an `is('pass_order_id', null)` guard with rollback, so a second
+click (or a race between two admins) returns 409 instead of double-granting. Once
+delivered the strip renders a tertiary **Entregado** pill.
+
+**Winner email.** New `sendTournamentPassPrizeEmail()` in `src/lib/email.ts` —
+sends the winner a "premio entregado" confirmation (tournament, position,
+duration, expiry) plus an admin copy.
+
+**Prize formatters.** `PrizeBadge` (public tournament cards/detail),
+`AdminTournamentCockpit`, and `AdminTournamentResultsPanel` now render the pass as
+a `Pase Nd` segment joined with any tokens/COP amounts — and the formatters were
+refactored to build a `parts[]` array so `both` + pass combine cleanly.
+
+### Database
+
+Two migrations, **applied to the live DB via Supabase MCP** and committed for
+repo / fresh-DB parity (filenames match the live `schema_migrations` timestamps):
+
+- `20260527144250_tournament_prizes_include_pass.sql` — adds
+  `tournament_prizes.includes_pass` (boolean NOT NULL default false) and
+  `pass_days` (int nullable); extends `prize_type` CHECK to admit `'pass'`; and
+  rewrites the amount-consistency CHECK to encode the pass invariants
+  (`pass` ⇒ no tokens/COP + `includes_pass = true`; `includes_pass = true`
+  ⇒ `pass_days > 0`).
+- `20260527144344_tournament_results_pass_order_id.sql` — adds
+  `tournament_results.pass_order_id` (bigint FK → `pass_orders`, ON DELETE SET
+  NULL) + a partial UNIQUE index for delivery idempotency.
+
+`src/types/database.types.ts` updated to match.
+
+### Files
+
+- `supabase/migrations/20260527144250_tournament_prizes_include_pass.sql` *(new)*
+- `supabase/migrations/20260527144344_tournament_results_pass_order_id.sql` *(new)*
+- `src/app/api/admin/tournament-results/deliver-pass/route.ts` *(new)*
+- `src/components/admin/AdminTorneoPrizesEditor.tsx` — pass type + add-on toggle + duration
+- `src/components/admin/AdminTournamentResultsPanel.tsx` — pass strip + Entregar pase
+- `src/components/admin/AdminTournamentInfoEditor.tsx` — thread `defaultPassDays`, map pass fields
+- `src/components/admin/AdminTournamentCockpit.tsx` — thread `defaultPassDays`, prize formatter
+- `src/components/torneos/PrizeBadge.tsx` — pass segment in public prize badge
+- `src/app/admin/(protected)/torneos/[slug]/manage/page.tsx` — load `pass_config.duration_days`
+- `src/app/api/admin/tournaments/route.ts` — persist `includes_pass` / `pass_days` on prize save
+- `src/lib/email.ts` — `sendTournamentPassPrizeEmail()`
+- `src/types/database.types.ts`
+
+### Verification
+
+- Both migrations confirmed live in production (columns, CHECK constraints, and
+  the partial UNIQUE index queried via MCP)
+- `npm run build` clean — Compiled successfully, all 114 pages generated
+
+---
+
 ## [2.36.16] — 2026-05-26
 
 ### Fixed — Admin pass grant silently rejected by DB CHECK

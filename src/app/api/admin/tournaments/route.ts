@@ -32,21 +32,39 @@ export async function GET() {
   return NextResponse.json(data ?? []);
 }
 
-type PrizeRow = { position: number; prizeType: string; amountTokens: string; amountCop: string };
+type PrizeRow = {
+  position:     number;
+  prizeType:    string;
+  amountTokens: string;
+  amountCop:    string;
+  includesPass?: boolean;
+  passDays?:    string | number;
+};
 
 async function savePrizes(tournamentId: number, prizes: PrizeRow[]) {
   await supabaseAdmin.from("tournament_prizes").delete().eq("tournament_id", tournamentId);
   if (!prizes?.length) return;
   await supabaseAdmin.from("tournament_prizes").insert(
-    prizes.map((p) => ({
-      tournament_id: tournamentId,
-      position:      p.position,
-      prize_type:    p.prizeType as "tokens" | "cop" | "both",
-      amount_tokens: (p.prizeType === "tokens" || p.prizeType === "both") && p.amountTokens
-        ? parseFloat(p.amountTokens) : null,
-      amount_cop:    (p.prizeType === "cop" || p.prizeType === "both") && p.amountCop
-        ? parseInt(p.amountCop) : null,
-    }))
+    prizes.map((p) => {
+      // For prize_type='pass', includes_pass is implicit. For tokens/cop/both,
+      // it's an optional add-on the admin opted into.
+      const isPassOnly  = p.prizeType === "pass";
+      const includesPass = isPassOnly || !!p.includesPass;
+      const passDaysNum  = includesPass && p.passDays != null && p.passDays !== ""
+        ? Number(p.passDays)
+        : null;
+      return {
+        tournament_id: tournamentId,
+        position:      p.position,
+        prize_type:    p.prizeType as "tokens" | "cop" | "both" | "pass",
+        amount_tokens: !isPassOnly && (p.prizeType === "tokens" || p.prizeType === "both") && p.amountTokens
+          ? parseFloat(p.amountTokens) : null,
+        amount_cop:    !isPassOnly && (p.prizeType === "cop" || p.prizeType === "both") && p.amountCop
+          ? parseInt(p.amountCop) : null,
+        includes_pass: includesPass,
+        pass_days:     passDaysNum,
+      };
+    })
   );
 }
 

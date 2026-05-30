@@ -1533,6 +1533,8 @@ export type Database = {
           amount_tokens: number | null
           created_at: string
           id: number
+          includes_pass: boolean
+          pass_days: number | null
           position: number
           prize_type: string
           tournament_id: number
@@ -1542,6 +1544,8 @@ export type Database = {
           amount_tokens?: number | null
           created_at?: string
           id?: number
+          includes_pass?: boolean
+          pass_days?: number | null
           position: number
           prize_type: string
           tournament_id: number
@@ -1551,6 +1555,8 @@ export type Database = {
           amount_tokens?: number | null
           created_at?: string
           id?: number
+          includes_pass?: boolean
+          pass_days?: number | null
           position?: number
           prize_type?: string
           tournament_id?: number
@@ -1625,6 +1631,7 @@ export type Database = {
           awarded_at: string
           awarded_by: string | null
           id: number
+          pass_order_id: number | null
           points: number
           position: number
           prize_comprobante_url: string | null
@@ -1639,6 +1646,7 @@ export type Database = {
           awarded_at?: string
           awarded_by?: string | null
           id?: number
+          pass_order_id?: number | null
           points: number
           position: number
           prize_comprobante_url?: string | null
@@ -1653,6 +1661,7 @@ export type Database = {
           awarded_at?: string
           awarded_by?: string | null
           id?: number
+          pass_order_id?: number | null
           points?: number
           position?: number
           prize_comprobante_url?: string | null
