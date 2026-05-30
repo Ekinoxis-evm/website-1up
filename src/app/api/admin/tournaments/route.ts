@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { validatePrizes, type PrizeRow } from "@/lib/tournamentPrizes";
 
 function slugify(name: string): string {
   return name
@@ -31,15 +32,6 @@ export async function GET() {
     .order("date", { ascending: true });
   return NextResponse.json(data ?? []);
 }
-
-type PrizeRow = {
-  position:     number;
-  prizeType:    string;
-  amountTokens: string;
-  amountCop:    string;
-  includesPass?: boolean;
-  passDays?:    string | number;
-};
 
 async function savePrizes(tournamentId: number, prizes: PrizeRow[]) {
   await supabaseAdmin.from("tournament_prizes").delete().eq("tournament_id", tournamentId);
@@ -72,6 +64,8 @@ export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   if (!body.name) return NextResponse.json({ error: "name requerido" }, { status: 400 });
+  const prizeError = validatePrizes(body.prizes);
+  if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
   const baseSlug = slugify(body.name);
   // Ensure uniqueness: append random 4-char suffix if slug already exists
   let slug = baseSlug;
@@ -113,6 +107,11 @@ export async function PUT(req: NextRequest) {
 
   // Soft-cancel path — extends regular updates with bulk-cancellation of active registrations.
   const isCancelling = body.cancelTournament === true;
+
+  if (!isCancelling) {
+    const prizeError = validatePrizes(body.prizes);
+    if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
+  }
 
   // Re-slugify when name changes; keep existing slug otherwise
   const { data: existing } = await supabaseAdmin.from("tournaments").select("name, slug").eq("id", body.id).single();

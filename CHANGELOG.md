@@ -45,6 +45,29 @@ delivered the strip renders a tertiary **Entregado** pill.
 sends the winner a "premio entregado" confirmation (tournament, position,
 duration, expiry) plus an admin copy.
 
+### Hardened (pre-merge review)
+
+- **Idempotency race closed.** The delivery link step
+  (`.update(...).is('pass_order_id', null)`) now inspects the affected-row count
+  via `.select('id')` — a PostgREST UPDATE that matches no rows returns
+  `error: null`, so the previous `if (linkErr)` rollback never fired when two
+  admin clicks raced, orphaning a second confirmed `pass_orders` row and
+  double-extending the pass. An empty result now rolls back and returns 409.
+- **`pass_days` validated server-side.** New pure helper
+  `validatePrizes()` in `src/lib/tournamentPrizes.ts` (mirrors the DB CHECK) runs
+  fail-fast in the tournaments POST/PUT before any write, so
+  `includes_pass = true` with a blank/zero/negative duration returns a clean 400
+  instead of tripping the constraint and leaking a raw 500. Pinned by
+  `src/__tests__/lib/tournamentPrizes.test.ts`.
+- **Grant row carries `email`** — the deliver-pass insert now writes
+  `winner.email` for parity with the canonical `/api/admin/pass-orders`
+  admin-grant shape (admin filtering by email finds these rows).
+
+**Known limitation (fast-follow):** pass delivery is currently one-way — the
+podium "Revertir" action reverts the token/COP prize status but does not unlink
+or void a delivered pass (the `pass_status` trigger only fires on INSERT/UPDATE,
+so undoing needs its own endpoint). Tracked for a follow-up.
+
 **Prize formatters.** `PrizeBadge` (public tournament cards/detail),
 `AdminTournamentCockpit`, and `AdminTournamentResultsPanel` now render the pass as
 a `Pase Nd` segment joined with any tokens/COP amounts — and the formatters were
@@ -71,7 +94,9 @@ repo / fresh-DB parity (filenames match the live `schema_migrations` timestamps)
 
 - `supabase/migrations/20260527144250_tournament_prizes_include_pass.sql` *(new)*
 - `supabase/migrations/20260527144344_tournament_results_pass_order_id.sql` *(new)*
-- `src/app/api/admin/tournament-results/deliver-pass/route.ts` *(new)*
+- `src/app/api/admin/tournament-results/deliver-pass/route.ts` *(new)* — idempotent grant (row-count-checked link)
+- `src/lib/tournamentPrizes.ts` *(new)* — `PrizeRow` + `validatePrizes()` (mirrors the DB CHECK)
+- `src/__tests__/lib/tournamentPrizes.test.ts` *(new)* — pins the pass-days invariant
 - `src/components/admin/AdminTorneoPrizesEditor.tsx` — pass type + add-on toggle + duration
 - `src/components/admin/AdminTournamentResultsPanel.tsx` — pass strip + Entregar pase
 - `src/components/admin/AdminTournamentInfoEditor.tsx` — thread `defaultPassDays`, map pass fields
@@ -87,6 +112,7 @@ repo / fresh-DB parity (filenames match the live `schema_migrations` timestamps)
 - Both migrations confirmed live in production (columns, CHECK constraints, and
   the partial UNIQUE index queried via MCP)
 - `npm run build` clean — Compiled successfully, all 114 pages generated
+- Tests **201 → 209 passing** (+8, the new `validatePrizes` invariant suite)
 
 ---
 

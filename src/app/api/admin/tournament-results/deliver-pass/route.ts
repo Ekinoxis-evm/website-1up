@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_profile_id:         result.user_profile_id,
       privy_user_id:           winner.privy_user_id,
+      email:                   winner.email ?? null,
       wallet_address:          winner.wallet_address ?? "",
       recipient_address:       config?.recipient_address ?? "",
       payment_method:          "admin_grant",
@@ -123,15 +124,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: passErr?.message ?? "No se pudo crear la orden del pase." }, { status: 500 });
   }
 
-  // 7) Link the order back on tournament_results (idempotency via UNIQUE partial index)
-  const { error: linkErr } = await supabaseAdmin
+  // 7) Link the order back on tournament_results. The `.is(pass_order_id, null)`
+  // guard makes this idempotent: a PostgREST UPDATE that matches no rows is NOT
+  // an error, so we must inspect the affected-row count — an empty result means
+  // a concurrent click already linked an order, and we roll ours back.
+  const { data: linked, error: linkErr } = await supabaseAdmin
     .from("tournament_results")
     .update({ pass_order_id: passOrder.id })
     .eq("id", resultId)
-    .is("pass_order_id", null);
+    .is("pass_order_id", null)
+    .select("id");
 
-  if (linkErr) {
-    // Race condition: another admin click already linked an order — roll back ours
+  if (linkErr || !linked || linked.length === 0) {
     await supabaseAdmin.from("pass_orders").delete().eq("id", passOrder.id);
     return NextResponse.json({ error: "El pase fue entregado simultáneamente por otra acción." }, { status: 409 });
   }
