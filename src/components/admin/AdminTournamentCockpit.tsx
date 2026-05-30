@@ -44,11 +44,12 @@ type TournamentRich = Tournament & {
 };
 
 interface Props {
-  tournament:    TournamentRich;
-  registrations: CockpitRegistration[];
-  bracket:       { id: number; status: string; format: string; participant_count: number } | null;
-  results:       ResultRow[];
-  games:         Pick<Game, "id" | "name">[];
+  tournament:      TournamentRich;
+  registrations:   CockpitRegistration[];
+  bracket:         { id: number; status: string; format: string; participant_count: number } | null;
+  results:         ResultRow[];
+  games:           Pick<Game, "id" | "name">[];
+  defaultPassDays: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -64,17 +65,13 @@ const LOC_LABELS: Record<string, string> = {
 };
 
 function fmtPrize(p: TournamentPrize): string {
-  if (p.prize_type === "tokens" && p.amount_tokens)
-    return `${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`;
-  if (p.prize_type === "cop" && p.amount_cop)
-    return `$${p.amount_cop.toLocaleString("es-CO")}`;
-  if (p.prize_type === "both") {
-    const parts: string[] = [];
-    if (p.amount_tokens) parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
-    if (p.amount_cop)    parts.push(`$${p.amount_cop.toLocaleString("es-CO")}`);
-    return parts.join(" + ");
-  }
-  return "—";
+  const parts: string[] = [];
+  if ((p.prize_type === "tokens" || p.prize_type === "both") && p.amount_tokens)
+    parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
+  if ((p.prize_type === "cop" || p.prize_type === "both") && p.amount_cop)
+    parts.push(`$${p.amount_cop.toLocaleString("es-CO")}`);
+  if (p.includes_pass && p.pass_days) parts.push(`Pase ${p.pass_days}d`);
+  return parts.length ? parts.join(" + ") : "—";
 }
 
 function fmtDate(d: string | null): string {
@@ -94,7 +91,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "premios",       label: "Premios",       icon: "emoji_events"  },
 ];
 
-export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games }: Props) {
+export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -490,6 +487,7 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           <AdminTournamentInfoEditor
             tournament={tournament}
             games={games}
+            defaultPassDays={defaultPassDays}
             onSaved={() => router.refresh()}
           />
         )}

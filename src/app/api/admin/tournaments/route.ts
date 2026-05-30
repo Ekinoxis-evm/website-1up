@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { validatePrizes, type PrizeRow } from "@/lib/tournamentPrizes";
 
 function slugify(name: string): string {
   return name
@@ -32,21 +33,30 @@ export async function GET() {
   return NextResponse.json(data ?? []);
 }
 
-type PrizeRow = { position: number; prizeType: string; amountTokens: string; amountCop: string };
-
 async function savePrizes(tournamentId: number, prizes: PrizeRow[]) {
   await supabaseAdmin.from("tournament_prizes").delete().eq("tournament_id", tournamentId);
   if (!prizes?.length) return;
   await supabaseAdmin.from("tournament_prizes").insert(
-    prizes.map((p) => ({
-      tournament_id: tournamentId,
-      position:      p.position,
-      prize_type:    p.prizeType as "tokens" | "cop" | "both",
-      amount_tokens: (p.prizeType === "tokens" || p.prizeType === "both") && p.amountTokens
-        ? parseFloat(p.amountTokens) : null,
-      amount_cop:    (p.prizeType === "cop" || p.prizeType === "both") && p.amountCop
-        ? parseInt(p.amountCop) : null,
-    }))
+    prizes.map((p) => {
+      // For prize_type='pass', includes_pass is implicit. For tokens/cop/both,
+      // it's an optional add-on the admin opted into.
+      const isPassOnly  = p.prizeType === "pass";
+      const includesPass = isPassOnly || !!p.includesPass;
+      const passDaysNum  = includesPass && p.passDays != null && p.passDays !== ""
+        ? Number(p.passDays)
+        : null;
+      return {
+        tournament_id: tournamentId,
+        position:      p.position,
+        prize_type:    p.prizeType as "tokens" | "cop" | "both" | "pass",
+        amount_tokens: !isPassOnly && (p.prizeType === "tokens" || p.prizeType === "both") && p.amountTokens
+          ? parseFloat(p.amountTokens) : null,
+        amount_cop:    !isPassOnly && (p.prizeType === "cop" || p.prizeType === "both") && p.amountCop
+          ? parseInt(p.amountCop) : null,
+        includes_pass: includesPass,
+        pass_days:     passDaysNum,
+      };
+    })
   );
 }
 
@@ -54,6 +64,8 @@ export async function POST(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   if (!body.name) return NextResponse.json({ error: "name requerido" }, { status: 400 });
+  const prizeError = validatePrizes(body.prizes);
+  if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
   const baseSlug = slugify(body.name);
   // Ensure uniqueness: append random 4-char suffix if slug already exists
   let slug = baseSlug;
@@ -95,6 +107,11 @@ export async function PUT(req: NextRequest) {
 
   // Soft-cancel path — extends regular updates with bulk-cancellation of active registrations.
   const isCancelling = body.cancelTournament === true;
+
+  if (!isCancelling) {
+    const prizeError = validatePrizes(body.prizes);
+    if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
+  }
 
   // Re-slugify when name changes; keep existing slug otherwise
   const { data: existing } = await supabaseAdmin.from("tournaments").select("name, slug").eq("id", body.id).single();

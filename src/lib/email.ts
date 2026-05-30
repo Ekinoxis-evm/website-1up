@@ -532,6 +532,72 @@ export async function sendPassBankApprovedEmail(opts: {
   ]);
 }
 
+// ── Pass — granted as a tournament prize ────────────────────────
+
+export async function sendTournamentPassPrizeEmail(opts: {
+  userEmail:      string;
+  userName:       string;
+  tournamentName: string;
+  position:       number; // 1 / 2 / 3
+  durationDays:   number;
+  expiresAt:      string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { userEmail, userName, tournamentName, position, durationDays, expiresAt } = opts;
+  const expDate    = new Date(expiresAt).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" });
+  const medal      = position === 1 ? "🥇" : position === 2 ? "🥈" : "🥉";
+  const posLabel   = position === 1 ? "1° Lugar" : position === 2 ? "2° Lugar" : "3° Lugar";
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to:   userEmail,
+      subject: `${medal} ¡Felicitaciones! Tu Pase 1UP por ${tournamentName} está activo`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <div style="background:#e91e8c;height:4px"></div>
+          <div style="padding:32px 24px">
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
+              ${medal} ¡Premio Entregado!
+            </h1>
+            <p style="color:#666;margin:0 0 8px">Hola ${userName},</p>
+            <p style="color:#444;margin:0 0 24px">
+              Por tu <strong>${posLabel}</strong> en <strong>${tournamentName}</strong> ganaste un <strong>1UP Pass</strong>.
+              Ya está activo en tu cuenta.
+            </p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Torneo</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Posición</td>
+                  <td style="padding:8px 0;text-align:right">${medal} ${posLabel}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Duración</td>
+                  <td style="padding:8px 0;text-align:right">${durationDays} días</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Vence</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${expDate}</td></tr>
+            </table>
+            <p style="color:#444;margin:24px 0 0">
+              Disfruta los beneficios del Pase 1UP en la Tower. ¡Nos vemos pronto!
+            </p>
+          </div>
+          <div style="background:#111;padding:16px 24px">
+            <p style="color:#666;font-size:11px;margin:0">1UP Gaming Tower · Colombia · 1upesports.org</p>
+          </div>
+        </div>
+      `,
+    }),
+    ...(ADMIN_EMAIL ? [resend.emails.send({
+      from: FROM,
+      to:   ADMIN_EMAIL,
+      subject: `[Admin] Pase entregado — ${userName} · ${posLabel} ${tournamentName}`,
+      html: `
+        <p><strong>${userName}</strong> (${userEmail}) recibió un Pase 1UP por su ${posLabel} en <strong>${tournamentName}</strong>.</p>
+        <p>${durationDays} días · vence ${expDate}</p>
+      `,
+    })] : []),
+  ]);
+}
+
 // ── Pass (bank) — admin rejected ────────────────────────────────
 
 export async function sendPassBankRejectedEmail(opts: {

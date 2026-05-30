@@ -3,31 +3,31 @@ import type { TournamentPrize } from "@/types/database.types";
 const MEDAL = ["", "🥇", "🥈", "🥉"];
 
 function formatPrize(p: TournamentPrize): string {
-  if (p.prize_type === "tokens" && p.amount_tokens) {
-    return `${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`;
+  const parts: string[] = [];
+  if ((p.prize_type === "tokens" || p.prize_type === "both") && p.amount_tokens) {
+    parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
   }
-  if (p.prize_type === "cop" && p.amount_cop) {
-    return `$${p.amount_cop.toLocaleString("es-CO")} COP`;
+  if ((p.prize_type === "cop" || p.prize_type === "both") && p.amount_cop) {
+    parts.push(`$${p.amount_cop.toLocaleString("es-CO")} COP`);
   }
-  if (p.prize_type === "both") {
-    const parts: string[] = [];
-    if (p.amount_tokens) parts.push(`${Number(p.amount_tokens).toLocaleString("es-CO")} $1UP`);
-    if (p.amount_cop)    parts.push(`$${p.amount_cop.toLocaleString("es-CO")} COP`);
-    return parts.join(" + ");
+  if (p.includes_pass && p.pass_days) {
+    parts.push(`Pase ${p.pass_days}d`);
   }
-  return "";
+  return parts.join(" + ");
 }
 
 export function PrizeBadge({ prizes }: { prizes: TournamentPrize[] }) {
   const first = prizes.find((p) => p.position === 1);
   if (!first) return null;
+  const label = formatPrize(first);
+  if (!label) return null;
   return (
     <span className="flex items-center gap-1 text-secondary">
       <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
         workspace_premium
       </span>
       <span className="font-headline font-bold text-xs uppercase tracking-widest">
-        {formatPrize(first)}
+        {label}
       </span>
     </span>
   );

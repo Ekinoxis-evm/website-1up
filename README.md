@@ -183,6 +183,9 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 20. `20260523161035_add_avatar_url_to_user_profiles.sql` — adds `avatar_url text` column (v2.31.0)
 21. `20260523161959_hall_of_fame_view_add_avatar_url.sql` — rebuilds `hall_of_fame` view to expose `avatar_url` (v2.31.0)
 22. `20260524050326_audit_closure_v2_36_4.sql` — `hall_of_fame` view → `security_invoker = on`, `set_updated_at` search_path pinned, dead `report_match_result` function dropped, `tournament_registrations` RLS policy wrapped in `(SELECT …)` (v2.36.4)
+23. `20260526131000_pass_orders_allow_zero_token_amount_for_admin_grant.sql` — relaxes the `pass_orders` token-amount CHECK to allow `0` for `admin_grant` orders while keeping `> 0` for paid purchases (v2.36.16)
+24. `20260527144250_tournament_prizes_include_pass.sql` — adds `tournament_prizes.includes_pass` + `pass_days`, extends `prize_type` CHECK to admit `pass`, rewrites the amount-consistency CHECK to encode pass invariants (v2.37.0)
+25. `20260527144344_tournament_results_pass_order_id.sql` — adds `tournament_results.pass_order_id` (FK → `pass_orders`, ON DELETE SET NULL) + partial UNIQUE index for delivery idempotency (v2.37.0)
 
 ### 4. Start the dev server
 
@@ -264,10 +267,10 @@ npm run dev
 | `/admin/user-profiles` | Supabase user profiles — table view (Email / Documento / Comfenalco / Privy ID / Registro). Legacy read-only. |
 | `/admin/token-orders` | $1UP token purchase purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
 | `/admin/bank-accounts` | Bank accounts CRUD + treasury wallet — COP bank accounts shown to users in the BUY modal, plus the $1UP treasury wallet (`pass_config.recipient_address`) that receives all token payments (Pass + Courses) |
-| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
+| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both/Pase 1UP), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
-| `/admin/torneos/[slug]/manage` | **Per-tournament cockpit (v2.36.0).** Single page with stats strip, 4-step phase stepper (Inscripciones → Borrador → En curso → Finalizado, driven by bracket lifecycle), Pública/TV/QR/Share/Cancelar/Eliminar toolbar, and 4 tabs: **Información** (inline-editable form), **Inscripciones** (status mgmt + CSV), **Bracket** (seeding, start, record winners, undo), **Premios** (podium + on-chain $1UP delivery with one click, or manual tx-hash/comprobante). Replaces the prior standalone `/admin/tournament-brackets` and `/admin/tournament-results` pages — both deleted in 2.36.0. |
+| `/admin/torneos/[slug]/manage` | **Per-tournament cockpit (v2.36.0).** Single page with stats strip, 4-step phase stepper (Inscripciones → Borrador → En curso → Finalizado, driven by bracket lifecycle), Pública/TV/QR/Share/Cancelar/Eliminar toolbar, and 4 tabs: **Información** (inline-editable form), **Inscripciones** (status mgmt + CSV), **Bracket** (seeding, start, record winners, undo), **Premios** (podium + on-chain $1UP delivery with one click, or manual tx-hash/comprobante; **one-click 1UP Pass delivery** when a position's prize includes a pass — v2.37.0). Replaces the prior standalone `/admin/tournament-brackets` and `/admin/tournament-results` pages — both deleted in 2.36.0. |
 | `/admin/site-images` | Site-level images — Equipment Highlight (Gaming Tower) + Learning Path (Academia) |
 | `/admin/referral-codes` | Referral code CRUD — create codes with optional use cap, activate/deactivate, usage tracking |
 | `/admin/social-links` | Social link URLs per platform — footer icons (instagram, tiktok, kick, youtube, x, twitch) + community invite links (discord, whatsapp — shown in CommunitySection, filtered from footer) |
@@ -319,10 +322,10 @@ npm run dev
 | `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
 | `tournaments` | Esports tournaments — `slug` (unique, auto-generated from name), game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), sponsor_name, sponsor_website_url, sponsor_logo_url, is_registration_open, sort_order |
-| `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both), amount_tokens, amount_cop. DB CHECK enforces type/amount consistency |
+| `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both/**pass**), amount_tokens, amount_cop, **includes_pass** (bool), **pass_days** (int). DB CHECK enforces type/amount consistency + pass invariants. A 1UP Pass can be a standalone prize or an add-on on a tokens/cop/both row (v2.37.0) |
 | `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
-| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url. UNIQUE per tournament+position and per tournament+user |
+| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url, **pass_order_id** (FK → `pass_orders` when a 1UP Pass prize is delivered; partial UNIQUE for idempotency, v2.37.0). UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
 
 ---
