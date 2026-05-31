@@ -31,6 +31,7 @@ export type ResultRow = TournamentResult & {
     username:   string | null;
     avatar_url: string | null;
   } | null;
+  pass: { state: "issued" | "active" | "expired" | "revoked" } | null;
 };
 
 export type RegistrationOption = {
@@ -250,7 +251,7 @@ export function AdminTournamentResultsPanel({
   }
 
   async function deliverPass(resultId: number) {
-    if (!confirm("¿Entregar Pase 1UP al ganador? Esto crea una orden admin_grant automáticamente.")) return;
+    if (!confirm("¿Entregar Pase 1UP al ganador? Se creará un pase pendiente de activación (el ganador lo activa cuando quiera).")) return;
     setBusy(resultId); setError(null);
     try {
       const res = await fetch("/api/admin/tournament-results/deliver-pass", {
@@ -414,10 +415,16 @@ export function AdminTournamentResultsPanel({
                           Pase 1UP · {prize.pass_days} días
                         </p>
                       </div>
-                      {result.pass_order_id ? (
-                        <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-tertiary/20 text-tertiary">
-                          Entregado
-                        </span>
+                      {result.pass_id ? (
+                        result.pass?.state === "active" ? (
+                          <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-tertiary/20 text-tertiary">
+                            Activado
+                          </span>
+                        ) : (
+                          <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-secondary-container/40 text-secondary">
+                            Entregado · sin activar
+                          </span>
+                        )
                       ) : (
                         <button
                           onClick={() => deliverPass(result.id)}

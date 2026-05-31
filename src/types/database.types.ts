@@ -1725,6 +1725,7 @@ export type Database = {
           awarded_at: string
           awarded_by: string | null
           id: number
+          pass_id: number | null
           pass_order_id: number | null
           points: number
           position: number
@@ -1740,6 +1741,7 @@ export type Database = {
           awarded_at?: string
           awarded_by?: string | null
           id?: number
+          pass_id?: number | null
           pass_order_id?: number | null
           points: number
           position: number
@@ -1755,6 +1757,7 @@ export type Database = {
           awarded_at?: string
           awarded_by?: string | null
           id?: number
+          pass_id?: number | null
           pass_order_id?: number | null
           points?: number
           position?: number
@@ -1767,6 +1770,13 @@ export type Database = {
           user_profile_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "tournament_results_pass_id_fkey"
+            columns: ["pass_id"]
+            isOneToOne: true
+            referencedRelation: "passes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tournament_results_tournament_id_fkey"
             columns: ["tournament_id"]

@@ -5,6 +5,64 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.39.0] — 2026-05-31
+
+### Added — 1UP Pass claim-later activation (Pass redesign Phase 2)
+
+Won passes are now **claimable**: the winner activates the pass whenever they want, and the
+duration counts from that day — instead of the clock starting the instant it's delivered.
+Builds on the `passes` object model from v2.38.0.
+
+**Tournament-prize delivery now issues a claimable pass.** `POST /api/admin/tournament-results/deliver-pass`
+was reworked — instead of creating a confirmed `pass_order` (which auto-activated), it inserts
+a `passes` row in state **`issued`** (`source='tournament_prize'`, provenance in `source_ref`)
+and links it on the new `tournament_results.pass_id`. `pass_status` is untouched until the
+winner activates. (Direct purchases and admin grants still auto-activate, by design.)
+
+**User activation.** New endpoints:
+- `GET /api/user/passes` — the caller's passes (asset rows) with state.
+- `POST /api/user/passes/activate` — activate an own `issued` pass: sets `state='active'`,
+  `activated_at=now`, `expires_at` via `computePassWindow()` (stacks onto any active pass).
+  Guarded by `canActivatePass()` (ownership + state) and a row-count-checked update for
+  idempotency. Rate-limited under `authMutate`.
+
+**User UI.** New **Mis Pases** section on `/app/pass` (`MisPases`) — lists every pass the
+user owns with a one-tap **Activar** on `issued` ones and a live countdown on `active` ones.
+This unifies purchased + won passes in one place.
+
+**Admin visibility.** The cockpit Premios strip now shows **"Entregado · sin activar"** vs
+**"Activado"** (driven by the linked pass's state, embedded in the manage-page query).
+
+**Email.** The prize email was reworded to claim-later ("ganaste un pase — actívalo cuando
+quieras", with an "Activar mi pase" CTA to `/app/pass`); no more "ya está activo".
+
+### Database
+
+- `20260531140045_tournament_results_pass_id.sql` — adds `tournament_results.pass_id`
+  (FK → `passes`, ON DELETE SET NULL) + partial UNIQUE index for delivery idempotency.
+  Applied live via Supabase MCP. `src/types/database.types.ts` updated.
+
+### QA
+
+- **Tier-2 unit tests:** `canActivatePass()` (`src/lib/passActivation.ts`) pinned by
+  `src/__tests__/lib/passActivation.test.ts` — ownership/IDOR guard + state preconditions.
+  Tests **215 → 221**.
+- `npm run build` clean.
+
+### Files
+
+- `supabase/migrations/20260531140045_tournament_results_pass_id.sql` *(new)*
+- `src/app/api/user/passes/route.ts` *(new)* · `src/app/api/user/passes/activate/route.ts` *(new)*
+- `src/lib/passActivation.ts` *(new)* + `src/__tests__/lib/passActivation.test.ts` *(new)*
+- `src/components/perfil/MisPases.tsx` *(new)* + `src/app/app/(protected)/pass/page.tsx`
+- `src/app/api/admin/tournament-results/deliver-pass/route.ts` — issues a claimable pass
+- `src/components/admin/AdminTournamentResultsPanel.tsx` — delivered/activated state
+- `src/app/admin/(protected)/torneos/[slug]/manage/page.tsx` — embed linked pass state
+- `src/lib/email.ts` — claim-later prize email
+- `src/types/database.types.ts`
+
+---
+
 ## [2.38.0] — 2026-05-31
 
 ### Added — 1UP Pass object model (Phase 1: data layer, NFT-ready)

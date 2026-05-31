@@ -97,6 +97,8 @@ All `/api/admin/*` require a Privy Bearer token + isAdmin check.
 | `POST /api/admin/upload` | isAdmin | Image upload → Supabase Storage |
 | `GET\|PATCH /api/admin/token-orders` | isAdmin | List token purchase orders / approve or reject |
 | `POST\|PUT\|DELETE /api/admin/bank-accounts` | isAdmin | Bank account CRUD |
+| `GET /api/user/passes` | Privy user | List the caller's passes (the `passes` asset rows) with state |
+| `POST /api/user/passes/activate` | Privy user | Activate an own `issued` pass (claim-later) — sets `state='active'`, `activated_at`, stacked `expires_at`. Guarded by `canActivatePass()` + idempotent row-count update; rate-limited |
 | `GET /api/user/pass-config` | Public | Pass price, recipient address, duration |
 | `GET\|POST /api/user/pass-orders` | Privy user | List own pass orders / submit after confirmed tx |
 | `GET\|PUT /api/admin/pass-config` | isAdmin | Read/update pass price, recipient wallet, duration, active flag |
@@ -109,6 +111,7 @@ All `/api/admin/*` require a Privy Bearer token + isAdmin check.
 | `GET\|POST\|DELETE /api/user/tournament-registrations` | Privy user | List own registrations / register for tournament (RPC) / cancel |
 | `GET\|PATCH /api/admin/tournament-registrations` | isAdmin | List all registrations (filter by tournamentId) / update status (attended/no_show) |
 | `POST\|DELETE /api/admin/tournament-results` | isAdmin | Upsert podium result (position 1–3 with points) / delete by id |
+| `POST /api/admin/tournament-results/deliver-pass` | isAdmin | Issue a **claimable** 1UP Pass to a podium winner (v2.39.0) — inserts a `passes` row in `issued` state (`source='tournament_prize'`), links `tournament_results.pass_id`, emails the winner to activate. Idempotent (partial UNIQUE on `pass_id`) |
 | `GET\|POST\|PUT\|DELETE /api/admin/international-tournaments` | isAdmin | International tournament CRUD |
 | `POST /api/user/tournament-checkin` | Privy user | Mark own registration as `attended` — validates tournament is `live`, registration is `registered` |
 | `POST /api/user/stream-token` | Privy user | Verify enrollment → signed RS256 JWT (1h) for `academia_content.stream_uid` (legacy flat content) |
