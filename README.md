@@ -187,6 +187,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 24. `20260527144250_tournament_prizes_include_pass.sql` — adds `tournament_prizes.includes_pass` + `pass_days`, extends `prize_type` CHECK to admit `pass`, rewrites the amount-consistency CHECK to encode pass invariants (v2.37.0)
 25. `20260527144344_tournament_results_pass_order_id.sql` — adds `tournament_results.pass_order_id` (FK → `pass_orders`, ON DELETE SET NULL) + partial UNIQUE index for delivery idempotency (v2.37.0)
 26. `20260531132045_passes_object_model.sql` — adds the `passes` table (first-class pass asset, `id` = future ERC-721 tokenId) + `pass_state` enum (`issued/active/expired/revoked`); repoints `pass_status` derivation + the `pass_orders` trigger (now mirrors into `passes`) + nightly cron; backfills all confirmed orders. Behavior-neutral (v2.38.0, Pass redesign Phase 1)
+27. `20260531140045_tournament_results_pass_id.sql` — adds `tournament_results.pass_id` (FK → `passes`, ON DELETE SET NULL) + partial UNIQUE index; the link for claim-later prize delivery (v2.39.0, Pass redesign Phase 2)
 
 ### 4. Start the dev server
 
@@ -327,7 +328,7 @@ npm run dev
 | `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both/**pass**), amount_tokens, amount_cop, **includes_pass** (bool), **pass_days** (int). DB CHECK enforces type/amount consistency + pass invariants. A 1UP Pass can be a standalone prize or an add-on on a tokens/cop/both row (v2.37.0) |
 | `tournament_registrations` | User registrations — tournament FK, user_profile FK, privy_user_id, status (registered/cancelled/attended/no_show), registered_at, cancelled_at. RPC `register_for_tournament` enforces capacity + uniqueness atomically |
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
-| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url, **pass_order_id** (FK → `pass_orders` when a 1UP Pass prize is delivered; partial UNIQUE for idempotency, v2.37.0). UNIQUE per tournament+position and per tournament+user |
+| `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url, **pass_order_id** (legacy v2.37.0 link), **pass_id** (FK → `passes` — the claimable pass issued as a prize, partial UNIQUE for idempotency, v2.39.0). UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
 
 ---

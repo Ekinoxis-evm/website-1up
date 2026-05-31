@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.13 |
+| **Versión** | 2.14 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | 31 de mayo de 2026 |
-| **Versión en producción** | v2.38.0 |
+| **Versión en producción** | v2.39.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -332,7 +332,9 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/admin/tournaments` | GET, POST, PUT, DELETE | CRUD de torneos (status derivado del bracket) |
 | `/api/admin/tournament-registrations` | GET, PATCH | Listado + cambio de estado |
 | `/api/admin/tournament-results` | POST, DELETE | Upsert podio + delete |
-| `/api/admin/tournament-results/deliver-pass` | POST | Entrega de Pase 1UP como premio — crea orden `admin_grant`, idempotente |
+| `/api/admin/tournament-results/deliver-pass` | POST | Emite un Pase 1UP **reclamable** al ganador (v2.39.0) — crea fila en `passes` (estado `issued`), idempotente |
+| `/api/user/passes` | GET | Lista los pases del usuario (objeto `passes`) con estado |
+| `/api/user/passes/activate` | POST | El usuario activa su pase `issued` (claim-later); la duración cuenta desde la activación |
 | `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets — generación, start, result, undo |
 | `/api/admin/international-tournaments` | GET, POST, PUT, DELETE | CRUD de torneos internacionales |
 

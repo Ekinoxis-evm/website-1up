@@ -52,7 +52,7 @@ export default async function AdminTournamentManagePage({
       .maybeSingle(),
     supabaseAdmin
       .from("tournament_results")
-      .select("*, user_profiles(nombre, apellidos, username, avatar_url)")
+      .select("*, user_profiles(nombre, apellidos, username, avatar_url), pass:passes!tournament_results_pass_id_fkey(state)")
       .eq("tournament_id", tournament.id)
       .order("position"),
     // Needed by the inline-editable Info tab's game selector.

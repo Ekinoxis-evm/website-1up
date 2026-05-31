@@ -1,20 +1,19 @@
 // POST /api/admin/tournament-results/deliver-pass
 //
-// Grants a 1UP Pass to the winner of a tournament_results row, in one atomic
-// click. Composes:
-//   1) verify the prize for this position has includes_pass = true + pass_days
-//   2) compute started_at — stack on top of any currently-active pass, else now
-//   3) insert pass_orders row with payment_method='admin_grant', token_amount_paid=0
-//   4) link the new order id back on tournament_results.pass_order_id (UNIQUE
-//      partial index makes re-clicks idempotent: second attempt fails the link
-//      step and we surface that to the operator)
-//   5) fire the winner email (best-effort, don't fail the action on email)
-//   6) revalidate
+// Issues a 1UP Pass to the winner of a tournament_results row as a *claimable*
+// asset (v2.39.0 claim-later model). It does NOT activate the pass — the winner
+// taps "Activar" in their app whenever they want, and the duration counts from
+// that day. Composes:
+//   1) verify the prize for this position has includes_pass + pass_days
+//   2) insert a `passes` row in state='issued' (source='tournament_prize')
+//   3) link it on tournament_results.pass_id (UNIQUE partial index makes
+//      re-clicks idempotent: an empty row-count means a concurrent click won —
+//      roll ours back and return 409)
+//   4) email the winner that a pass is waiting to be activated (best-effort)
+//   5) revalidate
 //
-// The trg_sync_pass_status trigger picks up the INSERT and flips
-// user_profiles.pass_status to 'active' automatically — same path as
-// manual admin grants. See /api/admin/pass-orders POST for the canonical
-// admin_grant insert shape.
+// pass_status stays unchanged until the winner activates (an `issued` pass is
+// not `active`). Activation lives at POST /api/user/passes/activate.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -22,8 +21,6 @@ import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { sendTournamentPassPrizeEmail } from "@/lib/email";
-import { isValidPassOrderAmount } from "@/lib/passOrders";
-import { computePassWindow } from "@/lib/passWindow";
 
 export async function POST(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -34,20 +31,20 @@ export async function POST(req: NextRequest) {
   const { resultId } = await req.json() as { resultId: number };
   if (!resultId) return NextResponse.json({ error: "resultId requerido" }, { status: 400 });
 
-  // 1) Fetch the result row + linked tournament + winner profile + pass_config
+  // 1) Fetch the result row + linked tournament + winner profile
   const { data: result, error: resultErr } = await supabaseAdmin
     .from("tournament_results")
     .select(`
-      id, tournament_id, user_profile_id, position, pass_order_id,
+      id, tournament_id, user_profile_id, position, pass_id,
       tournaments ( name, slug ),
-      user_profiles ( nombre, apellidos, email, privy_user_id, wallet_address )
+      user_profiles ( nombre, apellidos, email, wallet_address )
     `)
     .eq("id", resultId)
     .single();
 
   if (resultErr || !result) return NextResponse.json({ error: "Resultado no encontrado." }, { status: 404 });
 
-  if (result.pass_order_id) {
+  if (result.pass_id) {
     return NextResponse.json({ error: "El pase ya fue entregado para esta posición." }, { status: 409 });
   }
 
@@ -69,81 +66,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Esta posición no tiene un Pase 1UP configurado como premio." }, { status: 400 });
   }
 
-  // 3) Compute started_at — stack onto any existing active pass for the same user
-  const nowIso = new Date().toISOString();
-  const { data: activePass } = await supabaseAdmin
-    .from("pass_orders")
-    .select("expires_at")
-    .eq("user_profile_id", result.user_profile_id)
-    .eq("status", "confirmed")
-    .gt("expires_at", nowIso)
-    .order("expires_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { startedAt: startBase, expiresAt } = computePassWindow({
-    activeExpiresAt: activePass?.expires_at,
-    durationDays: prize.pass_days,
-  });
-
-  // 4) Read pass_config for recipient_address (treasury wallet)
-  const { data: config } = await supabaseAdmin
-    .from("pass_config")
-    .select("recipient_address, price_token")
-    .eq("id", 1)
-    .maybeSingle();
-
-  // 5) Sanity-check the predicate that protects the DB CHECK (defense in depth)
-  if (!isValidPassOrderAmount("admin_grant", 0)) {
-    return NextResponse.json({ error: "Predicate invariant violated." }, { status: 500 });
-  }
-
-  // 6) Create the pass_order
-  const { data: passOrder, error: passErr } = await supabaseAdmin
-    .from("pass_orders")
+  // 3) Issue the pass as a claimable asset (not activated)
+  const { data: pass, error: passErr } = await supabaseAdmin
+    .from("passes")
     .insert({
-      user_profile_id:         result.user_profile_id,
-      privy_user_id:           winner.privy_user_id,
-      email:                   winner.email ?? null,
-      wallet_address:          winner.wallet_address ?? "",
-      recipient_address:       config?.recipient_address ?? "",
-      payment_method:          "admin_grant",
-      token_amount_paid:       0,
-      token_price_at_purchase: config?.price_token ?? 0,
-      duration_days:           prize.pass_days,
-      status:                  "confirmed",
-      started_at:              startBase.toISOString(),
-      paid_at:                 nowIso,
-      expires_at:              expiresAt.toISOString(),
-      granted_by:              adminEmail,
-      reviewed_by:             adminEmail,
-      reviewed_at:             nowIso,
-      admin_notes:             `Premio torneo: ${tournament.name} · ${result.position}° lugar`,
+      owner_user_profile_id: result.user_profile_id,
+      owner_wallet_address:  winner.wallet_address ?? null,
+      source:                "tournament_prize",
+      source_ref:            `${tournament.name} · ${result.position}° lugar`,
+      duration_days:         prize.pass_days,
+      state:                 "issued",
+      issued_by:             adminEmail,
     })
-    .select()
+    .select("id")
     .single();
 
-  if (passErr || !passOrder) {
-    return NextResponse.json({ error: passErr?.message ?? "No se pudo crear la orden del pase." }, { status: 500 });
+  if (passErr || !pass) {
+    return NextResponse.json({ error: passErr?.message ?? "No se pudo emitir el pase." }, { status: 500 });
   }
 
-  // 7) Link the order back on tournament_results. The `.is(pass_order_id, null)`
-  // guard makes this idempotent: a PostgREST UPDATE that matches no rows is NOT
-  // an error, so we must inspect the affected-row count — an empty result means
-  // a concurrent click already linked an order, and we roll ours back.
+  // 4) Link the pass on tournament_results. The `.is(pass_id, null)` guard makes
+  // this idempotent: a PostgREST UPDATE matching no rows returns error:null, so
+  // we inspect the affected-row count — an empty result means a concurrent click
+  // already linked a pass, and we roll ours back.
   const { data: linked, error: linkErr } = await supabaseAdmin
     .from("tournament_results")
-    .update({ pass_order_id: passOrder.id })
+    .update({ pass_id: pass.id })
     .eq("id", resultId)
-    .is("pass_order_id", null)
+    .is("pass_id", null)
     .select("id");
 
   if (linkErr || !linked || linked.length === 0) {
-    await supabaseAdmin.from("pass_orders").delete().eq("id", passOrder.id);
+    // Roll back the orphan. If the delete itself fails, surface it with the id
+    // rather than swallowing — a silent orphan would let a re-click issue a 2nd pass.
+    const { error: rbErr } = await supabaseAdmin.from("passes").delete().eq("id", pass.id);
+    if (rbErr) {
+      console.error("deliver-pass: failed to roll back orphaned pass", pass.id, rbErr.message);
+      return NextResponse.json({ error: `Conflicto al vincular el pase (pase huérfano ${pass.id} — contacta soporte).` }, { status: 500 });
+    }
     return NextResponse.json({ error: "El pase fue entregado simultáneamente por otra acción." }, { status: 409 });
   }
 
-  // 8) Best-effort email — don't fail the request if it bounces
+  // 5) Best-effort email — tell the winner a pass is waiting to be activated
   if (winner.email) {
     const fullName = [winner.nombre, winner.apellidos].filter(Boolean).join(" ").trim() || winner.email;
     sendTournamentPassPrizeEmail({
@@ -152,12 +116,10 @@ export async function POST(req: NextRequest) {
       tournamentName: tournament.name,
       position:       result.position,
       durationDays:   prize.pass_days,
-      expiresAt:      expiresAt.toISOString(),
     }).catch(() => null);
   }
 
   revalidatePath(`/admin/torneos/${tournament.slug}/manage`);
-  revalidatePath("/admin/pass-orders");
   revalidatePath("/app/pass");
-  return NextResponse.json({ ok: true, passOrderId: passOrder.id, expiresAt: expiresAt.toISOString() });
+  return NextResponse.json({ ok: true, passId: pass.id });
 }

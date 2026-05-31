@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { PassPurchasePanel } from "@/components/perfil/PassPurchasePanel";
+import { MisPases } from "@/components/perfil/MisPases";
 
 export const metadata = { title: "1UP Pass — 1UP App" };
 
@@ -17,6 +18,8 @@ export default async function AppPassPage() {
         </h1>
         <div className="h-1 w-16 bg-secondary-container mt-3" />
       </div>
+
+      <MisPases />
 
       <PassPurchasePanel config={config ?? null} benefits={benefits ?? []} />
     </div>
