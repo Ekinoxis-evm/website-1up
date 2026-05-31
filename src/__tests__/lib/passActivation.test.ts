@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canActivatePass } from "@/lib/passActivation";
+import { canActivatePass, canRevokePass } from "@/lib/passActivation";
 
 const OWNER = 42;
 const pass = (state: string, owner = OWNER) => ({ owner_user_profile_id: owner, state });
@@ -30,5 +30,21 @@ describe("canActivatePass — activation precondition guard", () => {
 
   it("rejects an unknown state", () => {
     expect(canActivatePass(pass("weird"), OWNER)).toMatchObject({ ok: false, status: 409 });
+  });
+});
+
+describe("canRevokePass — admin revoke precondition", () => {
+  it("allows revoking an issued, active, or expired pass", () => {
+    expect(canRevokePass({ state: "issued" })).toEqual({ ok: true });
+    expect(canRevokePass({ state: "active" })).toEqual({ ok: true });
+    expect(canRevokePass({ state: "expired" })).toEqual({ ok: true });
+  });
+
+  it("404s when the pass does not exist", () => {
+    expect(canRevokePass(null)).toMatchObject({ ok: false, status: 404 });
+  });
+
+  it("409s when the pass is already revoked (idempotency guard)", () => {
+    expect(canRevokePass({ state: "revoked" })).toMatchObject({ ok: false, status: 409 });
   });
 });

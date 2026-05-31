@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.14 |
+| **Versión** | 2.15 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | 31 de mayo de 2026 |
-| **Versión en producción** | v2.39.0 |
+| **Versión en producción** | v2.40.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -335,6 +335,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/admin/tournament-results/deliver-pass` | POST | Emite un Pase 1UP **reclamable** al ganador (v2.39.0) — crea fila en `passes` (estado `issued`), idempotente |
 | `/api/user/passes` | GET | Lista los pases del usuario (objeto `passes`) con estado |
 | `/api/user/passes/activate` | POST | El usuario activa su pase `issued` (claim-later); la duración cuenta desde la activación |
+| `/api/admin/passes/revoke` | POST | Admin revoca un pase entregado (v2.40.0) — `state='revoked'` + desvincula para re-entrega |
 | `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets — generación, start, result, undo |
 | `/api/admin/international-tournaments` | GET, POST, PUT, DELETE | CRUD de torneos internacionales |
 

@@ -112,6 +112,7 @@ All `/api/admin/*` require a Privy Bearer token + isAdmin check.
 | `GET\|PATCH /api/admin/tournament-registrations` | isAdmin | List all registrations (filter by tournamentId) / update status (attended/no_show) |
 | `POST\|DELETE /api/admin/tournament-results` | isAdmin | Upsert podium result (position 1–3 with points) / delete by id |
 | `POST /api/admin/tournament-results/deliver-pass` | isAdmin | Issue a **claimable** 1UP Pass to a podium winner (v2.39.0) — inserts a `passes` row in `issued` state (`source='tournament_prize'`), links `tournament_results.pass_id`, emails the winner to activate. Idempotent (partial UNIQUE on `pass_id`) |
+| `POST /api/admin/passes/revoke` | isAdmin | Revoke a delivered pass (v2.40.0) — `state='revoked'` + unlinks `tournament_results.pass_id` so the prize can be re-delivered. Idempotent (state-guarded) |
 | `GET\|POST\|PUT\|DELETE /api/admin/international-tournaments` | isAdmin | International tournament CRUD |
 | `POST /api/user/tournament-checkin` | Privy user | Mark own registration as `attended` — validates tournament is `live`, registration is `registered` |
 | `POST /api/user/stream-token` | Privy user | Verify enrollment → signed RS256 JWT (1h) for `academia_content.stream_uid` (legacy flat content) |
