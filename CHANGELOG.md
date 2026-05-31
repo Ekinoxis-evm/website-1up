@@ -5,6 +5,62 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.38.0] — 2026-05-31
+
+### Added — 1UP Pass object model (Phase 1: data layer, NFT-ready)
+
+Groundwork to turn the 1UP Pass from "a status derived from `pass_orders`" into a
+**first-class, ownable, activatable object**. This phase is **behavior-neutral** — no
+user-facing change yet — but it lays the schema for claim-later activation (Phase 2) and
+on-chain ERC-721 minting on Base (Phase 3). See `memory/project_1up_pass_nft_direction.md`.
+
+**New `passes` table** — one row per pass *asset* (vs `pass_orders`, which stays the
+*transaction* record of how it was acquired). Key fields: `id` (the future ERC-721 tokenId),
+`owner_user_profile_id`/`owner_wallet_address`, `source` (purchase/admin_grant/tournament_prize),
+`state` (`issued`/`active`/`expired`/`revoked`), nullable `activated_at`/`expires_at`
+(claim-later-ready), revoke columns, and null NFT columns (`token_id`/`contract_address`/
+`mint_tx_hash`/`chain_id`) for Phase 3. A state-consistency CHECK enforces the lifecycle.
+
+**`pass_status` now derives from `passes`.** `user_profiles.pass_status` is recomputed from
+the new table (active pass → `active`; any past pass → `expired`; none → `never`) via
+`recompute_pass_status()` + a trigger on `passes`.
+
+**Zero app changes.** The existing `pass_orders` trigger was repointed to **mirror** every
+confirmed order into an active `passes` row, so every purchase / bank / admin-grant /
+tournament-prize path keeps working untouched. A guard prevents a later order edit from
+clobbering a manually-revoked or claim-later (`issued`) pass.
+
+**Backfill, verified against live data.** All 22 confirmed `pass_orders` were backfilled
+into `passes` (21 active + 1 expired). Post-migration QA confirmed **0 users changed
+`pass_status`** (distribution held at 20 active / 1 expired / 57 never).
+
+### Database
+
+- `20260531132045_passes_object_model.sql` — `pass_state` enum, `passes` table + indexes +
+  state CHECK, `recompute_pass_status()`, the passes→profile sync trigger, the backfill, the
+  `pass_orders`→`passes` mirror, and the nightly cron repointed to expire passes. Applied to
+  the live DB via Supabase MCP. `src/types/database.types.ts` updated.
+
+### QA
+
+- **Tier 1 (data validation):** 3 post-migration SQL checks (counts, distribution unchanged,
+  0 mismatched users) — documented as standard practice in `.claude/rules/testing-practices.md`.
+- **Tier 2 (unit):** extracted the pass-stacking math into `src/lib/passWindow.ts` and pinned
+  it with `src/__tests__/lib/passWindow.test.ts` (stacks onto an active pass, starts now
+  otherwise, exact duration). Tests **209 → 215**.
+- Documented the full **test-pyramid QA methodology** (Tiers 1/2/3) in
+  `.claude/rules/testing-practices.md`.
+
+### Files
+
+- `supabase/migrations/20260531132045_passes_object_model.sql` *(new)*
+- `src/lib/passWindow.ts` *(new)* + `src/__tests__/lib/passWindow.test.ts` *(new)*
+- `src/app/api/admin/tournament-results/deliver-pass/route.ts` — uses `computePassWindow()`
+- `src/types/database.types.ts` — `passes` table + `pass_state` enum
+- `.claude/rules/testing-practices.md` — QA methodology + new test rows
+
+---
+
 ## [2.37.0] — 2026-05-30
 
 ### Added — 1UP Pass as a tournament prize

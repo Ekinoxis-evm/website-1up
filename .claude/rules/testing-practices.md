@@ -1,9 +1,50 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.36.1):** 14 Vitest files, **114 tests passing**, ~330ms wall time.
+> **Current state (v2.38.0):** 19 Vitest files, **215 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
+
+---
+
+## QA methodology — the test pyramid
+
+We use the standard **test pyramid**: a wide base of cheap, fast tests and a thin top of
+expensive ones. Each tier answers a different question and runs at a different time.
+
+| Tier | Question it answers | Tool | Runs | Needs auth/browser? |
+|------|--------------------|------|------|---------------------|
+| **1. Data / migration validation** | "Did this migration do the right thing to live data?" | SQL via Supabase MCP | Once, at apply-time | No |
+| **2. Unit / integration tests** *(the base)* | "Is the business logic correct, forever?" | Vitest | Every push (pre-deploy) | No — boundaries mocked |
+| **3. End-to-end (E2E)** *(the thin top)* | "Does the full flow work through the real UI + auth?" | *(not yet — see below)* | CI, pre-deploy | Yes |
+
+**Tier 1 — data validation.** Every DDL/data migration applied to prod is immediately
+followed by SQL checks that prove the outcome (row counts match, no record changed state
+unexpectedly, no orphans). This *is* the migration's test — see the
+`passes` backfill (v2.38.0): three checks confirmed 22 orders → 22 passes and **0** users
+changed `pass_status`. Never apply a data migration to prod without a paired verification query.
+
+**Tier 2 — unit/integration (where most of our confidence lives).** The rule is **extract the
+bug-prone logic into a pure `src/lib/*` function and test that** — don't test the Next.js
+request/response wiring or assert "the ORM was called". Canonical examples:
+`isValidPassOrderAmount` and `validatePrizes` (mirror DB CHECKs), `computePassWindow`
+(pass-stacking math), `selectBestDiscount`, the webhook idempotency map. When a route has
+risky logic, the move is: pull it into a helper, unit-test the helper exhaustively, have the
+route call it. This is why a "race condition" or "stacking" bug becomes a one-line import +
+a test file, not a manual click-through.
+
+**Tier 3 — E2E (deliberately deferred).** We have **zero** E2E tests today, and that's an
+intentional, professional posture for this stage — E2E is slow and brittle, and the blocker
+is that **Privy auth resists automation** (email OTP / Google OAuth). Real browser E2E
+(Playwright/Cypress driving admin login → action → assert) requires a **test-auth path**
+first: a Privy test user with a programmatic login, or a non-prod-only auth-bypass header
+that is hard-gated to never work in production. Build this only when a flow is both
+business-critical *and* stable. Until then, the residual manual check is a ~60-second visual
+"eyeball" — kept small precisely because Tiers 1+2 cover the logic.
+
+**Pyramid discipline:** when you reach for an E2E test, first ask whether the thing you want
+to prove is really logic (→ Tier 2) or really data (→ Tier 1). Most "I need to test the whole
+flow" instincts are actually a missing pure-function test plus a data-validation query.
 
 ---
 
@@ -26,6 +67,9 @@ All test files live under `src/__tests__/lib/`:
 | `podium.test.ts` | `derivePodium()` from a completed bracket — 1st/2nd/3rd assignment + manual-override preservation |
 | `tournamentPoints.test.ts` | `pointsFor()` / `POINTS_BY_POSITION` (10/5/3 defaults) |
 | `sniffAvatarMime.test.ts` | Magic-byte detection for image uploads (rejects spoofed `image/*` MIMEs) |
+| `passOrders.test.ts` | `isValidPassOrderAmount()` — mirrors the `pass_orders` token-amount CHECK (admin_grant allows 0; paid purchases require >0) |
+| `tournamentPrizes.test.ts` | `validatePrizes()` — mirrors the `tournament_prizes` pass invariant (pass_days > 0 when a prize includes a pass) |
+| `passWindow.test.ts` | `computePassWindow()` — pass-stacking math (stacks onto an active pass, starts now otherwise, exact duration) |
 | `utils.test.ts` | Misc shared utilities |
 
 ---

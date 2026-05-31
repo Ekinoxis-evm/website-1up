@@ -186,6 +186,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 23. `20260526131000_pass_orders_allow_zero_token_amount_for_admin_grant.sql` — relaxes the `pass_orders` token-amount CHECK to allow `0` for `admin_grant` orders while keeping `> 0` for paid purchases (v2.36.16)
 24. `20260527144250_tournament_prizes_include_pass.sql` — adds `tournament_prizes.includes_pass` + `pass_days`, extends `prize_type` CHECK to admit `pass`, rewrites the amount-consistency CHECK to encode pass invariants (v2.37.0)
 25. `20260527144344_tournament_results_pass_order_id.sql` — adds `tournament_results.pass_order_id` (FK → `pass_orders`, ON DELETE SET NULL) + partial UNIQUE index for delivery idempotency (v2.37.0)
+26. `20260531132045_passes_object_model.sql` — adds the `passes` table (first-class pass asset, `id` = future ERC-721 tokenId) + `pass_state` enum (`issued/active/expired/revoked`); repoints `pass_status` derivation + the `pass_orders` trigger (now mirrors into `passes`) + nightly cron; backfills all confirmed orders. Behavior-neutral (v2.38.0, Pass redesign Phase 1)
 
 ### 4. Start the dev server
 
@@ -319,7 +320,8 @@ npm run dev
 | `bank_accounts` | Bank transfer destinations — shown in the BUY modal; admin-managed (bank name, type, account number, holder, instructions) |
 | `token_purchase_orders` | $1UP token purchase purchases — user submits COP amount + comprobante; admin approves/rejects and sends tokens manually. Rate: 1 $1UP = 1,000 COP |
 | `pass_config` | Single-row config for 1UP Pass: price in $1UP (`price_token`), `recipient_address`, `duration_days`, `is_active` — admin-editable |
-| `pass_orders` | Pass purchases — `payment_method` (token/bank), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason` |
+| `pass_orders` | Pass purchases — `payment_method` (token/bank/admin_grant), `tx_hash` (nullable — only for token path), `bank_account_id` FK, `comprobante_url`, `status` (confirmed/failed/pending_bank/…), `expires_at` (stacks on renewal), `rejection_reason`. The *transaction* record; the *asset* is `passes` |
+| `passes` | **First-class pass asset (v2.38.0)** — one row per pass. `id` (→ future ERC-721 tokenId), `owner_user_profile_id`, `owner_wallet_address`, `source` (purchase/admin_grant/tournament_prize), `source_order_id` FK → `pass_orders`, `state` (`issued`/`active`/`expired`/`revoked`), `activated_at`/`expires_at` (null until activated — claim-later), revoke columns, and null NFT columns (`token_id`/`contract_address`/`mint_tx_hash`/`chain_id`) for Phase 3. `user_profiles.pass_status` is derived from this table |
 | `referral_codes` | Codes optional at onboarding (can be added later on `/app/identidad`): `code` (unique), `description`, `is_active`, `max_uses`, `used_count` — admin-managed |
 | `tournaments` | Esports tournaments — `slug` (unique, auto-generated from name), game FK, date, image, max_participants, status (upcoming/live/completed), location_type (presencial/online/mixto), sponsor_name, sponsor_website_url, sponsor_logo_url, is_registration_open, sort_order |
 | `tournament_prizes` | Prize structure per tournament — position (1–3 unique per tournament), prize_type (tokens/cop/both/**pass**), amount_tokens, amount_cop, **includes_pass** (bool), **pass_days** (int). DB CHECK enforces type/amount consistency + pass invariants. A 1UP Pass can be a standalone prize or an add-on on a tokens/cop/both row (v2.37.0) |
