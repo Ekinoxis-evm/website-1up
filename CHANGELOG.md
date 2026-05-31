@@ -5,6 +5,40 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.41.0-data] — 2026-05-31
+
+### Added — paid tournament entry: data layer (Phase 1 of the feature)
+
+Foundation for charging a registration fee per tournament. **Behavior-neutral** — no
+user-facing change yet (no UI reads these columns); the payment + registration flows land in
+the follow-up PRs. Decisions (locked): **both** payment methods (1UP tokens + bank-proof),
+slot counts **only once paid/approved** (no holds), **no refunds** in v1 (bank path warns +
+manual-refund exception if the tournament fills before approval).
+
+**Schema** (`20260531182031_paid_tournament_entry.sql`, applied live + verified):
+- `tournaments.entry_fee_tokens` (numeric) + `entry_fee_cop` (int) — null = free (unchanged).
+- New `tournament_entry_orders` table (Option A — the payment record, mirroring
+  `pass_orders`): tournament/user FKs, `registration_id` (set once registered), `payment_method`
+  (token/bank), amount, `tx_hash`/`block_number`, `bank_account_id`/`comprobante_url`, `status`
+  (`tournament_entry_status`: pending_bank/confirmed/rejected/cancelled), review fields.
+- Guards: partial UNIQUE (one in-flight order per user+tournament) + `lower(tx_hash)` UNIQUE
+  (token idempotency) + status/tournament indexes.
+
+`src/types/database.types.ts` updated (fee columns, the new table, the new enum).
+
+### Next (follow-up PRs)
+
+Token entry path (on-chain verify → register) · bank entry path (comprobante → admin approve →
+register) · register-page payment step · admin fee editor + approval in the cockpit. Capacity
+is enforced by the existing `register_for_tournament` RPC at confirmation time (no RPC change).
+
+### Files
+
+- `supabase/migrations/20260531182031_paid_tournament_entry.sql` *(new)*
+- `src/types/database.types.ts`
+
+---
+
 ## [2.40.1] — 2026-05-31
 
 ### Added — revoke ANY user's 1UP Pass from the admin panel
