@@ -23,6 +23,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { sendTournamentPassPrizeEmail } from "@/lib/email";
 import { isValidPassOrderAmount } from "@/lib/passOrders";
+import { computePassWindow } from "@/lib/passWindow";
 
 export async function POST(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -80,8 +81,10 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  const startBase = activePass?.expires_at ? new Date(activePass.expires_at) : new Date();
-  const expiresAt = new Date(startBase.getTime() + prize.pass_days * 24 * 60 * 60 * 1000);
+  const { startedAt: startBase, expiresAt } = computePassWindow({
+    activeExpiresAt: activePass?.expires_at,
+    durationDays: prize.pass_days,
+  });
 
   // 4) Read pass_config for recipient_address (treasury wallet)
   const { data: config } = await supabaseAdmin

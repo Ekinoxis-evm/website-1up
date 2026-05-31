@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.12 |
+| **Versión** | 2.13 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 30 de mayo de 2026 |
-| **Versión en producción** | v2.37.0 |
+| **Última actualización** | 31 de mayo de 2026 |
+| **Versión en producción** | v2.38.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -368,6 +368,7 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `hall_of_fame` (view) | SECURITY INVOKER — ranking por puntos |
 | `pass_config` | Singleton (id=1) con CHECK |
 | `pass_orders` | Órdenes de pass — partial UNIQUE en `lower(tx_hash)` + 1 pending por usuario + sponsor del admin grant |
+| `passes` | Pase 1UP como objeto (v2.38.0) — `id` = futuro tokenId ERC-721, `state` (issued/active/expired/revoked), activación claim-later, columnas NFT nulas hasta minteo en Base. `pass_status` se deriva de aquí |
 | `token_purchase_orders` | OTC orders — partial UNIQUE 1 pending por usuario |
 | `bank_accounts` | Cuentas para pagos OTC — list response enmascarada |
 | `discount_rules` | Trigger types, porcentaje, aplicación, aliado FK, vigencia |

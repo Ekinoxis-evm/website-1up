@@ -1256,6 +1256,100 @@ export type Database = {
           },
         ]
       }
+      passes: {
+        Row: {
+          activated_at: string | null
+          chain_id: number | null
+          contract_address: string | null
+          created_at: string
+          duration_days: number
+          expires_at: string | null
+          id: number
+          issued_at: string
+          issued_by: string | null
+          mint_tx_hash: string | null
+          owner_user_profile_id: number
+          owner_wallet_address: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string
+          source_order_id: number | null
+          source_ref: string | null
+          state: Database["public"]["Enums"]["pass_state"]
+          token_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          chain_id?: number | null
+          contract_address?: string | null
+          created_at?: string
+          duration_days: number
+          expires_at?: string | null
+          id?: number
+          issued_at?: string
+          issued_by?: string | null
+          mint_tx_hash?: string | null
+          owner_user_profile_id: number
+          owner_wallet_address?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source: string
+          source_order_id?: number | null
+          source_ref?: string | null
+          state?: Database["public"]["Enums"]["pass_state"]
+          token_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          chain_id?: number | null
+          contract_address?: string | null
+          created_at?: string
+          duration_days?: number
+          expires_at?: string | null
+          id?: number
+          issued_at?: string
+          issued_by?: string | null
+          mint_tx_hash?: string | null
+          owner_user_profile_id?: number
+          owner_wallet_address?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source?: string
+          source_order_id?: number | null
+          source_ref?: string | null
+          state?: Database["public"]["Enums"]["pass_state"]
+          token_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passes_owner_user_profile_id_fkey"
+            columns: ["owner_user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "hall_of_fame"
+            referencedColumns: ["user_profile_id"]
+          },
+          {
+            foreignKeyName: "passes_owner_user_profile_id_fkey"
+            columns: ["owner_user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passes_source_order_id_fkey"
+            columns: ["source_order_id"]
+            isOneToOne: true
+            referencedRelation: "pass_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string | null
@@ -1895,6 +1989,7 @@ export type Database = {
         | "failed"
         | "expired_unverified"
         | "pending_bank"
+      pass_state: "issued" | "active" | "expired" | "revoked"
       pass_status_enum: "never" | "active" | "expired"
       payment_status: "pending" | "approved" | "rejected" | "cancelled"
       prize_delivery_status: "no_prize" | "pending" | "sent"
@@ -2044,6 +2139,7 @@ export const Constants = {
         "expired_unverified",
         "pending_bank",
       ],
+      pass_state: ["issued", "active", "expired", "revoked"],
       pass_status_enum: ["never", "active", "expired"],
       payment_status: ["pending", "approved", "rejected", "cancelled"],
       prize_delivery_status: ["no_prize", "pending", "sent"],
