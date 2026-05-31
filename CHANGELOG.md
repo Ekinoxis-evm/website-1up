@@ -5,6 +5,29 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.40.1] — 2026-05-31
+
+### Added — revoke ANY user's 1UP Pass from the admin panel
+
+The Revocar capability from v2.40.0 was only surfaced in the tournament cockpit (for
+prize-delivered passes). It now applies to **any pass assigned to any user**, regardless of
+source (purchase / admin grant / tournament prize).
+
+- **`/admin/pass-orders`** gains a **Pases** section (`AdminPassesList`) listing every pass
+  with owner, source, state, and a **Revocar** button on any non-revoked pass. Filter by
+  state (Todos / Activo / Sin activar / Expirado / Revocado) + search by user/email.
+- Reuses the existing `POST /api/admin/passes/revoke` endpoint (state-guarded, idempotent;
+  recomputes the owner's `pass_status` via the `passes` trigger). No new endpoint or migration.
+- Admin failure/success surfaced via the shared `AdminToast`.
+
+### Files
+
+- `src/components/admin/AdminPassesList.tsx` *(new)*
+- `src/app/admin/(protected)/pass-orders/page.tsx` — fetch `passes` + render the list
+- `.claude/rules/product-management.md` *(new)* — Notion backlog/hub keep-in-sync workflow
+
+---
+
 ## [2.40.0] — 2026-05-31
 
 ### Added — admin can revoke a delivered 1UP Pass (Pass redesign Phase 3)
