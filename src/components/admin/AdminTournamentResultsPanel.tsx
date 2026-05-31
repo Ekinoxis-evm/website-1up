@@ -271,6 +271,27 @@ export function AdminTournamentResultsPanel({
     }
   }
 
+  async function revokePass(resultId: number, passId: number) {
+    if (!confirm("¿Revocar el Pase 1UP entregado? Se anulará y podrás volver a entregarlo.")) return;
+    setBusy(resultId); setError(null);
+    try {
+      const res = await fetch("/api/admin/passes/revoke", {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ passId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "No se pudo revocar el pase.");
+        return;
+      }
+      router.refresh();
+      onChange?.();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function revertSent(resultId: number) {
     if (!confirm("¿Revertir entrega? El estado volverá a 'pendiente'.")) return;
     setBusy(resultId); setError(null);
@@ -416,15 +437,24 @@ export function AdminTournamentResultsPanel({
                         </p>
                       </div>
                       {result.pass_id ? (
-                        result.pass?.state === "active" ? (
-                          <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-tertiary/20 text-tertiary">
-                            Activado
-                          </span>
-                        ) : (
-                          <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-secondary-container/40 text-secondary">
-                            Entregado · sin activar
-                          </span>
-                        )
+                        <div className="flex items-center gap-2">
+                          {result.pass?.state === "active" ? (
+                            <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-tertiary/20 text-tertiary">
+                              Activado
+                            </span>
+                          ) : (
+                            <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-secondary-container/40 text-secondary">
+                              Entregado · sin activar
+                            </span>
+                          )}
+                          <button
+                            onClick={() => revokePass(result.id, result.pass_id!)}
+                            disabled={busy === result.id}
+                            className="font-headline font-bold text-[10px] uppercase tracking-widest text-error/80 hover:text-error disabled:opacity-40 transition-colors"
+                          >
+                            Revocar
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => deliverPass(result.id)}

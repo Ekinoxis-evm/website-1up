@@ -26,3 +26,14 @@ export function canActivatePass(
     default:        return { ok: false, error: "Este pase no se puede activar.", status: 409 };
   }
 }
+
+// Admin revoke precondition (no ownership check — admin-only). Any pass that
+// isn't already revoked can be revoked; revoking is idempotent at the route via
+// a state-guarded update.
+export function canRevokePass(
+  pass: { state: string } | null | undefined,
+): { ok: true } | { ok: false; error: string; status: number } {
+  if (!pass) return { ok: false, error: "Pase no encontrado.", status: 404 };
+  if (pass.state === "revoked") return { ok: false, error: "Este pase ya fue revocado.", status: 409 };
+  return { ok: true };
+}

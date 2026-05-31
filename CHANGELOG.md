@@ -5,6 +5,42 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.40.0] — 2026-05-31
+
+### Added — admin can revoke a delivered 1UP Pass (Pass redesign Phase 3)
+
+Closes the one-way-delivery gap flagged back in v2.37.0: an admin can now **undo** a pass
+that was delivered to the wrong winner / by mistake.
+
+- `POST /api/admin/passes/revoke` *(isAdmin)* — sets the pass `state='revoked'`
+  (`revoked_at`/`revoked_by`/`revoke_reason`), then unlinks any `tournament_results.pass_id`
+  so the prize can be **re-delivered**. State-guarded update → idempotent. The `passes`
+  trigger recomputes the owner's `pass_status` (a revoked pass no longer counts as active).
+- **Admin UI:** a **Revocar** action next to the "Entregado/Activado" pill in the cockpit
+  Premios strip. After revoking, the strip flips back to "Entregar pase".
+- Guard: `canRevokePass()` (`src/lib/passActivation.ts`) — any non-revoked pass can be
+  revoked; re-revoking 409s.
+
+This completes the claim-later lifecycle (issue → activate → **revoke**). Next phase: gift or
+transfer an unactivated pass, then on-chain ERC-721 minting on Base.
+
+### QA
+
+- **Tier-2 unit:** `canRevokePass()` tests (issued/active/expired revocable, missing → 404,
+  already-revoked → 409). Tests **221 → 224**.
+- **Tier-1 data validation:** verified the revoke UPDATE on both an `issued` and an `active`
+  pass satisfies `passes_state_consistency` (rolled-back transaction against the live DB).
+- `npm run build` clean.
+
+### Files
+
+- `src/app/api/admin/passes/revoke/route.ts` *(new)*
+- `src/lib/passActivation.ts` — `canRevokePass()`
+- `src/__tests__/lib/passActivation.test.ts` — revoke cases
+- `src/components/admin/AdminTournamentResultsPanel.tsx` — Revocar action
+
+---
+
 ## [2.39.0] — 2026-05-31
 
 ### Added — 1UP Pass claim-later activation (Pass redesign Phase 2)
