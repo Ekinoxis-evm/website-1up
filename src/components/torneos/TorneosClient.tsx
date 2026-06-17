@@ -127,6 +127,8 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
               tournamentDate={t.date}
               locationType={t.location_type}
               isRegistered={isRegistered}
+              entryFeeTokens={t.entry_fee_tokens}
+              entryFeeCop={t.entry_fee_cop}
               onRegistered={onRegistered}
               compact
             />

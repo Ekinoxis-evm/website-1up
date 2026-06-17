@@ -4,6 +4,7 @@ import { verifyToken, resolveUserEmail } from "@/lib/privy";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { validatePrizes, type PrizeRow } from "@/lib/tournamentPrizes";
+import { parseEntryFeeInput } from "@/lib/tournamentEntry";
 
 function slugify(name: string): string {
   return name
@@ -66,6 +67,8 @@ export async function POST(req: NextRequest) {
   if (!body.name) return NextResponse.json({ error: "name requerido" }, { status: 400 });
   const prizeError = validatePrizes(body.prizes);
   if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
+  const feeParse = parseEntryFeeInput(body.entryFeeTokens, body.entryFeeCop, body.treasuryAddress);
+  if (!feeParse.ok) return NextResponse.json({ error: feeParse.error }, { status: 400 });
   const baseSlug = slugify(body.name);
   // Ensure uniqueness: append random 4-char suffix if slug already exists
   let slug = baseSlug;
@@ -92,6 +95,9 @@ export async function POST(req: NextRequest) {
     sponsor_name:         body.sponsorName || null,
     sponsor_website_url:  body.sponsorWebsiteUrl || null,
     sponsor_logo_url:     body.sponsorLogoUrl || null,
+    entry_fee_tokens:     feeParse.tokens,
+    entry_fee_cop:        feeParse.cop,
+    treasury_address:     feeParse.treasury,
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (body.prizes?.length) await savePrizes(data.id, body.prizes);
@@ -108,9 +114,18 @@ export async function PUT(req: NextRequest) {
   // Soft-cancel path — extends regular updates with bulk-cancellation of active registrations.
   const isCancelling = body.cancelTournament === true;
 
+  // Fee fields follow the sponsor pattern: only written when present in the
+  // body, so the cancel path (which omits them) never wipes a configured fee.
+  const hasFeeInput = body.entryFeeTokens !== undefined || body.entryFeeCop !== undefined || body.treasuryAddress !== undefined;
+  let feeParse: ReturnType<typeof parseEntryFeeInput> = { ok: true, tokens: null, cop: null, treasury: null };
+
   if (!isCancelling) {
     const prizeError = validatePrizes(body.prizes);
     if (prizeError) return NextResponse.json({ error: prizeError }, { status: 400 });
+    if (hasFeeInput) {
+      feeParse = parseEntryFeeInput(body.entryFeeTokens, body.entryFeeCop, body.treasuryAddress);
+      if (!feeParse.ok) return NextResponse.json({ error: feeParse.error }, { status: 400 });
+    }
   }
 
   // Re-slugify when name changes; keep existing slug otherwise
@@ -154,6 +169,9 @@ export async function PUT(req: NextRequest) {
     sponsor_name:         body.sponsorName !== undefined ? (body.sponsorName || null) : undefined,
     sponsor_website_url:  body.sponsorWebsiteUrl !== undefined ? (body.sponsorWebsiteUrl || null) : undefined,
     sponsor_logo_url:     body.sponsorLogoUrl !== undefined ? (body.sponsorLogoUrl || null) : undefined,
+    ...(!isCancelling && hasFeeInput && feeParse.ok
+      ? { entry_fee_tokens: feeParse.tokens, entry_fee_cop: feeParse.cop, treasury_address: feeParse.treasury }
+      : {}),
   }).eq("id", body.id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!isCancelling) await savePrizes(body.id, body.prizes ?? []);

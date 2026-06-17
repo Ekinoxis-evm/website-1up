@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.15 |
+| **Versión** | 2.16 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 31 de mayo de 2026 |
-| **Versión en producción** | v2.40.0 |
+| **Última actualización** | 12 de junio de 2026 |
+| **Versión en producción** | v2.41.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -296,6 +296,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/user/pass-orders` | GET, POST | Órdenes de pass propias / crear | 20/min/user (POST) |
 | `/api/user/course-orders` | POST | Inscripción a curso (token o banco) | 20/min/user |
 | `/api/user/tournament-registrations` | GET, POST, DELETE | Inscripciones a torneos (tournamentId coerced) | — |
+| `/api/user/tournament-entry-orders` | GET, POST | v2.41.0 — pago de inscripción a torneo: $1UP verificado on-chain contra la **tesorería propia del torneo** (cupo asignado vía RPC al confirmar; sin tesorería configurada → 503) o transferencia bancaria con comprobante (queda `pending_bank` hasta aprobación admin). Notifica por email a usuario y admin en cada evento. Sin reembolsos automáticos | 20/min/user (POST) |
 | `/api/user/tournament-checkin` | POST | Check-in QR en torneo live | — |
 | `/api/user/stream-token` | POST | Token CF Stream (legacy `academia_content`) — IP bound | — |
 | `/api/user/course-intro-token` | POST | Token CF Stream para video intro autenticado — IP bound | — |
@@ -331,6 +332,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/admin/referral-codes` | GET, POST, PUT | CRUD de códigos de referido |
 | `/api/admin/tournaments` | GET, POST, PUT, DELETE | CRUD de torneos (status derivado del bracket) |
 | `/api/admin/tournament-registrations` | GET, PATCH | Listado + cambio de estado |
+| `/api/admin/tournament-entry-orders` | GET, PATCH | v2.41.0 — órdenes de pago de inscripción: listado con comprobantes firmados + aprobar (inscribe vía RPC; torneo lleno → 409 con instrucción de reembolso manual) / rechazar con motivo |
 | `/api/admin/tournament-results` | POST, DELETE | Upsert podio + delete |
 | `/api/admin/tournament-results/deliver-pass` | POST | Emite un Pase 1UP **reclamable** al ganador (v2.39.0) — crea fila en `passes` (estado `issued`), idempotente |
 | `/api/user/passes` | GET | Lista los pases del usuario (objeto `passes`) con estado |
@@ -361,7 +363,8 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `course_session_documents` | Docs descargables — `storage_path` en bucket privado, magic-byte sniffed — CASCADE |
 | `masters` | Instructores con redes (8 plataformas) |
 | `enrollments` | Inscripciones — partial UNIQUE en `lower(tx_hash)` (no duplicación de transferencias on-chain) |
-| `tournaments` | Torneos — status derivado del bracket (no editable directamente) |
+| `tournaments` | Torneos — status derivado del bracket (no editable directamente) + `entry_fee_tokens`/`entry_fee_cop` (null = gratuito, v2.41.0) + `treasury_address` (wallet EVM propia del torneo para el pago en $1UP — obligatoria si hay fee en $1UP, nunca reutiliza la tesorería del Pass, v2.41.0) |
+| `tournament_entry_orders` | Pago de inscripción a torneo (v2.41.0, espejo de `pass_orders`) — partial UNIQUE en `lower(tx_hash)` + 1 orden en curso por usuario+torneo; `registration_id` se vincula al asignar el cupo; orden confirmada sin cupo = reembolso manual |
 | `tournament_prizes` | Premios por posición 1-3 con CHECK de consistencia type/amount — soporta tokens/COP/ambos/**Pase 1UP** (`includes_pass` + `pass_days`, add-on o premio único) |
 | `tournament_registrations` | Inscripciones — UNIQUE (tournament_id, user_profile_id), RPC `register_for_tournament` con check `status = 'upcoming'` |
 | `tournament_results` | Podio (1-3) + entrega de premios (tx_hash, comprobante) + `pass_order_id` (Pase 1UP entregado, partial UNIQUE para idempotencia) |

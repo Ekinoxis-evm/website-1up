@@ -124,6 +124,9 @@ export function TournamentDetailModal({ tournament: t, onClose, isRegistered = f
               tournamentDate={t.date}
               locationType={t.location_type}
               isRegistered={isRegistered}
+              entryFeeTokens={t.entry_fee_tokens}
+              entryFeeCop={t.entry_fee_cop}
+              treasuryAddress={t.treasury_address}
               onRegistered={onRegistered}
             />
           )}

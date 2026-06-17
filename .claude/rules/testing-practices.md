@@ -1,6 +1,6 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.38.0):** 19 Vitest files, **215 tests passing**, <1s wall time.
+> **Current state (v2.41.0):** 21 Vitest files, **256 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
@@ -70,6 +70,8 @@ All test files live under `src/__tests__/lib/`:
 | `passOrders.test.ts` | `isValidPassOrderAmount()` — mirrors the `pass_orders` token-amount CHECK (admin_grant allows 0; paid purchases require >0) |
 | `tournamentPrizes.test.ts` | `validatePrizes()` — mirrors the `tournament_prizes` pass invariant (pass_days > 0 when a prize includes a pass) |
 | `passWindow.test.ts` | `computePassWindow()` — pass-stacking math (stacks onto an active pass, starts now otherwise, exact duration) |
+| `passActivation.test.ts` | `canActivatePass()` / `canRevokePass()` — claim-later + revoke preconditions (ownership, state machine, 404/409s) |
+| `tournamentEntry.test.ts` | Paid tournament entry (v2.41.0) — `tournamentEntryFee()` (null/0 = gratis), `parseEntryFeeInput()` (admin fee validation), `isValidTreasuryAddress()` + fee/treasury coupling (token fee requires a valid per-tournament treasury, bank-only doesn't), `canCreateEntryOrder()` (free/closed/method gates), `canReviewEntryOrder()` (only `pending_bank` reviewable, idempotent 409s), manual-refund messaging |
 | `utils.test.ts` | Misc shared utilities |
 
 ---
@@ -130,7 +132,7 @@ Mandatory before any deploy:
 
 ```
 [ ] npm run build       — zero errors, all routes generated
-[ ] npm run test:run    — 14/14 files, all tests pass
+[ ] npm run test:run    — all files, all tests pass
 [ ] npm run lint        — zero ESLint errors
 [ ] Manual smoke if the change touches:
       - auth (login → admin/app dashboards)

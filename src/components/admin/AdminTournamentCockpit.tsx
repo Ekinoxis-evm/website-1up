@@ -34,6 +34,7 @@ import {
   type RegistrationOption,
 } from "@/components/admin/AdminTournamentResultsPanel";
 import { AdminTournamentInfoEditor } from "@/components/admin/AdminTournamentInfoEditor";
+import { AdminTournamentEntryOrdersPanel, type EntryOrderRow } from "@/components/admin/AdminTournamentEntryOrdersPanel";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
@@ -50,6 +51,7 @@ interface Props {
   results:         ResultRow[];
   games:           Pick<Game, "id" | "name">[];
   defaultPassDays: number;
+  entryOrders:     EntryOrderRow[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -83,15 +85,16 @@ function fmtDate(d: string | null): string {
   });
 }
 
-type TabId = "info" | "inscripciones" | "bracket" | "premios";
+type TabId = "info" | "inscripciones" | "pagos" | "bracket" | "premios";
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "info",          label: "Información",   icon: "info"          },
   { id: "inscripciones", label: "Inscripciones", icon: "groups"        },
+  { id: "pagos",         label: "Pagos",         icon: "payments"      },
   { id: "bracket",       label: "Bracket",       icon: "account_tree"  },
   { id: "premios",       label: "Premios",       icon: "emoji_events"  },
 ];
 
-export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays }: Props) {
+export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays, entryOrders }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -449,8 +452,10 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
       <div className="flex flex-wrap items-center gap-1" role="tablist">
         {TABS.map(t => {
           const active = activeTab === t.id;
+          const pendingPayments = entryOrders.filter((o) => o.status === "pending_bank").length;
           const badge =
             t.id === "inscripciones" ? counts.total :
+            t.id === "pagos"          ? (entryOrders.length > 0 ? pendingPayments : undefined) :
             t.id === "premios"        ? sortedPrizes.length :
             undefined;
           return (
@@ -495,6 +500,15 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           <AdminTournamentRegistrationsPanel
             registrations={registrations}
             tournamentName={tournament.name}
+            onChange={() => router.refresh()}
+          />
+        )}
+        {activeTab === "pagos" && (
+          <AdminTournamentEntryOrdersPanel
+            orders={entryOrders}
+            tournamentName={tournament.name}
+            entryFeeTokens={tournament.entry_fee_tokens}
+            entryFeeCop={tournament.entry_fee_cop}
             onChange={() => router.refresh()}
           />
         )}

@@ -204,6 +204,18 @@ export default async function TournamentDetailPage(
                 {t.max_participants ? `Máximo ${t.max_participants}` : "Sin límite definido"}
               </p>
             </div>
+            {((t.entry_fee_tokens ?? 0) > 0 || (t.entry_fee_cop ?? 0) > 0) && (
+              <div className="bg-surface px-3 py-3 col-span-2">
+                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Inscripción</p>
+                <p className="font-body text-sm text-on-surface">
+                  {[
+                    (t.entry_fee_tokens ?? 0) > 0 ? `${Number(t.entry_fee_tokens).toLocaleString("es-CO")} $1UP` : null,
+                    (t.entry_fee_cop ?? 0) > 0 ? `$${Number(t.entry_fee_cop).toLocaleString("es-CO")} COP` : null,
+                  ].filter(Boolean).join(" · ")}
+                </p>
+                <p className="font-body text-xs text-outline mt-0.5">El cupo se asigna al confirmarse el pago.</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-auto">
@@ -214,6 +226,9 @@ export default async function TournamentDetailPage(
                 tournamentDate={t.date}
                 locationType={t.location_type}
                 isRegistered={false}
+                entryFeeTokens={t.entry_fee_tokens}
+                entryFeeCop={t.entry_fee_cop}
+                treasuryAddress={t.treasury_address}
               />
             )}
             {!t.is_registration_open && t.status !== "completed" && (

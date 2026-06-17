@@ -1917,6 +1917,7 @@ export type Database = {
           sponsor_name: string | null
           sponsor_website_url: string | null
           status: string
+          treasury_address: string | null
         }
         Insert: {
           created_at?: string
@@ -1939,6 +1940,7 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_website_url?: string | null
           status?: string
+          treasury_address?: string | null
         }
         Update: {
           created_at?: string
@@ -1961,6 +1963,7 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_website_url?: string | null
           status?: string
+          treasury_address?: string | null
         }
         Relationships: [
           {
@@ -2296,6 +2299,8 @@ export type TournamentRegistration   = Database["public"]["Tables"]["tournament_
 export type InternationalTournament  = Database["public"]["Tables"]["international_tournaments"]["Row"];
 export type TournamentResult         = Database["public"]["Tables"]["tournament_results"]["Row"];
 export type PrizeDeliveryStatus      = Database["public"]["Enums"]["prize_delivery_status"];
+export type TournamentEntryOrder     = Database["public"]["Tables"]["tournament_entry_orders"]["Row"];
+export type TournamentEntryStatus    = Database["public"]["Enums"]["tournament_entry_status"];
 
 // Bracket aliases
 export type Bracket             = Database["public"]["Tables"]["brackets"]["Row"];

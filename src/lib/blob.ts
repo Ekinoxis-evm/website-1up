@@ -59,18 +59,22 @@ export async function uploadComprobante(
 // from another user's hash prefix) and attach it to their own order.
 export class ComprobantePathError extends Error {}
 
+// `folderPrefix` namespaces order tables that share the bucket — e.g.
+// tournament entry orders use "entry-" so entry order #37 never collides with
+// pass/token order #37 at `37/receipt.*`.
 export async function moveComprobanteToOrder(
   pendingPath: string,
   orderId: number,
   ext: string,
   callerPrivyUserId: string,
+  folderPrefix = "",
 ): Promise<string> {
   const expectedPrefix = `pending/${userPathPrefix(callerPrivyUserId)}-`;
   if (!pendingPath.startsWith(expectedPrefix)) {
     throw new ComprobantePathError("Comprobante path does not belong to caller.");
   }
 
-  const finalPath = `${orderId}/receipt.${ext}`;
+  const finalPath = `${folderPrefix}${orderId}/receipt.${ext}`;
 
   const { error } = await supabaseAdmin.storage
     .from("comprobantes")
