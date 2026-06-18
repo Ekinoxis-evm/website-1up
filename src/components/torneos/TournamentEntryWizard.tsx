@@ -32,7 +32,8 @@ type BankAccount = {
 type View =
   | "method" | "no_method"
   | "token_confirm" | "token_sending" | "token_confirming" | "token_registering" | "token_success" | "token_error"
-  | "bank_data" | "bank_comprobante" | "bank_success";
+  | "bank_data" | "bank_comprobante" | "bank_success"
+  | "cash_confirm";
 
 interface Props {
   tournamentId:    number;
@@ -40,6 +41,7 @@ interface Props {
   entryFeeTokens:  number | null;
   entryFeeCop:     number | null;
   treasuryAddress: string | null;
+  cashEnabled:     boolean;
   walletAddress:   string | null;
   getAccessToken:  () => Promise<string | null>;
   onClose:         () => void;
@@ -56,7 +58,7 @@ function fmtCop(n: number): string {
 const TREASURY_RE = /^0x[a-fA-F0-9]{40}$/;
 
 export function TournamentEntryWizard({
-  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, walletAddress,
+  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, walletAddress,
   getAccessToken, onClose, onRegistered, onPending,
 }: Props) {
   const { sendTransaction } = useSendTransaction();
@@ -64,12 +66,19 @@ export function TournamentEntryWizard({
   const recipientAddress = treasuryAddress && TREASURY_RE.test(treasuryAddress) ? treasuryAddress : null;
   const tokenAvailable = entryFeeTokens != null && entryFeeTokens > 0 && recipientAddress != null;
   const bankAvailable  = entryFeeCop != null && entryFeeCop > 0;
+  // Cash is collected in pesos at the venue, so it requires a COP fee + the
+  // admin toggle (server enforces both — this just mirrors it for the UI).
+  const cashAvailable  = cashEnabled && entryFeeCop != null && entryFeeCop > 0;
   const canPayToken    = tokenAvailable && !!walletAddress;
+  // Whether more than one method exists — drives the method-choice screen and
+  // the "ATRÁS" affordances on each sub-flow.
+  const methodCount = [tokenAvailable, bankAvailable, cashAvailable].filter(Boolean).length;
 
   const [view, setView] = useState<View>(() => {
-    if (tokenAvailable && bankAvailable) return "method";
+    if (methodCount > 1) return "method";
     if (tokenAvailable) return "token_confirm";
     if (bankAvailable)  return "bank_data";
+    if (cashAvailable)  return "cash_confirm";
     // Paid-token tournament whose treasury isn't configured yet — fail closed.
     return "no_method";
   });
@@ -88,6 +97,14 @@ export function TournamentEntryWizard({
   const [submitLoading, setSubmitLoading]           = useState(false);
   const [submitError, setSubmitError]               = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // The pending-state screen ("bank_success") is shared by the wire and cash
+  // paths; this drives the message variant.
+  const [pendingMethod, setPendingMethod] = useState<"bank" | "cash">("bank");
+
+  // ── Cash state ──────────────────────────────────────────────────────
+  const [cashLoading, setCashLoading] = useState(false);
+  const [cashError, setCashError]     = useState<string | null>(null);
 
   async function authHeader(): Promise<Record<string, string>> {
     const token = await getAccessToken();
@@ -253,11 +270,40 @@ export function TournamentEntryWizard({
       setSubmitError(d.error ?? "Error al crear la solicitud");
       return;
     }
+    setPendingMethod("bank");
     setView("bank_success");
     onPending();
   }
 
-  const closable = ["method", "no_method", "token_confirm", "token_success", "token_error", "bank_data", "bank_comprobante", "bank_success"].includes(view);
+  // ── Cash flow ───────────────────────────────────────────────────────
+  // The simplest path: the user commits to paying in person, an admin confirms
+  // receipt later. No tx, no comprobante — just create the pending order.
+  async function handleCashSubmit() {
+    setCashLoading(true); setCashError(null);
+
+    const token = await getAccessToken();
+    const res = await fetch("/api/user/tournament-entry-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ tournamentId, paymentMethod: "cash" }),
+    });
+
+    setCashLoading(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setCashError(
+        d.reason === "method_unavailable"
+          ? "Este torneo no acepta pago en efectivo."
+          : (d.error ?? "Error al crear la solicitud"),
+      );
+      return;
+    }
+    setPendingMethod("cash");
+    setView("bank_success");
+    onPending();
+  }
+
+  const closable = ["method", "no_method", "token_confirm", "token_success", "token_error", "bank_data", "bank_comprobante", "bank_success", "cash_confirm"].includes(view);
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -293,9 +339,9 @@ export function TournamentEntryWizard({
                     </span>
                   </div>
                 )}
-                {bankAvailable && (
+                {(bankAvailable || cashAvailable) && (
                   <div className="flex justify-between items-center">
-                    <span className="font-headline text-xs uppercase tracking-widest text-outline">Por banco</span>
+                    <span className="font-headline text-xs uppercase tracking-widest text-outline">En COP</span>
                     <span className="font-headline font-black text-xl">{fmtCop(entryFeeCop!)}</span>
                   </div>
                 )}
@@ -314,12 +360,28 @@ export function TournamentEntryWizard({
                   Necesitas una wallet asociada para pagar con $1UP.
                 </p>
               )}
-              <button
-                onClick={() => setView("bank_data")}
-                className="w-full bg-surface-container-high text-on-background font-headline font-black uppercase tracking-tighter py-4 hover:opacity-90 transition-opacity"
-              >
-                TRANSFERENCIA BANCARIA
-              </button>
+              {bankAvailable && (
+                <button
+                  onClick={() => setView("bank_data")}
+                  className="w-full bg-surface-container-high text-on-background font-headline font-black uppercase tracking-tighter py-4 hover:opacity-90 transition-opacity"
+                >
+                  TRANSFERENCIA BANCARIA
+                </button>
+              )}
+              {cashAvailable && (
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setView("cash_confirm")}
+                    className="w-full bg-surface-container-high text-on-background font-headline font-black uppercase tracking-tighter py-4 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">payments</span>
+                    EFECTIVO
+                  </button>
+                  <p className="font-body text-xs text-on-surface/50">
+                    Paga en el evento — el equipo confirma tu inscripción.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -605,7 +667,50 @@ export function TournamentEntryWizard({
             </div>
           )}
 
-          {/* ── Bank: success (esperando aprobación) ── */}
+          {/* ── Cash: confirm ── */}
+          {view === "cash_confirm" && (
+            <div className="space-y-5">
+              <div className="bg-surface-container-low p-4 flex justify-between items-center">
+                <span className="font-headline text-xs uppercase tracking-widest text-outline">Inscripción</span>
+                <span className="font-headline font-black text-xl">{fmtCop(entryFeeCop ?? 0)}</span>
+              </div>
+
+              <div className="bg-surface-container-low p-5 flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary-container text-3xl shrink-0">payments</span>
+                <p className="font-body text-sm text-on-surface/80 leading-relaxed">
+                  Paga en efectivo en el evento. Al registrar tu inscripción, el equipo 1UP
+                  confirmará tu cupo cuando recibas el pago en persona.
+                </p>
+              </div>
+
+              <div className="bg-secondary/10 p-4">
+                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-secondary mb-1">Importante</p>
+                <p className="font-body text-xs text-on-surface/70 leading-relaxed">
+                  Tu cupo queda en revisión hasta que el equipo confirme el pago. Si el torneo
+                  se llena antes de que pagues, no podremos garantizar tu inscripción.
+                </p>
+              </div>
+
+              {cashError && <p className="font-body text-xs text-error">{cashError}</p>}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCashSubmit}
+                  disabled={cashLoading}
+                  className="flex-1 bg-primary-container text-white font-headline font-black uppercase py-3 disabled:opacity-40"
+                >
+                  {cashLoading ? "Registrando…" : "REGISTRAR INSCRIPCIÓN"}
+                </button>
+                {methodCount > 1 && (
+                  <button onClick={() => setView("method")} className="px-5 bg-surface-container-high font-headline font-black uppercase text-sm">
+                    ATRÁS
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Bank/Cash: success (esperando aprobación) ── */}
           {view === "bank_success" && (
             <div className="space-y-5 text-center py-4">
               <span className="material-symbols-outlined text-secondary text-6xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -613,11 +718,19 @@ export function TournamentEntryWizard({
               </span>
               <div>
                 <p className="font-headline font-black text-2xl uppercase tracking-tighter">¡Solicitud enviada!</p>
-                <p className="font-body text-sm text-on-surface/60 mt-2">
-                  Tu pago está en revisión — el equipo lo aprobará en máximo 24 horas hábiles
-                  y tu cupo quedará asignado en ese momento. Recuerda: si el torneo se llena
-                  antes de la aprobación, el reembolso se gestiona manualmente.
-                </p>
+                {pendingMethod === "cash" ? (
+                  <p className="font-body text-sm text-on-surface/60 mt-2">
+                    Tu inscripción en efectivo quedó registrada. Paga en el evento y el equipo
+                    confirmará tu cupo. Recuerda: si el torneo se llena antes de tu pago, no
+                    podremos garantizar tu inscripción.
+                  </p>
+                ) : (
+                  <p className="font-body text-sm text-on-surface/60 mt-2">
+                    Tu pago está en revisión — el equipo lo aprobará en máximo 24 horas hábiles
+                    y tu cupo quedará asignado en ese momento. Recuerda: si el torneo se llena
+                    antes de la aprobación, el reembolso se gestiona manualmente.
+                  </p>
+                )}
               </div>
               <button
                 onClick={onClose}

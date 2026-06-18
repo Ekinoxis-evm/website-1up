@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { PrizePodium } from "@/components/torneos/PrizeBadge";
 import { RegisterButton } from "@/components/torneos/RegisterButton";
 import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
@@ -130,6 +130,17 @@ export default async function TournamentDetailPage(
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
   const bracketData = await fetchBracket(t.id);
 
+  // Cash entry is offered only when the admin enabled it for tournament entry
+  // AND the tournament has a COP fee (cash is collected in pesos at the venue).
+  // service_payment_methods is service-role only (RLS denies anon) — read it with
+  // the admin client (safe: this is a Server Component).
+  const { data: methodCfg } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("cash_enabled")
+    .eq("service", "tournament_entry")
+    .maybeSingle();
+  const cashEnabled = !!methodCfg?.cash_enabled && (t.entry_fee_cop ?? 0) > 0;
+
   const dateLong = t.date
     ? new Date(t.date).toLocaleDateString("es-CO", {
         weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota",
@@ -229,6 +240,7 @@ export default async function TournamentDetailPage(
                 entryFeeTokens={t.entry_fee_tokens}
                 entryFeeCop={t.entry_fee_cop}
                 treasuryAddress={t.treasury_address}
+                cashEnabled={cashEnabled}
               />
             )}
             {!t.is_registration_open && t.status !== "completed" && (
