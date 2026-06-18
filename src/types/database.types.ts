@@ -1621,6 +1621,101 @@ export type Database = {
           },
         ]
       }
+      tournament_entry_orders: {
+        Row: {
+          amount_cop: number | null
+          amount_tokens: number | null
+          bank_account_id: number | null
+          block_number: number | null
+          comprobante_url: string | null
+          created_at: string
+          id: number
+          payment_method: string
+          privy_user_id: string
+          registration_id: number | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["tournament_entry_status"]
+          tournament_id: number
+          tx_hash: string | null
+          updated_at: string
+          user_profile_id: number
+          wallet_address: string | null
+        }
+        Insert: {
+          amount_cop?: number | null
+          amount_tokens?: number | null
+          bank_account_id?: number | null
+          block_number?: number | null
+          comprobante_url?: string | null
+          created_at?: string
+          id?: number
+          payment_method: string
+          privy_user_id: string
+          registration_id?: number | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["tournament_entry_status"]
+          tournament_id: number
+          tx_hash?: string | null
+          updated_at?: string
+          user_profile_id: number
+          wallet_address?: string | null
+        }
+        Update: {
+          amount_cop?: number | null
+          amount_tokens?: number | null
+          bank_account_id?: number | null
+          block_number?: number | null
+          comprobante_url?: string | null
+          created_at?: string
+          id?: number
+          payment_method?: string
+          privy_user_id?: string
+          registration_id?: number | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["tournament_entry_status"]
+          tournament_id?: number
+          tx_hash?: string | null
+          updated_at?: string
+          user_profile_id?: number
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_entry_orders_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_entry_orders_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_entry_orders_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_entry_orders_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_prizes: {
         Row: {
           amount_cop: number | null
@@ -1805,6 +1900,8 @@ export type Database = {
           created_at: string
           date: string | null
           description: string | null
+          entry_fee_cop: number | null
+          entry_fee_tokens: number | null
           game_id: number | null
           id: number
           image_url: string | null
@@ -1820,11 +1917,14 @@ export type Database = {
           sponsor_name: string | null
           sponsor_website_url: string | null
           status: string
+          treasury_address: string | null
         }
         Insert: {
           created_at?: string
           date?: string | null
           description?: string | null
+          entry_fee_cop?: number | null
+          entry_fee_tokens?: number | null
           game_id?: number | null
           id?: number
           image_url?: string | null
@@ -1840,11 +1940,14 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_website_url?: string | null
           status?: string
+          treasury_address?: string | null
         }
         Update: {
           created_at?: string
           date?: string | null
           description?: string | null
+          entry_fee_cop?: number | null
+          entry_fee_tokens?: number | null
           game_id?: number | null
           id?: number
           image_url?: string | null
@@ -1860,6 +1963,7 @@ export type Database = {
           sponsor_name?: string | null
           sponsor_website_url?: string | null
           status?: string
+          treasury_address?: string | null
         }
         Relationships: [
           {
@@ -2007,6 +2111,7 @@ export type Database = {
       slot_source: "seed" | "winner_of" | "loser_of" | "bye"
       tipo_documento: "CC" | "CE" | "TI" | "PP" | "NIT"
       token_purchase_status: "pending" | "approved" | "rejected" | "cancelled"
+      tournament_entry_status: "pending_bank" | "confirmed" | "rejected" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2157,6 +2262,7 @@ export const Constants = {
       slot_source: ["seed", "winner_of", "loser_of", "bye"],
       tipo_documento: ["CC", "CE", "TI", "PP", "NIT"],
       token_purchase_status: ["pending", "approved", "rejected", "cancelled"],
+      tournament_entry_status: ["pending_bank", "confirmed", "rejected", "cancelled"],
     },
   },
 } as const
@@ -2193,6 +2299,8 @@ export type TournamentRegistration   = Database["public"]["Tables"]["tournament_
 export type InternationalTournament  = Database["public"]["Tables"]["international_tournaments"]["Row"];
 export type TournamentResult         = Database["public"]["Tables"]["tournament_results"]["Row"];
 export type PrizeDeliveryStatus      = Database["public"]["Enums"]["prize_delivery_status"];
+export type TournamentEntryOrder     = Database["public"]["Tables"]["tournament_entry_orders"]["Row"];
+export type TournamentEntryStatus    = Database["public"]["Enums"]["tournament_entry_status"];
 
 // Bracket aliases
 export type Bracket             = Database["public"]["Tables"]["brackets"]["Row"];

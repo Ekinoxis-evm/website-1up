@@ -297,6 +297,210 @@ export async function sendTournamentRegistrationEmail(opts: {
   ]);
 }
 
+// ── Tournament entry fee (token) — admin notification ───────────
+// The user already gets the full registration confirmation via
+// sendTournamentRegistrationEmail; this only adds the admin "paid entry" copy.
+
+export async function sendTournamentEntryTokenAdminEmail(opts: {
+  userName:       string;
+  userEmail:      string;
+  tournamentName: string;
+  tokenAmount:    number;
+  txHash:         string;
+}) {
+  if (!ADMIN_EMAIL || !process.env.RESEND_API_KEY) return;
+
+  const { userName, userEmail, tournamentName, tokenAmount, txHash } = opts;
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from:    FROM,
+      to:      ADMIN_EMAIL,
+      subject: `[Torneo] Inscripción paga ($1UP) — ${tournamentName} · ${userName}`,
+      html: `
+        <p><strong>${userName}</strong> (${userEmail}) pagó la inscripción a <strong>${tournamentName}</strong>.</p>
+        <p>${tokenAmount.toLocaleString("es-CO")} $1UP · verificado en cadena</p>
+        <p>TX: <a href="https://basescan.org/tx/${txHash}">${txHash}</a></p>
+      `,
+    }),
+  ]);
+}
+
+// ── Tournament entry fee (bank) — comprobante received ──────────
+
+export async function sendTournamentEntryBankEmails(opts: {
+  userEmail:      string;
+  userName:       string;
+  orderId:        number;
+  tournamentName: string;
+  amountCop:      number;
+  bankName:       string;
+  manageUrl:      string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { userEmail, userName, orderId, tournamentName, amountCop, bankName, manageUrl } = opts;
+  const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(amountCop);
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to:   userEmail,
+      subject: `⏳ Recibimos tu comprobante — inscripción en revisión · ${tournamentName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <div style="background:#e91e8c;height:4px"></div>
+          <div style="padding:32px 24px">
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
+              Inscripción en revisión
+            </h1>
+            <p style="color:#666;margin:0 0 24px">Hola ${userName}, recibimos tu comprobante para <strong>${tournamentName}</strong>.</p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Torneo</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Monto</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${cop}</td></tr>
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Banco</td>
+                  <td style="padding:8px 0;text-align:right">${bankName}</td></tr>
+            </table>
+            <div style="background:#fff8e1;border-left:4px solid #e91e8c;padding:14px 16px;margin-top:20px">
+              <p style="color:#444;font-size:13px;line-height:1.6;margin:0">
+                Tu cupo se confirma <strong>solo cuando el equipo apruebe tu comprobante</strong> (máx. 24 horas
+                hábiles). Si el torneo se llena antes de la aprobación, no podremos inscribirte y el reembolso
+                se gestiona manualmente — no hay reembolsos automáticos.
+              </p>
+            </div>
+          </div>
+          <div style="background:#111;padding:16px 24px">
+            <p style="color:#666;font-size:11px;margin:0">1UP Gaming Tower · Colombia · 1upesports.org</p>
+          </div>
+        </div>
+      `,
+    }),
+    ...(ADMIN_EMAIL ? [resend.emails.send({
+      from:    FROM,
+      to:      ADMIN_EMAIL,
+      subject: `[Torneo] Comprobante por revisar #${orderId} — ${tournamentName} · ${userName}`,
+      html: `
+        <p><strong>${userName}</strong> (${userEmail}) envió un comprobante para inscribirse en <strong>${tournamentName}</strong>.</p>
+        <p>Orden #${orderId} · ${cop} · Banco: ${bankName}</p>
+        <p><a href="${manageUrl}">Revisar en la pestaña Pagos →</a></p>
+      `,
+    })] : []),
+  ]);
+}
+
+// ── Tournament entry fee (bank) — admin approved ────────────────
+
+export async function sendTournamentEntryApprovedEmail(opts: {
+  userEmail:      string;
+  userName:       string;
+  tournamentName: string;
+  tournamentUrl:  string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { userEmail, userName, tournamentName, tournamentUrl } = opts;
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to:   userEmail,
+      subject: `✅ Inscripción confirmada — ${tournamentName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <div style="background:#e91e8c;height:4px"></div>
+          <div style="padding:32px 24px">
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
+              ¡Estás inscrito!
+            </h1>
+            <p style="color:#666;margin:0 0 24px">
+              Hola ${userName}, confirmamos tu transferencia. Tu cupo en <strong>${tournamentName}</strong> quedó asignado.
+            </p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#999;font-size:12px;text-transform:uppercase">Torneo</td>
+                  <td style="padding:8px 0;font-weight:700;text-align:right">${tournamentName}</td></tr>
+            </table>
+            <div style="margin-top:24px">
+              <a href="${tournamentUrl}"
+                style="display:inline-block;background:#111;color:#fff;font-weight:900;text-transform:uppercase;padding:12px 20px;text-decoration:none;font-size:12px;letter-spacing:1px">
+                VER TORNEO →
+              </a>
+            </div>
+            <p style="color:#999;font-size:12px;margin-top:24px">
+              Estaremos en contacto con los detalles finales del torneo. ¡Mucha suerte!
+            </p>
+          </div>
+          <div style="background:#111;padding:16px 24px">
+            <p style="color:#666;font-size:11px;margin:0">1UP Gaming Tower · Colombia · 1upesports.org</p>
+          </div>
+        </div>
+      `,
+    }),
+    ...(ADMIN_EMAIL ? [resend.emails.send({
+      from:    FROM,
+      to:      ADMIN_EMAIL,
+      subject: `[Torneo] Inscripción (banco) aprobada — ${tournamentName} · ${userName}`,
+      html: `
+        <p><strong>Inscripción aprobada</strong> para <strong>${userName}</strong> (${userEmail}) en <strong>${tournamentName}</strong>.</p>
+      `,
+    })] : []),
+  ]);
+}
+
+// ── Tournament entry fee (bank) — admin rejected ────────────────
+
+export async function sendTournamentEntryRejectedEmail(opts: {
+  userEmail:       string;
+  userName:        string;
+  tournamentName:  string;
+  rejectionReason: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { userEmail, userName, tournamentName, rejectionReason } = opts;
+
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to:   userEmail,
+      subject: `⚠️ Inscripción rechazada — ${tournamentName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+          <div style="background:#b00020;height:4px"></div>
+          <div style="padding:32px 24px">
+            <h1 style="font-size:22px;font-weight:900;text-transform:uppercase;margin:0 0 8px">
+              Inscripción rechazada
+            </h1>
+            <p style="color:#666;margin:0 0 24px">
+              Hola ${userName}, no pudimos validar tu pago para <strong>${tournamentName}</strong>.
+            </p>
+            <div style="background:#fff5f5;border-left:4px solid #b00020;padding:14px 16px">
+              <p style="color:#999;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">Motivo</p>
+              <p style="color:#444;font-size:13px;margin:0;white-space:pre-line">${rejectionReason}</p>
+            </div>
+            <p style="color:#999;font-size:12px;margin-top:24px">
+              Si crees que es un error, escríbenos respondiendo a este correo con el comprobante.
+            </p>
+          </div>
+          <div style="background:#111;padding:16px 24px">
+            <p style="color:#666;font-size:11px;margin:0">1UP Gaming Tower · Colombia · 1upesports.org</p>
+          </div>
+        </div>
+      `,
+    }),
+    ...(ADMIN_EMAIL ? [resend.emails.send({
+      from:    FROM,
+      to:      ADMIN_EMAIL,
+      subject: `[Torneo] Inscripción rechazada — ${tournamentName} · ${userName}`,
+      html: `
+        <p><strong>Inscripción rechazada</strong> para <strong>${userName}</strong> (${userEmail}) en <strong>${tournamentName}</strong>.</p>
+        <p>Motivo: ${rejectionReason}</p>
+      `,
+    })] : []),
+  ]);
+}
+
 // ── Pass purchase (bank transfer) ───────────────────────────────
 
 export async function sendPassBankEmails(opts: {

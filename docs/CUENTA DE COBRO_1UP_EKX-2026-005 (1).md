@@ -1,4 +1,4 @@
-**CUENTA DE COBRO**
+ok**CUENTA DE COBRO**
 
 **EKX-2026-005**
 

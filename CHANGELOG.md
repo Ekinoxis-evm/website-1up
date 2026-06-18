@@ -5,6 +5,139 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.41.0] — 2026-06-12
+
+### Added — paid tournament entry (Phases 2–4: payment flows + UI + cockpit)
+
+Tournaments can now charge an inscription fee — **$1UP on-chain** and/or **COP por banco**
+(comprobante + aprobación admin). Builds on the v2.41.0-data layer; the locked decisions
+hold: the slot is taken **only** when the payment confirms (no holds — capacity stays
+enforced by the existing `register_for_tournament` RPC at confirmation time), **no refunds**
+in v1 (bank flow warns; fill-before-approval is a flagged manual-refund case).
+`entry_fee_tokens`/`entry_fee_cop` null = free → the existing free flow is untouched.
+
+**Per-tournament treasury** — entry fees do **not** reuse `pass_config.recipient_address`.
+Each tournament has its own `tournaments.treasury_address` (nullable text, EVM address).
+The admin Info tab exposes a **"Tesorería (wallet)"** field validated client- and
+server-side (`isValidTreasuryAddress`, `/^0x[a-fA-F0-9]{40}$/`); a token fee
+(`entry_fee_tokens > 0`) **cannot be saved without a valid treasury** (Spanish error from
+`parseEntryFeeInput`), while bank-only fees don't require one. The token wizard pays to —
+and the API verifies the recipient as — that wallet; a paid-token tournament with a
+null/invalid treasury **fails closed** (503 with a "contacta al equipo" message and a
+`no_method` wizard state), never falling back to the pass treasury.
+
+**Token path** — `POST /api/user/tournament-entry-orders` (Privy user, rate-limited):
+tx-first flow mirroring `pass_orders`. Client pays $1UP (Base, gas-sponsored) to the
+tournament's own `treasury_address`, backend re-verifies the receipt with
+`verifyPassTransfer` (exact amount, pinned sender via `getVerifiedWallet`, ≥3
+confirmations, recipient = the tournament treasury), inserts the order as `confirmed`, then
+registers via the RPC and links `registration_id`. Guards: duplicate `lower(tx_hash)` →
+409, one-in-flight partial UNIQUE → 409, wrong amount/recipient → 422, missing treasury →
+503. If the RPC says `full` after a verified payment, the order stays `confirmed` without
+registration (the manual-refund evidence) and the user gets the explicit manual-refund
+message.
+
+**Bank path** — same endpoint with `paymentMethod: "bank"`: comprobante upload via the
+existing `/api/user/upload-comprobante` flow (pending path → `moveComprobanteToOrder`,
+now namespaced `entry-{orderId}/receipt.*` so entry orders never collide with pass/token
+receipts), order lands `pending_bank`. Admin review via
+`GET|PATCH /api/admin/tournament-entry-orders` (checkAdmin on both): approve runs the RPC
+first — a full tournament returns 409 with an explicit "rechaza y gestiona el reembolso
+manual" message instead of silently failing — then flips to `confirmed` + links the
+registration; reject records `rejection_reason` + review fields. State transitions guarded
+by `canReviewEntryOrder()` (only `pending_bank` is reviewable; token orders never are).
+
+**User UI** — `RegisterButton` gains fee awareness: paid tournaments show
+`INSCRIBIRME · <fee>` and open the new `TournamentEntryWizard` (method choice → token
+phases mirroring `BuyPassWizard`, or bank steps mirroring `BuyPassBankWizard` with the
+**no-refund warning**), plus a `PAGO EN REVISIÓN` pending state for bank orders. The
+tournament detail page shows the fee (display convention 1 $1UP = 1.000 COP). Compact
+cards link to the detail page. Free tournaments render exactly as before.
+
+**Admin cockpit** — `/admin/torneos/[slug]/manage`: the Info tab
+(`AdminTournamentInfoEditor`) gains entry-fee editing (vacío = gratis; validated
+server-side by `parseEntryFeeInput`, fee preserved on the cancel path), and a new **Pagos**
+tab (`AdminTournamentEntryOrdersPanel`) lists every entry order with KPIs, signed
+comprobante preview, approve/reject with rejection reason (shared AdminToast), and a
+red **"Pago sin cupo — reembolso manual"** flag on confirmed orders without registration.
+
+**Transactional emails (Resend, fire-and-forget)** — every entry-order event now notifies
+both parties, mirroring the pass/token order templates; failures are logged and never fail
+the order. Token success: keeps the existing `sendTournamentRegistrationEmail` for the user
+**and** notifies `ADMIN_NOTIFICATION_EMAIL` of the paid entry (tournament, user, amount,
+BaseScan TX link). Bank `pending_bank`: user gets "Recibimos tu comprobante — inscripción
+en revisión" (with the no-refund caveat), admin gets a "comprobante por revisar" notice
+linking to the cockpit **Pagos** tab. Approved: user gets an inscription-confirmed email
+(admin copy too). Rejected: user gets the email with the `rejection_reason`. All Spanish.
+
+### QA
+
+- **Tier-2 unit:** `src/__tests__/lib/tournamentEntry.test.ts` — fee detection
+  (`tournamentEntryFee`, null/0 = free), admin fee validation (`parseEntryFeeInput`),
+  order-creation gates (`canCreateEntryOrder`: free/closed/method-unavailable), review
+  state transitions (`canReviewEntryOrder`: only `pending_bank`, idempotent 409s,
+  fails closed), the manual-refund messaging, **treasury validation
+  (`isValidTreasuryAddress`)** and the **fee/treasury coupling** (token fee requires a
+  valid treasury; bank-only doesn't; malformed treasury always rejected). Tests
+  **224 → 256** (21 files).
+- **Migration:** `tournaments.treasury_address` (nullable text) applied live via the
+  Supabase MCP; committed as `supabase/migrations/20260612000000_tournament_treasury_address.sql`.
+- `npm run build` clean.
+
+### Files
+
+- `src/lib/tournamentEntry.ts` *(new)* — pure fee/gate/transition logic + `isValidTreasuryAddress` + fee/treasury coupling
+- `src/app/api/user/tournament-entry-orders/route.ts` *(new)* — token path verifies against the tournament treasury (fails closed if null); bank + token emails
+- `src/app/api/admin/tournament-entry-orders/route.ts` *(new)* — approve/reject emails
+- `src/components/torneos/TournamentEntryWizard.tsx` *(new)* — pays to the tournament treasury (prop, not pass-config); `no_method` fail-closed state
+- `src/components/admin/AdminTournamentEntryOrdersPanel.tsx` *(new)*
+- `src/__tests__/lib/tournamentEntry.test.ts` *(new)*
+- `src/lib/email.ts` — `sendTournamentEntryTokenAdminEmail`, `sendTournamentEntryBankEmails`, `sendTournamentEntryApprovedEmail`, `sendTournamentEntryRejectedEmail`
+- `src/app/api/admin/tournaments/route.ts` — entry-fee + `treasuryAddress` fields (POST/PUT)
+- `src/components/torneos/RegisterButton.tsx`, `TorneosClient.tsx`, `TournamentDetailModal.tsx` — `treasuryAddress` prop pass-through
+- `src/app/(main)/torneos/[slug]/page.tsx` — fee display + props
+- `src/components/admin/AdminTournamentInfoEditor.tsx` — "Tesorería (wallet)" field + token-fee coupling, `AdminTournamentCockpit.tsx`
+- `src/app/admin/(protected)/torneos/[slug]/manage/page.tsx` — entry-orders loader
+- `src/lib/blob.ts` — `moveComprobanteToOrder` optional `folderPrefix`
+- `src/types/database.types.ts` — `tournaments.treasury_address`; `TournamentEntryOrder` / `TournamentEntryStatus` aliases
+- `supabase/migrations/20260612000000_tournament_treasury_address.sql` *(new)*
+
+---
+
+## [2.41.0-data] — 2026-05-31
+
+### Added — paid tournament entry: data layer (Phase 1 of the feature)
+
+Foundation for charging a registration fee per tournament. **Behavior-neutral** — no
+user-facing change yet (no UI reads these columns); the payment + registration flows land in
+the follow-up PRs. Decisions (locked): **both** payment methods (1UP tokens + bank-proof),
+slot counts **only once paid/approved** (no holds), **no refunds** in v1 (bank path warns +
+manual-refund exception if the tournament fills before approval).
+
+**Schema** (`20260531182031_paid_tournament_entry.sql`, applied live + verified):
+- `tournaments.entry_fee_tokens` (numeric) + `entry_fee_cop` (int) — null = free (unchanged).
+- New `tournament_entry_orders` table (Option A — the payment record, mirroring
+  `pass_orders`): tournament/user FKs, `registration_id` (set once registered), `payment_method`
+  (token/bank), amount, `tx_hash`/`block_number`, `bank_account_id`/`comprobante_url`, `status`
+  (`tournament_entry_status`: pending_bank/confirmed/rejected/cancelled), review fields.
+- Guards: partial UNIQUE (one in-flight order per user+tournament) + `lower(tx_hash)` UNIQUE
+  (token idempotency) + status/tournament indexes.
+
+`src/types/database.types.ts` updated (fee columns, the new table, the new enum).
+
+### Next (follow-up PRs)
+
+Token entry path (on-chain verify → register) · bank entry path (comprobante → admin approve →
+register) · register-page payment step · admin fee editor + approval in the cockpit. Capacity
+is enforced by the existing `register_for_tournament` RPC at confirmation time (no RPC change).
+
+### Files
+
+- `supabase/migrations/20260531182031_paid_tournament_entry.sql` *(new)*
+- `src/types/database.types.ts`
+
+---
+
 ## [2.40.1] — 2026-05-31
 
 ### Added — revoke ANY user's 1UP Pass from the admin panel

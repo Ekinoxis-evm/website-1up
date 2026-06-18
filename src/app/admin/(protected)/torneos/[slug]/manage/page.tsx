@@ -16,6 +16,7 @@
 
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getComprobanteSignedUrl } from "@/lib/blob";
 import { AdminTournamentCockpit } from "@/components/admin/AdminTournamentCockpit";
 
 export default async function AdminTournamentManagePage({
@@ -39,6 +40,7 @@ export default async function AdminTournamentManagePage({
     { data: results },
     { data: games },
     { data: passConfig },
+    { data: entryOrders },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -59,7 +61,20 @@ export default async function AdminTournamentManagePage({
     supabaseAdmin.from("games").select("id, name").order("name"),
     // Default duration for the "Incluir Pase 1UP" toggle in the prize editor.
     supabaseAdmin.from("pass_config").select("duration_days").eq("id", 1).maybeSingle(),
+    // Entry-fee payment orders (v2.41.0) — Pagos tab approval panel.
+    supabaseAdmin
+      .from("tournament_entry_orders")
+      .select("*, user_profiles(nombre, apellidos, email, username, avatar_url)")
+      .eq("tournament_id", tournament.id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Comprobantes live in a private bucket — sign them for the admin preview.
+  const entryOrdersSigned = await Promise.all((entryOrders ?? []).map(async (order) => {
+    if (!order.comprobante_url) return order;
+    const signedUrl = await getComprobanteSignedUrl(order.comprobante_url);
+    return { ...order, comprobante_url: signedUrl };
+  }));
 
   return (
     <AdminTournamentCockpit
@@ -69,6 +84,7 @@ export default async function AdminTournamentManagePage({
       results={results ?? []}
       games={games ?? []}
       defaultPassDays={passConfig?.duration_days ?? 30}
+      entryOrders={entryOrdersSigned}
     />
   );
 }

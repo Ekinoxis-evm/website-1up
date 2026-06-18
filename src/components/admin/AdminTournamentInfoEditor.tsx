@@ -70,6 +70,9 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
       .sort((a, b) => a.position - b.position)
       .map((p) => prizeToFormRow(p, defaultPassDays)),
   );
+  const [entryFeeTokens, setEntryFeeTokens]   = useState(tournament.entry_fee_tokens != null ? String(tournament.entry_fee_tokens) : "");
+  const [entryFeeCop, setEntryFeeCop]         = useState(tournament.entry_fee_cop != null ? String(tournament.entry_fee_cop) : "");
+  const [treasuryAddress, setTreasuryAddress] = useState(tournament.treasury_address ?? "");
   const [sponsorName, setSponsorName]           = useState(tournament.sponsor_name ?? "");
   const [sponsorWebsiteUrl, setSponsorWebUrl]   = useState(tournament.sponsor_website_url ?? "");
   const [sponsorLogoUrl, setSponsorLogoUrl]     = useState(tournament.sponsor_logo_url ?? "");
@@ -83,8 +86,15 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
   // what we send — mirror that in the UI so it doesn't look enabled.
   const regToggleDisabled = tournament.status !== "upcoming";
 
+  const tokenFeeSet  = entryFeeTokens.trim() !== "" && Number(entryFeeTokens) > 0;
+  const treasuryOk   = /^0x[a-fA-F0-9]{40}$/.test(treasuryAddress.trim());
+
   async function handleSave() {
     if (!name.trim()) { setError("El nombre es requerido."); return; }
+    if (tokenFeeSet && !treasuryOk) {
+      setError("Para cobrar la inscripción en $1UP define una tesorería (wallet) EVM válida.");
+      return;
+    }
     setSaving(true); setError(null);
     try {
       const token = await getAccessToken();
@@ -107,6 +117,9 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
           sponsorName,
           sponsorWebsiteUrl,
           sponsorLogoUrl,
+          entryFeeTokens,
+          entryFeeCop,
+          treasuryAddress,
           prizes,
         }),
       });
@@ -266,8 +279,62 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
         )}
       </div>
 
-      {/* ── Right: prizes + sponsor ────────────────────────────────── */}
+      {/* ── Right: entry fee + prizes + sponsor ────────────────────── */}
       <div className="space-y-4">
+        <div className="bg-surface-container p-5 space-y-3">
+          <h3 className="font-headline font-black text-sm uppercase tracking-widest text-on-surface mb-1">
+            Costo de inscripción <span className="font-headline font-bold text-xs text-outline/60 normal-case">(vacío = gratis)</span>
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">En $1UP</label>
+              <input
+                type="number"
+                min="0"
+                value={entryFeeTokens}
+                onChange={(e) => setEntryFeeTokens(e.target.value)}
+                placeholder="Ej: 10"
+                className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">En COP (banco)</label>
+              <input
+                type="number"
+                min="0"
+                value={entryFeeCop}
+                onChange={(e) => setEntryFeeCop(e.target.value)}
+                placeholder="Ej: 10000"
+                className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+              Tesorería (wallet) {tokenFeeSet && <span className="text-error">*</span>}
+            </label>
+            <input
+              value={treasuryAddress}
+              onChange={(e) => setTreasuryAddress(e.target.value)}
+              placeholder="0x… (dirección EVM en Base)"
+              spellCheck={false}
+              className={`w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none focus:outline-none ${
+                treasuryAddress.trim() !== "" && !treasuryOk ? "ring-2 ring-error" : ""
+              }`}
+            />
+            {tokenFeeSet && !treasuryOk && (
+              <p className="font-body text-[10px] text-error mt-1 leading-snug">
+                Obligatoria para cobrar en $1UP — los pagos del torneo se enviarán a esta wallet.
+              </p>
+            )}
+          </div>
+          <p className="font-body text-[10px] text-outline leading-snug">
+            El cupo se asigna solo al confirmarse el pago ($1UP verificado en cadena, o
+            comprobante bancario aprobado en la pestaña Pagos). Equivalencia de referencia:
+            1 $1UP = 1.000 COP. Sin reembolsos automáticos.
+          </p>
+        </div>
+
         <div className="bg-surface-container p-5">
           <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} />
         </div>
