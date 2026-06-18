@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.16 |
+| **Versión** | 2.17 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 12 de junio de 2026 |
-| **Versión en producción** | v2.41.0 |
+| **Última actualización** | 18 de junio de 2026 |
+| **Versión en producción** | v2.42.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -297,6 +297,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/user/course-orders` | POST | Inscripción a curso (token o banco) | 20/min/user |
 | `/api/user/tournament-registrations` | GET, POST, DELETE | Inscripciones a torneos (tournamentId coerced) | — |
 | `/api/user/tournament-entry-orders` | GET, POST | v2.41.0 — pago de inscripción a torneo: $1UP verificado on-chain contra la **tesorería propia del torneo** (cupo asignado vía RPC al confirmar; sin tesorería configurada → 503) o transferencia bancaria con comprobante (queda `pending_bank` hasta aprobación admin). Notifica por email a usuario y admin en cada evento. Sin reembolsos automáticos | 20/min/user (POST) |
+| `/api/admin/service-payment-methods` | GET, PATCH | v2.42.0 — capa de pagos unificada: configura qué métodos (`$1UP`/transferencia/efectivo/tarjeta) acepta cada servicio. Respaldado por la tabla `service_payment_methods` + el RPC atómico `apply_payment_event`. Tarjeta (Stripe) reservado hasta `PAYMENTS_CARD_LIVE` | — |
 | `/api/user/tournament-checkin` | POST | Check-in QR en torneo live | — |
 | `/api/user/stream-token` | POST | Token CF Stream (legacy `academia_content`) — IP bound | — |
 | `/api/user/course-intro-token` | POST | Token CF Stream para video intro autenticado — IP bound | — |

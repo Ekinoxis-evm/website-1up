@@ -58,6 +58,7 @@ const GROUPS: NavGroup[] = [
     icon: "settings",
     items: [
       { href: "/admin/user-profiles", icon: "people",               label: "Usuarios"     },
+      { href: "/admin/payment-methods",icon: "payments",            label: "Métodos de Pago" },
       { href: "/admin/referral-codes",icon: "confirmation_number",  label: "Referidos"    },
       { href: "/admin/submissions",   icon: "inbox",                label: "Solicitudes"  },
       { href: "/admin/users",         icon: "admin_panel_settings", label: "Admins"       },
