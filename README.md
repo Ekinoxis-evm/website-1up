@@ -131,6 +131,13 @@ ADMIN_EMAILS=                 # Comma-separated root admin emails
 MERCADOPAGO_ACCESS_TOKEN=
 MERCADOPAGO_WEBHOOK_SECRET=
 
+# Card / Apple Pay (Stripe) — RESERVED, design-only until card goes live (v2.42.0-data).
+# With PAYMENTS_CARD_LIVE unset/false, card never appears to users and no webhook acts.
+PAYMENTS_CARD_LIVE=                # "true" to flip card on (kill-switch)
+STRIPE_SECRET_KEY=                 # not used until card is live
+STRIPE_WEBHOOK_SECRET=             # not used until card is live
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
 # Subdomains
 NEXT_PUBLIC_BASE_URL=https://1upesports.org
 NEXT_PUBLIC_APP_URL=https://app.1upesports.org
@@ -333,6 +340,8 @@ npm run dev
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
 | `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url, **pass_order_id** (legacy v2.37.0 link), **pass_id** (FK → `passes` — the claimable pass issued as a prize, partial UNIQUE for idempotency, v2.39.0). UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
+| `payment_events` | **Unified payment ledger (v2.42.0-data)** — one row per payment, polymorphically linked to any order via `(order_kind, order_id)` (no FK). `method` (`token`/`wire`/`cash`/`card`), `amount_cop` **xor** `amount_tokens`, `status` (`pending`/`confirmed`/`rejected`/`cancelled`), method refs (`tx_hash`, `comprobante_url`, `recorded_by_admin`+`reason` for cash, reserved `stripe_*`). Global UNIQUE `lower(tx_hash)` (cross-kind replay block). Written by the `apply_payment_event()` RPC (advisory-lock serialized, single-confirmed invariant, returns `became_paid`). Not yet read/written by routes — Phase 1 spine |
+| `service_payment_methods` | Per-service enabled-methods config (v2.42.0-data) — `service` (`order_kind` PK), `token_enabled`/`wire_enabled`/`cash_enabled`/`card_enabled`. Admin-editable; card stays hidden until `PAYMENTS_CARD_LIVE` |
 
 ---
 
