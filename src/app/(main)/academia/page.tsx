@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { HeroAcademia } from "@/components/academia/HeroAcademia";
 import { CourseCatalog } from "@/components/academia/CourseCatalog";
 import { LearningPath } from "@/components/academia/LearningPath";
@@ -29,12 +29,16 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function AcademiaPage() {
-  const [{ data: allCourses }, { data: siteImage }, { data: masters }, { data: masterCourses }] = await Promise.all([
+  const [{ data: allCourses }, { data: siteImage }, { data: masters }, { data: masterCourses }, { data: methodCfg }] = await Promise.all([
     supabase.from("courses").select("*").eq("is_active", true).order("category").order("sort_order"),
     supabase.from("site_content").select("key, image_url, updated_at").eq("key", "learning_path").single(),
     supabase.from("masters").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("courses").select("id, name, category, master_id").eq("is_active", true),
+    // service_payment_methods is RLS deny-all — read it with the service-role client.
+    supabaseAdmin.from("service_payment_methods").select("cash_enabled").eq("service", "enrollment").maybeSingle(),
   ]);
+
+  const cashEnabled = !!methodCfg?.cash_enabled;
 
   const masterList = (masters ?? []) as Master[];
   const masterMinis = masterList.map((m) => ({ id: m.id, name: m.name, photo_url: m.photo_url }));
@@ -50,7 +54,7 @@ export default async function AcademiaPage() {
   return (
     <>
       <HeroAcademia />
-      <CourseCatalog courses={allCourses ?? []} masters={masterMinis} />
+      <CourseCatalog courses={allCourses ?? []} masters={masterMinis} cashEnabled={cashEnabled} />
       <LearningPath imageUrl={siteImage?.image_url} updatedAt={siteImage?.updated_at} />
 
       {/* Masters heading */}

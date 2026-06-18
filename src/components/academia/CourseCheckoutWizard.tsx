@@ -27,14 +27,16 @@ type BankAccount = {
   instructions: string | null;
 };
 
-type Method = "token" | "bank";
+type Method = "token" | "bank" | "cash";
 type Phase = "method" | "token_pay" | "token_sending" | "token_confirming" | "token_registering" |
-             "bank_select" | "bank_pay" | "bank_uploading" | "bank_submitting" | "success" | "error";
+             "bank_select" | "bank_pay" | "bank_uploading" | "bank_submitting" |
+             "cash_confirm" | "cash_submitting" | "success" | "error";
 
 interface Props {
   course:        Course;
   walletAddress: string | null;
   recipientAddress: string | null;
+  cashEnabled?:  boolean;
   getAccessToken: () => Promise<string | null>;
   onClose:        () => void;
 }
@@ -42,7 +44,7 @@ interface Props {
 const BASESCAN = "https://basescan.org/tx/";
 
 export function CourseCheckoutWizard({
-  course, walletAddress, recipientAddress, getAccessToken, onClose,
+  course, walletAddress, recipientAddress, cashEnabled = false, getAccessToken, onClose,
 }: Props) {
   const { sendTransaction } = useSendTransaction();
 
@@ -245,12 +247,37 @@ export function CourseCheckoutWizard({
     setPhase("success");
   }
 
+  // ── CASH ──────────────────────────────────────────────────────
+  // No tx, no comprobante — just create the pending enrollment. The admin
+  // confirms receipt in person and approves with a mandatory note.
+  async function submitCash() {
+    setPhase("cash_submitting"); setErrorMsg("");
+    const res = await fetch("/api/user/course-orders", {
+      method:  "POST",
+      headers: await authHeaders(),
+      body: JSON.stringify({ courseId: course.id, paymentMethod: "cash" }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setErrorMsg(
+        data.reason === "method_unavailable"
+          ? "Este curso no acepta pago en efectivo."
+          : (data.error ?? "Error al crear la inscripción."),
+      );
+      setPhase("error");
+      return;
+    }
+    setEnrollmentId(data.enrollmentId);
+    setPhase("success");
+  }
+
   // ── render ────────────────────────────────────────────────────
   const tokenAvailable  = !!(course.price_token && walletAddress && recipientAddress);
   const priceCop        = course.price_cop ?? 0;
+  const cashAvailable   = cashEnabled && priceCop > 0;
 
   // Close X disabled during processing
-  const allowClose = ["method", "bank_select", "bank_pay", "success", "error"].includes(phase);
+  const allowClose = ["method", "bank_select", "bank_pay", "cash_confirm", "success", "error"].includes(phase);
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
@@ -311,6 +338,24 @@ export function CourseCheckoutWizard({
                   Transfiere a una cuenta 1UP y sube el comprobante. Revisamos en máx. 24h.
                 </p>
               </button>
+
+              {cashAvailable && (
+                <button
+                  onClick={() => { setMethod("cash"); setPhase("cash_confirm"); }}
+                  className="w-full bg-surface-container-low p-5 text-left hover:bg-surface-container-high transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-headline font-black text-base uppercase flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary-container">payments</span>
+                      EFECTIVO
+                    </span>
+                    <span className="font-headline font-black text-primary text-lg">{formatCop(priceCop)}</span>
+                  </div>
+                  <p className="font-body text-xs text-on-surface/50">
+                    Paga en persona en 1UP Gaming Tower — el equipo confirma tu inscripción.
+                  </p>
+                </button>
+              )}
             </div>
           )}
 
@@ -516,6 +561,48 @@ export function CourseCheckoutWizard({
             </div>
           )}
 
+          {/* CASH CONFIRM */}
+          {(phase === "cash_confirm" || phase === "cash_submitting") && (
+            <div className="space-y-5">
+              <div className="bg-surface-container-low p-4 flex justify-between items-center">
+                <span className="font-headline text-xs uppercase tracking-widest text-outline">Inscripción</span>
+                <span className="font-headline font-black text-lg text-tertiary">{formatCop(priceCop)}</span>
+              </div>
+
+              <div className="bg-surface-container-low p-5 flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary-container text-3xl shrink-0">payments</span>
+                <p className="font-body text-sm text-on-surface/80 leading-relaxed">
+                  Paga en efectivo en 1UP Gaming Tower. Al registrar tu inscripción, el equipo
+                  confirmará tu acceso al curso cuando recibas el pago en persona.
+                </p>
+              </div>
+
+              <div className="bg-secondary-container/10 p-4">
+                <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-secondary mb-1">Importante</p>
+                <p className="font-body text-xs text-on-surface/70 leading-relaxed">
+                  Tu inscripción queda en revisión hasta que el equipo confirme el pago.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={submitCash}
+                  disabled={phase === "cash_submitting"}
+                  className="flex-1 bg-tertiary text-background font-headline font-black uppercase py-3 disabled:opacity-40"
+                >
+                  {phase === "cash_submitting" ? "REGISTRANDO…" : "REGISTRAR INSCRIPCIÓN"}
+                </button>
+                <button
+                  onClick={() => setPhase("method")}
+                  disabled={phase === "cash_submitting"}
+                  className="flex-1 bg-surface-container-highest font-headline font-black py-3 disabled:opacity-40"
+                >
+                  ATRÁS
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* SUCCESS */}
           {phase === "success" && (
             <div className="space-y-6">
@@ -561,7 +648,7 @@ export function CourseCheckoutWizard({
                     )}
                   </>
                 )}
-                {method === "bank" && (
+                {(method === "bank" || method === "cash") && (
                   <>
                     <div className="flex justify-between">
                       <span className="font-headline text-xs uppercase tracking-widest text-outline">Monto</span>
@@ -578,6 +665,11 @@ export function CourseCheckoutWizard({
               {method === "bank" && (
                 <p className="font-body text-xs text-on-surface/50 text-center">
                   El equipo revisará tu comprobante y confirmará tu inscripción en máx. 24h.
+                </p>
+              )}
+              {method === "cash" && (
+                <p className="font-body text-xs text-on-surface/50 text-center">
+                  Paga en persona en 1UP Gaming Tower. El equipo confirmará tu inscripción al recibir el pago.
                 </p>
               )}
 

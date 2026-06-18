@@ -49,10 +49,11 @@ const METHOD_STYLE: Record<string, { bg: string; label: string }> = {
   mercadopago: { bg: "bg-secondary-container/40 text-secondary", label: "MercadoPago" },
   token:       { bg: "bg-tertiary/20 text-tertiary",             label: "$1UP Token"  },
   bank:        { bg: "bg-primary-container/20 text-primary",     label: "Banco"       },
+  cash:        { bg: "bg-primary-container/20 text-primary",     label: "Efectivo"    },
 };
 
 const STATUS_FILTERS  = ["Todos", "approved", "pending", "rejected", "cancelled"] as const;
-const METHOD_FILTERS  = ["Todos", "mercadopago", "token", "bank"] as const;
+const METHOD_FILTERS  = ["Todos", "mercadopago", "token", "bank", "cash"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type MethodFilter = (typeof METHOD_FILTERS)[number];
 
@@ -70,6 +71,7 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
   const [actionId, setActionId]         = useState<number | null>(null);
   const [approvedTxHash, setApprovedTxHash] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [cashNote, setCashNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
@@ -87,6 +89,7 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
     setActionId(actionId === e.id ? null : e.id);
     setApprovedTxHash("");
     setRejectionReason("");
+    setCashNote("");
     setErr("");
   }
 
@@ -101,6 +104,7 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
         action,
         approvedTxHash:  approvedTxHash.trim() || undefined,
         rejectionReason: rejectionReason.trim() || undefined,
+        note:            cashNote.trim() || undefined,
       }),
     });
     setSaving(false);
@@ -112,6 +116,7 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
     setActionId(null);
     setApprovedTxHash("");
     setRejectionReason("");
+    setCashNote("");
     router.refresh();
   }
 
@@ -198,8 +203,9 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
                 ? ([u.nombre, u.apellidos].filter(Boolean).join(" ").trim() || u.email || `#${e.id}`)
                 : `#${e.id}`;
               const canReview =
-                (e.payment_method === "token" || e.payment_method === "bank") &&
+                (e.payment_method === "token" || e.payment_method === "bank" || e.payment_method === "cash") &&
                 e.payment_status === "pending";
+              const isCash = e.payment_method === "cash";
               const isOpen = actionId === e.id;
 
               return (
@@ -281,6 +287,8 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
                         </a>
                       ) : e.payment_method === "mercadopago" && e.mp_payment_id ? (
                         <span className="font-mono text-[10px] text-outline">MP #{e.mp_payment_id}</span>
+                      ) : e.payment_method === "cash" ? (
+                        <span className="font-body text-[10px] text-outline italic">sin comprobante</span>
                       ) : (
                         <span className="text-outline text-xs">—</span>
                       )}
@@ -335,6 +343,19 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
                               />
                             </div>
                           )}
+                          {isCash && (
+                            <div className="flex-1 min-w-[200px]">
+                              <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">
+                                Nota de confirmación <span className="font-normal normal-case text-outline/50">(obligatoria para aprobar)</span>
+                              </label>
+                              <input
+                                value={cashNote}
+                                onChange={(ev) => setCashNote(ev.target.value)}
+                                placeholder="Ej: Efectivo recibido en taquilla…"
+                                className="w-full bg-surface-container-lowest p-2.5 font-body text-sm border-none focus:outline-none"
+                              />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-[200px]">
                             <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">
                               Motivo de rechazo <span className="font-normal normal-case text-outline/50">(solo si rechazas)</span>
@@ -350,7 +371,7 @@ export function AdminEnrollmentsClient({ enrollments }: Props) {
                             {err && <p className="w-full font-body text-xs text-error">{err}</p>}
                             <button
                               onClick={() => doAction(e.id, "approve")}
-                              disabled={saving}
+                              disabled={saving || (isCash && !cashNote.trim())}
                               className="bg-tertiary text-white font-headline font-black text-xs uppercase px-5 py-2.5 disabled:opacity-50 flex items-center gap-1"
                             >
                               <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>

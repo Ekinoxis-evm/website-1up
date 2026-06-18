@@ -13,6 +13,7 @@ type MasterSummary = { id: number; name: string; photo_url: string | null };
 interface Props {
   courses: Course[];
   masters: MasterSummary[];
+  cashEnabled?: boolean;
 }
 
 const CATEGORIES = ["All", "Performance", "Technology", "Gaming"] as const;
@@ -24,7 +25,7 @@ const CAT_STYLE: Record<string, { badge: string; border: string }> = {
   Gaming:      { badge: "bg-primary-container text-white",     border: "border-primary-container"  },
 };
 
-export function CourseCatalog({ courses, masters }: Props) {
+export function CourseCatalog({ courses, masters, cashEnabled = false }: Props) {
   const [active, setActive] = useState<Cat>("All");
   const [activeMaster, setActiveMaster] = useState<number | "all">("all");
   const { ready, authenticated, login, getAccessToken } = usePrivy();
@@ -281,6 +282,7 @@ export function CourseCatalog({ courses, masters }: Props) {
           course={checkoutCourse}
           walletAddress={walletAddress}
           recipientAddress={recipientAddress}
+          cashEnabled={cashEnabled}
           getAccessToken={getAccessToken}
           onClose={() => setCheckoutCourse(null)}
         />

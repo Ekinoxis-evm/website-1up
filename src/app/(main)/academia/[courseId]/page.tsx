@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { CoursePreview } from "@/components/academia/CoursePreview";
 
 interface Props {
@@ -90,6 +90,14 @@ export default async function CoursePreviewPage({ params }: Props) {
     masterPhoto = master?.photo_url ?? null;
   }
 
+  // service_payment_methods is RLS deny-all — read it with the service-role client.
+  const { data: methodCfg } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("cash_enabled")
+    .eq("service", "enrollment")
+    .maybeSingle();
+  const cashEnabled = !!methodCfg?.cash_enabled;
+
   return (
     <CoursePreview
       course={course}
@@ -97,6 +105,7 @@ export default async function CoursePreviewPage({ params }: Props) {
       sessions={sessions}
       masterName={masterName}
       masterPhoto={masterPhoto}
+      cashEnabled={cashEnabled}
     />
   );
 }
