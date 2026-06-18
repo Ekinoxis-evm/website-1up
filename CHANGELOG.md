@@ -16,7 +16,9 @@ read/write entry orders). `tournament_entry_orders` shipped that way in **v2.41.
 live in production**. Fix: `ENABLE ROW LEVEL SECURITY` with **no policies** — the project's
 standard deny-all pattern (service-role `supabaseAdmin` bypasses RLS; every route already uses
 it). **Applied live via the Supabase MCP, so the production exposure is already closed**, then
-committed as `20260618010000_payments_enable_rls.sql`. The public tournament detail page's lone
+committed as `20260618010000_payments_enable_rls.sql` + `20260618020000_passes_enable_rls.sql`
+(a schema sweep also caught the **`passes`** asset table, v2.38.0, exposed the same way — fixed;
+**no public-schema table now has RLS disabled**). The public tournament detail page's lone
 anon read of `service_payment_methods` was switched to `supabaseAdmin` (Server Component, safe).
 
 ### Added — cash payment method on tournament entry (Phase 2b)
