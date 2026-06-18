@@ -77,8 +77,10 @@ tables exposed to the anon key.
   hardening on the payment tables.
 - **v2.44.0** (shipped) — **cash** on **academia courses** (`src/lib/courseEnrollment.ts`; same
   pattern; fulfillment = `payment_status` → `approved`).
-- **next** — cash on **$1UP purchases** (`token_purchase_orders` — approval still requires an admin
-  on-chain send), then **1UP Pass** (COP = `price_token × 1.000`).
+- **v2.45.0** (shipped) — **cash** on **$1UP purchases** (`src/lib/tokenPurchase.ts`). Nuance:
+  fulfillment is the admin's on-chain $1UP send (`verifyTokenTransfer` + `approved_tx_hash`) — cash
+  only records the COP receipt; approve still requires the txHash.
+- **next** — **1UP Pass** cash (COP = `price_token × 1.000`), then the Stripe / Apple Pay track.
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.

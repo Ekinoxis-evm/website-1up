@@ -50,6 +50,7 @@ export async function PATCH(req: NextRequest) {
     txHash?: string;
     rejectionReason?: string;
     adminNotes?: string;
+    note?: string;
   };
 
   if (!body.id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
@@ -57,12 +58,23 @@ export async function PATCH(req: NextRequest) {
 
   const { data: order } = await supabaseAdmin
     .from("token_purchase_orders")
-    .select("id, status, email, wallet_address, token_amount, cop_amount, user_profile_id, user_profiles(nombre, apellidos, email)")
+    .select("id, status, email, wallet_address, token_amount, cop_amount, payment_method, bank_account_id, comprobante_url, user_profile_id, user_profiles(nombre, apellidos, email)")
     .eq("id", body.id)
     .single();
 
   if (!order) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
   if (order.status !== "pending") return NextResponse.json({ error: "Solo se pueden gestionar órdenes pendientes" }, { status: 409 });
+
+  // Cash is admin-attested: confirming it records a payment_events row whose
+  // CHECK requires a reason. Demand the note up front so we never half-confirm.
+  const isCash   = order.payment_method === "cash";
+  const cashNote = (body.note ?? body.adminNotes ?? "").trim();
+  if (body.action === "approve" && isCash && !cashNote) {
+    return NextResponse.json(
+      { error: "Indica una nota/motivo para confirmar el pago en efectivo (p. ej. recibido en taquilla)." },
+      { status: 400 },
+    );
+  }
 
   const profile = Array.isArray(order.user_profiles) ? order.user_profiles[0] : order.user_profiles;
   const userEmail = profile?.email ?? order.email ?? null;
@@ -136,6 +148,24 @@ export async function PATCH(req: NextRequest) {
         updated_at:       new Date().toISOString(),
       })
       .eq("id", body.id);
+
+    // Record the COP receipt in the unified ledger. The on-chain $1UP send above
+    // is the fulfillment; this is the money-in side. cash = admin-attested with
+    // the mandatory note; bank = best-effort wire write mirroring courses.
+    // Best-effort: the order is already the source of truth, so a ledger hiccup
+    // must not fail the approval — but log it. The single-confirmed invariant in
+    // the RPC still guards against duplicates.
+    const { error: ledgerErr } = await supabaseAdmin.rpc("apply_payment_event", {
+      p_order_kind:        "token_purchase",
+      p_order_id:          order.id,
+      p_method:            isCash ? "cash" : "wire",
+      p_amount_cop:        order.cop_amount ?? undefined,
+      p_bank_account_id:   isCash ? undefined : (order.bank_account_id ?? undefined),
+      p_comprobante_url:   isCash ? undefined : (order.comprobante_url ?? undefined),
+      p_recorded_by_admin: adminEmail,
+      p_reason:            isCash ? cashNote : "Transferencia aprobada por el equipo",
+    });
+    if (ledgerErr) console.error("apply_payment_event failed for token order", order.id, ledgerErr.message);
 
     if (userEmail) {
       sendTokenOrderApprovedEmail({

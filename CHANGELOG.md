@@ -5,6 +5,40 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.45.0] — 2026-06-18
+
+### Added — cash payment on $1UP purchases (Phase 2b rollout 3/3)
+
+Cash on `token_purchase_orders`. **Key difference from courses/tournaments:** a $1UP purchase is
+fulfilled by the admin **sending $1UP on-chain** (verified via `verifyTokenTransfer` +
+`approved_tx_hash`) — there is no auto-fulfillment. Cash only changes how the COP is collected:
+the user pays in person instead of a bank transfer, and on approval the admin **still sends the
+tokens + provides the txHash** and **also records the peso receipt** in the ledger with a
+mandatory note. The on-chain send/verify path is **unchanged**.
+
+- **Migration** (`20260618030000_token_purchase_payment_method.sql`, applied live) — adds
+  `token_purchase_orders.payment_method` (`'bank'`/`'cash'`, default `'bank'`) and makes
+  `comprobante_url` nullable, with a CHECK still requiring it for bank orders.
+- **`src/lib/tokenPurchase.ts`** (new, pure, +tests) — `tokenPurchaseCashAvailable` /
+  `canSelectTokenMethod` gating by the `service_payment_methods` (`service='token_purchase'`) toggle.
+- **User** — `/api/user/token-orders` cash branch (no comprobante, server-gated); `BuyTokensWizard`
+  "Efectivo" option (cash-enabled computed server-side via `supabaseAdmin`).
+- **Admin** — `/api/admin/token-orders` approve requires a `note` for cash; records the cash COP
+  receipt via `apply_payment_event` after the (unchanged) on-chain send. `AdminTokenOrdersClient`:
+  cash rows show "Efectivo" + "sin comprobante"; the approve modal collects BOTH the txHash and
+  the cash note.
+
+### Status — cash is now live-ready across all four paid services
+tournament entry (v2.43.0) · academia courses (v2.44.0) · **$1UP purchases (v2.45.0)** · and the
+admin **Métodos de Pago** page governs them all. **1UP Pass** cash is the last piece.
+
+### QA
+- **325 tests** (new `tokenPurchase.test.ts`); `npm run build` clean. RLS-safe throughout.
+
+> Next: 1UP Pass cash (COP = `price_token × 1.000`). Then the Stripe / Apple Pay track.
+
+---
+
 ## [2.44.0] — 2026-06-18
 
 ### Added — cash payment on academia courses (Phase 2b rollout 2/3)

@@ -59,6 +59,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes]     = useState("");
+  const [cashNote, setCashNote]         = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
   const [actionError, setActionError]   = useState<string | null>(null);
   const [lightbox, setLightbox]         = useState<string | null>(null);
@@ -77,6 +78,11 @@ export function AdminTokenOrdersClient({ orders }: Props) {
 
   async function handleSendApprove() {
     if (!approveModal) return;
+    const isCash = approveModal.payment_method === "cash";
+    if (isCash && !cashNote.trim()) {
+      setActionError("Indica una nota de confirmación del pago en efectivo (p. ej. recibido en taquilla).");
+      return;
+    }
     const walletAddr = selectedWalletAddress || wallets[0]?.address;
     if (!walletAddr) { setActionError("Conecta una wallet primero."); return; }
 
@@ -116,7 +122,13 @@ export function AdminTokenOrdersClient({ orders }: Props) {
     const res = await fetch("/api/admin/token-orders", {
       method: "PATCH",
       headers: await authHeaders(),
-      body: JSON.stringify({ id: approveModal.id, action: "approve", txHash: hash, adminNotes: adminNotes.trim() }),
+      body: JSON.stringify({
+        id: approveModal.id,
+        action: "approve",
+        txHash: hash,
+        adminNotes: adminNotes.trim(),
+        ...(approveModal.payment_method === "cash" ? { note: cashNote.trim() } : {}),
+      }),
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -127,7 +139,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
     setSendStep("done");
     setTimeout(() => {
       setApproveModal(null); setSendStep("idle"); setCapturedHash(null);
-      setAdminNotes(""); setSelectedWalletAddress(""); setActionError(null);
+      setAdminNotes(""); setCashNote(""); setSelectedWalletAddress(""); setActionError(null);
       router.refresh();
     }, 2000);
   }
@@ -245,7 +257,9 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   {parseFloat(String(order.token_amount ?? 0)).toLocaleString()}
                 </td>
                 <td className="px-4 py-3">
-                  {order.bank_accounts ? (
+                  {order.payment_method === "cash" ? (
+                    <span className="bg-tertiary/15 text-tertiary font-headline font-bold text-[10px] uppercase px-2 py-1">Efectivo</span>
+                  ) : order.bank_accounts ? (
                     <div>
                       <p className="font-headline text-xs text-on-surface">{order.bank_accounts.bank_name}</p>
                       <p className="font-body text-[10px] text-on-surface/40">{order.bank_accounts.account_type}</p>
@@ -255,7 +269,9 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {order.comprobante_url ? (
+                  {order.payment_method === "cash" ? (
+                    <span className="font-body text-[10px] text-on-surface/40 uppercase">sin comprobante</span>
+                  ) : order.comprobante_url ? (
                     <button
                       onClick={() => setLightbox(order.comprobante_url!)}
                       className="w-12 h-12 overflow-hidden bg-surface-container-highest flex items-center justify-center group"
@@ -295,7 +311,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   {order.status === "pending" && (
                     <div className="flex gap-1.5">
                       <button
-                        onClick={() => { setApproveModal(order); setSendStep("idle"); setCapturedHash(null); setAdminNotes(""); setSelectedWalletAddress(wallets[0]?.address ?? ""); setActionError(null); }}
+                        onClick={() => { setApproveModal(order); setSendStep("idle"); setCapturedHash(null); setAdminNotes(""); setCashNote(""); setSelectedWalletAddress(wallets[0]?.address ?? ""); setActionError(null); }}
                         className="bg-tertiary/20 text-tertiary font-headline font-bold text-[10px] uppercase px-3 py-1.5 hover:bg-tertiary/30 transition-colors"
                       >
                         APROBAR
@@ -413,6 +429,24 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   </div>
                 )}
 
+                {/* Cash confirmation note — required for cash orders, recorded in the ledger */}
+                {approveModal.payment_method === "cash" && (
+                  <div className="bg-tertiary/10 p-3">
+                    <label className="block font-headline text-xs uppercase tracking-widest text-tertiary mb-1">
+                      Confirmación de pago en efectivo *
+                    </label>
+                    <textarea
+                      value={cashNote} onChange={(e) => setCashNote(e.target.value)}
+                      rows={2}
+                      placeholder="Recibido en taquilla / caja 1UP — $X COP"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none"
+                    />
+                    <p className="font-body text-[10px] text-on-surface/40 mt-1">
+                      Esta nota queda registrada como comprobante del cobro en efectivo.
+                    </p>
+                  </div>
+                )}
+
                 {/* Admin notes */}
                 <div>
                   <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">Notas (opcional)</label>
@@ -442,7 +476,7 @@ export function AdminTokenOrdersClient({ orders }: Props) {
                   ) : sendStep === "sending" ? "AGUARDA EN TU WALLET..." : "ESPERANDO CONFIRMACIÓN..."}
                 </button>
                 <button
-                  onClick={() => { setApproveModal(null); setSendStep("idle"); setCapturedHash(null); setActionError(null); }}
+                  onClick={() => { setApproveModal(null); setSendStep("idle"); setCapturedHash(null); setCashNote(""); setActionError(null); }}
                   disabled={sendStep !== "idle"}
                   className="flex-1 bg-surface-container-highest font-headline font-black py-3 disabled:opacity-40"
                 >
