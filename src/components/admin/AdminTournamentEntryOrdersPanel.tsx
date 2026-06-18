@@ -37,6 +37,12 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   cancelled:    { label: "Cancelada",  cls: "bg-outline/10 text-outline" },
 };
 
+function methodLabel(method: string): string {
+  if (method === "token") return "$1UP";
+  if (method === "cash") return "Efectivo";
+  return "Transferencia";
+}
+
 function orderUserName(o: EntryOrderRow): string {
   const p = o.user_profiles;
   if (!p) return `Perfil #${o.user_profile_id}`;
@@ -65,20 +71,26 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [rejectingId, setRejectingId]     = useState<number | null>(null);
   const [rejectReason, setRejectReason]   = useState("");
+  const [cashApprovingId, setCashApprovingId] = useState<number | null>(null);
+  const [cashNote, setCashNote]           = useState("");
 
   const hasFee = (entryFeeTokens ?? 0) > 0 || (entryFeeCop ?? 0) > 0;
   const pending     = orders.filter((o) => o.status === "pending_bank");
   const confirmed   = orders.filter((o) => o.status === "confirmed");
   const unlinked    = confirmed.filter((o) => o.registration_id == null);
 
-  async function review(id: number, action: "approve" | "reject", rejectionReason?: string) {
+  async function review(
+    id: number,
+    action: "approve" | "reject",
+    opts?: { rejectionReason?: string; note?: string },
+  ) {
     setActionLoading(id);
     try {
       const token = await getAccessToken();
       const res = await fetch("/api/admin/tournament-entry-orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id, action, rejectionReason }),
+        body: JSON.stringify({ id, action, rejectionReason: opts?.rejectionReason, note: opts?.note }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -88,10 +100,21 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
       showSuccess(action === "approve" ? "Pago aprobado — jugador inscrito." : "Orden rechazada.");
       setRejectingId(null);
       setRejectReason("");
+      setCashApprovingId(null);
+      setCashNote("");
       onChange();
     } finally {
       setActionLoading(null);
     }
+  }
+
+  function approveCash(id: number) {
+    const note = cashNote.trim();
+    if (!note) {
+      showError("Escribe una nota de confirmación para aprobar un pago en efectivo.");
+      return;
+    }
+    review(id, "approve", { note });
   }
 
   return (
@@ -133,6 +156,7 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
           {orders.map((o) => {
             const pill = STATUS_PILL[o.status] ?? { label: o.status, cls: "bg-outline/10 text-outline" };
             const isPending = o.status === "pending_bank";
+            const isCash    = o.payment_method === "cash";
             const noSlot    = o.status === "confirmed" && o.registration_id == null;
             return (
               <div key={o.id} className="bg-surface-container p-4 space-y-3">
@@ -145,7 +169,7 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container-high text-on-surface">
-                      {o.payment_method === "token" ? "$1UP" : "Banco"}
+                      {methodLabel(o.payment_method)}
                     </span>
                     <span className="font-headline font-bold text-sm">{fmtAmount(o)}</span>
                     <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 ${pill.cls}`}>
@@ -182,6 +206,12 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
                       Ver comprobante
                     </a>
                   )}
+                  {isCash && !o.comprobante_url && (
+                    <span className="font-body text-xs text-outline flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">payments</span>
+                      Sin comprobante — pago en efectivo, confirma al recibir
+                    </span>
+                  )}
                   {o.rejection_reason && (
                     <span className="font-body text-xs text-error">Motivo: {o.rejection_reason}</span>
                   )}
@@ -196,10 +226,13 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
                   <img src={o.comprobante_url} alt="Comprobante" className="max-h-48 object-contain bg-surface-container-lowest" />
                 )}
 
-                {isPending && rejectingId !== o.id && (
+                {isPending && rejectingId !== o.id && cashApprovingId !== o.id && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => review(o.id, "approve")}
+                      onClick={() => {
+                        if (isCash) { setCashApprovingId(o.id); setCashNote(""); }
+                        else review(o.id, "approve");
+                      }}
                       disabled={actionLoading === o.id}
                       className="bg-tertiary text-background font-headline font-black text-xs uppercase tracking-tight px-4 py-2 disabled:opacity-40"
                     >
@@ -215,6 +248,36 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
                   </div>
                 )}
 
+                {isPending && isCash && cashApprovingId === o.id && (
+                  <div className="space-y-2">
+                    <p className="font-headline font-bold text-[10px] uppercase tracking-widest text-outline">
+                      Nota de confirmación (efectivo)
+                    </p>
+                    <input
+                      value={cashNote}
+                      onChange={(e) => setCashNote(e.target.value)}
+                      placeholder="Recibido en taquilla — efectivo"
+                      className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => approveCash(o.id)}
+                        disabled={actionLoading === o.id}
+                        className="bg-tertiary text-background font-headline font-black text-xs uppercase tracking-tight px-4 py-2 disabled:opacity-40"
+                      >
+                        {actionLoading === o.id ? "PROCESANDO…" : "CONFIRMAR E INSCRIBIR"}
+                      </button>
+                      <button
+                        onClick={() => { setCashApprovingId(null); setCashNote(""); }}
+                        disabled={actionLoading === o.id}
+                        className="bg-surface-container-high font-headline font-black text-xs uppercase tracking-tight px-4 py-2 disabled:opacity-40"
+                      >
+                        VOLVER
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {isPending && rejectingId === o.id && (
                   <div className="space-y-2">
                     <input
@@ -225,7 +288,7 @@ export function AdminTournamentEntryOrdersPanel({ orders, tournamentName, entryF
                     />
                     <div className="flex gap-2">
                       <button
-                        onClick={() => review(o.id, "reject", rejectReason)}
+                        onClick={() => review(o.id, "reject", { rejectionReason: rejectReason })}
                         disabled={actionLoading === o.id}
                         className="bg-error text-white font-headline font-black text-xs uppercase tracking-tight px-4 py-2 disabled:opacity-40"
                       >

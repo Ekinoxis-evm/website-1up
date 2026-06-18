@@ -63,10 +63,19 @@ replay), `not_found`/`order_mismatch`/`not_pending` (bad `p_event_id`).
   reservation TTL + an admin reconciliation panel + server-quoted token tranches. Do NOT bolt on
   partial payments without that whole scope.
 
+## Security
+`payment_events`, `service_payment_methods`, and the order tables are **RLS-on with no policies**
+(deny-all) — touched ONLY via the service-role client. Never read them with the anon `supabase`
+client (even in a Server Component, use `supabaseAdmin`). v2.43.0 enabled RLS after finding these
+tables exposed to the anon key.
+
 ## Rollout state
 - **v2.42.0-data** (shipped) — schema + RPC + `methodRegistry`/`paymentEvents` + tests.
-- **v2.42.0** (in progress) — token/wire/cash live through the RPC + cash admin UI + method-config
-  page, proved on tournament entry first, then pass / courses / token-purchase.
+- **v2.42.0** (shipped) — admin Métodos de Pago config page + `orderKind`.
+- **v2.43.0** (shipped) — **cash** method live on **tournament entry** (user-selected →
+  admin-approved with a note → `apply_payment_event` → register). Methods now gated by the
+  per-service config. RLS hardening on the payment tables.
+- **next** — replicate cash + ledger to pass / academia courses / token-purchase.
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.

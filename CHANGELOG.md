@@ -5,6 +5,55 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.43.0] — 2026-06-18
+
+### Security — RLS enabled on the payment tables (applied live immediately)
+
+`payment_events`, `service_payment_methods`, and **`tournament_entry_orders`** were created
+with **RLS disabled** while the `anon` role held SELECT/UPDATE grants — exposing them through
+the public PostgREST/anon key (read the financial ledger, tamper the per-service method config,
+read/write entry orders). `tournament_entry_orders` shipped that way in **v2.41.0 (#54) and was
+live in production**. Fix: `ENABLE ROW LEVEL SECURITY` with **no policies** — the project's
+standard deny-all pattern (service-role `supabaseAdmin` bypasses RLS; every route already uses
+it). **Applied live via the Supabase MCP, so the production exposure is already closed**, then
+committed as `20260618010000_payments_enable_rls.sql`. The public tournament detail page's lone
+anon read of `service_payment_methods` was switched to `supabaseAdmin` (Server Component, safe).
+
+### Added — cash payment method on tournament entry (Phase 2b)
+
+Cash reuses the manual-review path, consistent with how wire works: **the user selects it, the
+order lands `pending_bank`, and an admin confirms receipt with a mandatory note** (no uploaded
+proof — the admin attests). The confirmed cash payment is recorded in the unified ledger via
+`apply_payment_event`.
+
+- **Migration** `20260618000000_tournament_entry_allow_cash.sql` (applied live) — relaxes the
+  `tournament_entry_orders.payment_method` CHECK to allow `'cash'`.
+- **Service-config gating** — methods are now gated by BOTH the per-tournament fee unit AND the
+  admin's `service_payment_methods` toggles (`availableEntryMethods` in `tournamentEntry.ts`).
+  Defaults are token+wire on, so live behavior is unchanged; the Métodos de Pago page now
+  genuinely governs tournament entry. card excluded until Stripe is live.
+- **User flow** — `TournamentEntryWizard` shows an **"Efectivo"** option when the tournament
+  has a COP fee and cash is enabled; selecting it `POST`s `{ paymentMethod: "cash" }` (no tx, no
+  comprobante) → `pending_bank` → a cash-specific "PAGO EN REVISIÓN" state. Detail page computes
+  `cashEnabled` server-side.
+- **Admin flow** — `AdminTournamentEntryOrdersPanel`: cash rows show an "Efectivo" chip + a
+  "sin comprobante" note; **approving a cash order requires a confirmation note** (e.g. "recibido
+  en taquilla"), enforced client- and server-side. Approve runs `register_for_tournament` then
+  records the cash payment via `apply_payment_event` (`recorded_by_admin` + reason). Wire
+  approvals now also write the ledger.
+
+### QA
+- **Tier-1 (live SQL):** RLS confirmed enabled on the three tables; the v2.42.0-data RPC test
+  already covers `apply_payment_event`.
+- **Tier-2:** `tournamentEntry.test.ts` extended (cash gating, `availableEntryMethods`, cash
+  review) — **301 tests**, `npm run build` clean.
+
+> Next (remaining Phase 2b): replicate cash + the ledger to pass / academia courses /
+> token-purchase. Stripe (card / Apple Pay) is a later track — review Stripe docs + stand up the
+> Stripe MCP against the account before enabling.
+
+---
+
 ## [2.42.0] — 2026-06-18
 
 ### Added — admin "Métodos de Pago" config + payments foundation (Phase 2a)

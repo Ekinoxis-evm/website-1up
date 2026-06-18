@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { moveComprobanteToOrder } from "@/lib/blob";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
 import { rateLimitByUser, limiters } from "@/lib/rateLimit";
-import { canCreateEntryOrder, tournamentEntryFee, paidRegistrationFailureMessage, isValidTreasuryAddress } from "@/lib/tournamentEntry";
+import { canCreateEntryOrder, tournamentEntryFee, paidRegistrationFailureMessage, isValidTreasuryAddress, DEFAULT_ENTRY_METHOD_FLAGS, type ServiceMethodFlags } from "@/lib/tournamentEntry";
 import { sendTournamentRegistrationEmail, sendTournamentEntryTokenAdminEmail, sendTournamentEntryBankEmails } from "@/lib/email";
 import { buildGoogleCalendarUrl } from "@/lib/calendar";
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (!Number.isFinite(tournamentId) || tournamentId <= 0) {
     return NextResponse.json({ error: "tournamentId inválido." }, { status: 400 });
   }
-  const method = paymentMethod === "bank" ? "bank" : "token";
+  const method = paymentMethod === "bank" ? "bank" : paymentMethod === "cash" ? "cash" : "token";
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
@@ -90,7 +90,16 @@ export async function POST(req: NextRequest) {
     .eq("id", tournamentId)
     .maybeSingle();
 
-  const gate = canCreateEntryOrder(tournament, method);
+  // Which methods this service accepts is admin-configurable; default to today's
+  // live behavior (token + wire) if the config row is somehow absent.
+  const { data: cfgRow } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("token_enabled, wire_enabled, cash_enabled, card_enabled")
+    .eq("service", "tournament_entry")
+    .maybeSingle();
+  const cfg: ServiceMethodFlags = cfgRow ?? DEFAULT_ENTRY_METHOD_FLAGS;
+
+  const gate = canCreateEntryOrder(tournament, method, cfg);
   if (!gate.ok) return NextResponse.json({ error: gate.error, reason: gate.reason }, { status: gate.status });
   const fee = tournamentEntryFee(tournament!)!;
 
@@ -120,6 +129,19 @@ export async function POST(req: NextRequest) {
       ? "Ya tienes un pago en revisión para este torneo. Espera la aprobación del equipo."
       : "Ya tienes un pago confirmado para este torneo.";
     return NextResponse.json({ error: msg, reason: "order_in_flight" }, { status: 409 });
+  }
+
+  if (method === "cash") {
+    return handleCashEntry({
+      privyUserId:    claims.userId,
+      userProfileId:  profile.id,
+      userName:       profile.nombre ?? "Jugador",
+      userEmail:      profile.email ?? null,
+      tournamentId,
+      tournamentName: tournament!.name,
+      tournamentSlug: tournament!.slug ?? String(tournamentId),
+      amountCop:      fee.cop!,
+    });
   }
 
   if (method === "bank") {
@@ -360,4 +382,60 @@ async function handleBankEntry(opts: {
   }
 
   return NextResponse.json({ id: inserted.id, status: "pending_bank" }, { status: 201 });
+}
+
+// Cash entry: the user commits to paying in person; the order lands pending_bank
+// (no comprobante) and an admin confirms receipt at the venue. Mirrors the bank
+// path minus the upload — the admin's approval is the attestation.
+async function handleCashEntry(opts: {
+  privyUserId:    string;
+  userProfileId:  number;
+  userName:       string;
+  userEmail:      string | null;
+  tournamentId:   number;
+  tournamentName: string;
+  tournamentSlug: string;
+  amountCop:      number;
+}): Promise<NextResponse> {
+  const {
+    privyUserId, userProfileId, userName, userEmail,
+    tournamentId, tournamentName, tournamentSlug, amountCop,
+  } = opts;
+
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("tournament_entry_orders")
+    .insert({
+      tournament_id:   tournamentId,
+      user_profile_id: userProfileId,
+      privy_user_id:   privyUserId,
+      payment_method:  "cash",
+      amount_cop:      amountCop,
+      status:          "pending_bank",
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      return NextResponse.json({ error: "Ya tienes un pago en curso para este torneo." }, { status: 409 });
+    }
+    return NextResponse.json({ error: insertErr.message }, { status: 500 });
+  }
+
+  revalidateEntryPaths();
+
+  if (userEmail) {
+    const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
+    sendTournamentEntryBankEmails({
+      userEmail,
+      userName,
+      orderId:        inserted.id,
+      tournamentName,
+      amountCop,
+      bankName:       "Pago en efectivo (presencial en 1UP Gaming Tower)",
+      manageUrl:      `${ADMIN_URL}/torneos/${tournamentSlug}/manage#pagos`,
+    }).catch(() => null);
+  }
+
+  return NextResponse.json({ id: inserted.id, status: "pending_bank", paymentMethod: "cash" }, { status: 201 });
 }

@@ -6,9 +6,17 @@ import {
   canCreateEntryOrder,
   canReviewEntryOrder,
   paidRegistrationFailureMessage,
+  availableEntryMethods,
+  DEFAULT_ENTRY_METHOD_FLAGS,
   TOKEN_COP_RATE,
   type EntryPrecheckTournament,
+  type ServiceMethodFlags,
 } from "@/lib/tournamentEntry";
+
+const flags = (o: Partial<ServiceMethodFlags> = {}): ServiceMethodFlags => ({
+  ...DEFAULT_ENTRY_METHOD_FLAGS,
+  ...o,
+});
 
 const TREASURY = "0x1111111111111111111111111111111111111111";
 
@@ -161,6 +169,53 @@ describe("canCreateEntryOrder — gate for the user POST", () => {
   });
 });
 
+describe("availableEntryMethods — fee unit AND service toggle", () => {
+  it("defaults to token + wire (cash/card off) when no config given", () => {
+    expect(availableEntryMethods({ tokens: 10, cop: 10000 })).toEqual(["token", "bank"]);
+  });
+
+  it("includes cash only when the tournament has a COP fee AND cash is enabled", () => {
+    expect(availableEntryMethods({ tokens: 10, cop: 10000 }, flags({ cash_enabled: true })))
+      .toEqual(["token", "bank", "cash"]);
+    // cash enabled but no COP fee → not offered
+    expect(availableEntryMethods({ tokens: 10, cop: null }, flags({ cash_enabled: true })))
+      .toEqual(["token"]);
+  });
+
+  it("drops a method when its service toggle is off, even if the fee unit exists", () => {
+    expect(availableEntryMethods({ tokens: 10, cop: 10000 }, flags({ wire_enabled: false })))
+      .toEqual(["token"]);
+    expect(availableEntryMethods({ tokens: 10, cop: 10000 }, flags({ token_enabled: false })))
+      .toEqual(["bank"]);
+  });
+
+  it("never offers card (Stripe not live in v1)", () => {
+    expect(availableEntryMethods({ tokens: 10, cop: 10000 }, flags({ card_enabled: true })))
+      .not.toContain("card");
+  });
+});
+
+describe("canCreateEntryOrder — cash + config gating", () => {
+  it("ok for cash when COP fee + cash enabled", () => {
+    expect(canCreateEntryOrder(tournament(), "cash", flags({ cash_enabled: true }))).toEqual({ ok: true });
+  });
+
+  it("rejects cash when cash is disabled in the service config (default)", () => {
+    expect(canCreateEntryOrder(tournament(), "cash"))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+  });
+
+  it("rejects cash when the tournament has no COP fee", () => {
+    expect(canCreateEntryOrder(tournament({ entry_fee_cop: null }), "cash", flags({ cash_enabled: true })))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+  });
+
+  it("rejects an otherwise-valid method when the admin disabled it", () => {
+    expect(canCreateEntryOrder(tournament(), "bank", flags({ wire_enabled: false })))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+  });
+});
+
 describe("canReviewEntryOrder — admin approve/reject state transitions", () => {
   it("404 when the order doesn't exist", () => {
     expect(canReviewEntryOrder(null)).toMatchObject({ ok: false, status: 404 });
@@ -172,8 +227,9 @@ describe("canReviewEntryOrder — admin approve/reject state transitions", () =>
       .toMatchObject({ ok: false, status: 409 });
   });
 
-  it("only pending_bank is reviewable", () => {
+  it("only pending_bank is reviewable — for both wire and cash", () => {
     expect(canReviewEntryOrder({ status: "pending_bank", payment_method: "bank" })).toEqual({ ok: true });
+    expect(canReviewEntryOrder({ status: "pending_bank", payment_method: "cash" })).toEqual({ ok: true });
   });
 
   it("409 for every terminal state (idempotency — double review is rejected)", () => {

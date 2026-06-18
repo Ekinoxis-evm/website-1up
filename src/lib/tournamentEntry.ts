@@ -68,7 +68,49 @@ function parseFeeValue(raw: unknown, integer: boolean): { value: number | null; 
   return { value: n };
 }
 
-export type EntryOrderMethod = "token" | "bank";
+// DB-level method values stored on tournament_entry_orders. `bank` is the wire
+// transfer (relabeled "Transferencia" in the UI). `cash` reuses the manual-review
+// path — selected by the user, attested/approved by an admin (no comprobante).
+export type EntryOrderMethod = "token" | "bank" | "cash";
+
+// Per-service toggles from service_payment_methods. Default = today's live
+// behavior (token + wire on; cash/card off) so callers without a config row are
+// unaffected.
+export type ServiceMethodFlags = {
+  token_enabled: boolean;
+  wire_enabled: boolean;
+  cash_enabled: boolean;
+  card_enabled: boolean;
+};
+
+export const DEFAULT_ENTRY_METHOD_FLAGS: ServiceMethodFlags = {
+  token_enabled: true,
+  wire_enabled: true,
+  cash_enabled: false,
+  card_enabled: false,
+};
+
+// Which methods to OFFER for a tournament: a method needs BOTH its fee unit set
+// on the tournament AND the service-level toggle on. (card is excluded until the
+// Stripe integration is live.)
+export function availableEntryMethods(
+  fee: EntryFee,
+  cfg: ServiceMethodFlags = DEFAULT_ENTRY_METHOD_FLAGS,
+): EntryOrderMethod[] {
+  const out: EntryOrderMethod[] = [];
+  if (fee.tokens != null && cfg.token_enabled) out.push("token");
+  if (fee.cop != null && cfg.wire_enabled) out.push("bank");
+  if (fee.cop != null && cfg.cash_enabled) out.push("cash");
+  return out;
+}
+
+function methodUnavailableMsg(method: EntryOrderMethod): string {
+  switch (method) {
+    case "token": return "Este torneo no acepta pago con $1UP.";
+    case "bank":  return "Este torneo no acepta pago por transferencia bancaria.";
+    case "cash":  return "Este torneo no acepta pago en efectivo.";
+  }
+}
 
 export type EntryCheck =
   | { ok: true }
@@ -82,19 +124,19 @@ export type EntryPrecheckTournament = EntryFeeColumns & {
 
 // Gate for creating an entry order. Capacity itself is NOT checked here — the
 // slot is only taken at confirmation time by the register_for_tournament RPC.
+// `cfg` gates by the admin's per-service method config (defaults to token+wire).
 export function canCreateEntryOrder(
   t: EntryPrecheckTournament | null | undefined,
   method: EntryOrderMethod,
+  cfg: ServiceMethodFlags = DEFAULT_ENTRY_METHOD_FLAGS,
 ): EntryCheck {
   if (!t || !t.is_active) return { ok: false, error: "Torneo no encontrado.", status: 404, reason: "not_found" };
   const fee = tournamentEntryFee(t);
   if (!fee) return { ok: false, error: "Este torneo es gratuito — inscríbete directamente.", status: 400, reason: "free" };
   if (t.status !== "upcoming" || !t.is_registration_open)
     return { ok: false, error: "El registro para este torneo está cerrado.", status: 400, reason: "closed" };
-  if (method === "token" && fee.tokens == null)
-    return { ok: false, error: "Este torneo no acepta pago con $1UP.", status: 400, reason: "method_unavailable" };
-  if (method === "bank" && fee.cop == null)
-    return { ok: false, error: "Este torneo no acepta pago por transferencia bancaria.", status: 400, reason: "method_unavailable" };
+  if (!availableEntryMethods(fee, cfg).includes(method))
+    return { ok: false, error: methodUnavailableMsg(method), status: 400, reason: "method_unavailable" };
   return { ok: true };
 }
 
@@ -103,14 +145,15 @@ export type ReviewableEntryOrder = {
   payment_method: string;
 };
 
-// Admin approve/reject precondition — only a bank order still in pending_bank
-// can be reviewed. Mirrors canActivatePass/canRevokePass.
+// Admin approve/reject precondition — only a manually-reviewed order (wire/bank
+// or cash) still in pending_bank can be reviewed. Token orders auto-confirm
+// on-chain and are never reviewable. Mirrors canActivatePass/canRevokePass.
 export function canReviewEntryOrder(
   order: ReviewableEntryOrder | null | undefined,
 ): EntryCheck {
   if (!order) return { ok: false, error: "Orden no encontrada.", status: 404 };
-  if (order.payment_method !== "bank")
-    return { ok: false, error: "Solo las órdenes bancarias requieren revisión manual.", status: 409 };
+  if (order.payment_method !== "bank" && order.payment_method !== "cash")
+    return { ok: false, error: "Esta orden no requiere revisión manual.", status: 409 };
   switch (order.status) {
     case "pending_bank": return { ok: true };
     case "confirmed":    return { ok: false, error: "Esta orden ya fue confirmada.", status: 409 };

@@ -54,10 +54,11 @@ export async function PATCH(req: NextRequest) {
   if (!await isAdmin(adminEmail)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, action, rejectionReason } = body as {
+  const { id, action, rejectionReason, note } = body as {
     id?: number;
     action?: "approve" | "reject";
     rejectionReason?: string;
+    note?: string;
   };
 
   if (!id) return NextResponse.json({ error: "id es requerido." }, { status: 400 });
@@ -73,6 +74,17 @@ export async function PATCH(req: NextRequest) {
 
   const gate = canReviewEntryOrder(order);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+
+  // Cash is admin-attested: confirming it records a payment_events row whose CHECK
+  // requires a reason. Demand the note up front so we never half-confirm.
+  const isCash = order!.payment_method === "cash";
+  const cashNote = (note ?? "").trim();
+  if (action === "approve" && isCash && !cashNote) {
+    return NextResponse.json(
+      { error: "Indica una nota/motivo para confirmar el pago en efectivo (p. ej. recibido en taquilla)." },
+      { status: 400 },
+    );
+  }
 
   const now = new Date().toISOString();
   const userEmail      = order!.user_profiles?.email ?? null;
@@ -158,6 +170,22 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Record the confirmed payment in the unified ledger (wire or cash). Best-effort:
+  // the order is already the source of truth for this slot, so a ledger hiccup
+  // must not fail the approval — but log it. The single-confirmed invariant +
+  // global tx uniqueness still guard against duplicates.
+  const { error: ledgerErr } = await supabaseAdmin.rpc("apply_payment_event", {
+    p_order_kind:        "tournament_entry",
+    p_order_id:          id,
+    p_method:            isCash ? "cash" : "wire",
+    p_amount_cop:        order!.amount_cop ?? undefined,
+    p_bank_account_id:   order!.bank_account_id ?? undefined,
+    p_comprobante_url:   order!.comprobante_url ?? undefined,
+    p_recorded_by_admin: adminEmail,
+    p_reason:            isCash ? cashNote : "Transferencia aprobada por el equipo",
+  });
+  if (ledgerErr) console.error("apply_payment_event failed for entry order", id, ledgerErr.message);
 
   if (userEmail) {
     sendTournamentEntryApprovedEmail({

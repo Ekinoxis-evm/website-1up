@@ -2195,6 +2195,25 @@ export type Database = {
       }
     }
     Functions: {
+      apply_payment_event: {
+        Args: {
+          p_order_kind: Database["public"]["Enums"]["order_kind"]
+          p_order_id: number
+          p_event_id?: number
+          p_method?: Database["public"]["Enums"]["payment_method"]
+          p_amount_cop?: number
+          p_amount_tokens?: number
+          p_tx_hash?: string
+          p_block_number?: number
+          p_wallet_address?: string
+          p_bank_account_id?: number
+          p_comprobante_url?: string
+          p_recorded_by_admin?: string
+          p_reason?: string
+          p_idempotency_key?: string
+        }
+        Returns: Json
+      }
       register_for_tournament: {
         Args: { privy_uid: string; tour_id: number; user_pid: number }
         Returns: Json
