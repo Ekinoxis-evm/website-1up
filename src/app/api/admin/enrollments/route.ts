@@ -15,6 +15,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { sendCourseOrderApprovedEmail, sendCourseOrderRejectedEmail } from "@/lib/email";
 import { getComprobanteSignedUrl } from "@/lib/blob";
+import { canReviewEnrollment } from "@/lib/courseEnrollment";
 
 export async function GET(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -83,6 +84,7 @@ export async function PATCH(req: NextRequest) {
     action?:          "approve" | "reject";
     approvedTxHash?:  string;
     rejectionReason?: string;
+    note?:            string;
     adminNotes?:      string;
   };
 
@@ -94,6 +96,7 @@ export async function PATCH(req: NextRequest) {
     .from("enrollments")
     .select(`
       id, payment_method, payment_status, final_price_cop, course_id,
+      bank_account_id, comprobante_url,
       user_profile_id,
       user_profiles ( email, nombre, apellidos ),
       courses ( name )
@@ -101,13 +104,20 @@ export async function PATCH(req: NextRequest) {
     .eq("id", body.id)
     .single();
 
+  const gate = canReviewEnrollment(enrollment);
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
   if (!enrollment) return NextResponse.json({ error: "Inscripción no encontrada" }, { status: 404 });
 
-  if (enrollment.payment_method !== "token" && enrollment.payment_method !== "bank")
-    return NextResponse.json({ error: "Solo se pueden gestionar inscripciones token o bank" }, { status: 409 });
-
-  if (enrollment.payment_status !== "pending")
-    return NextResponse.json({ error: "Solo se pueden gestionar inscripciones pendientes" }, { status: 409 });
+  // Cash is admin-attested: confirming it records a payment_events row whose CHECK
+  // requires a reason. Demand the note up front so we never half-confirm.
+  const isCash   = enrollment!.payment_method === "cash";
+  const cashNote = (body.note ?? body.adminNotes ?? "").trim();
+  if (body.action === "approve" && isCash && !cashNote) {
+    return NextResponse.json(
+      { error: "Indica una nota/motivo para confirmar el pago en efectivo (p. ej. recibido en taquilla)." },
+      { status: 400 },
+    );
+  }
 
   const profile = Array.isArray(enrollment.user_profiles) ? enrollment.user_profiles[0] : enrollment.user_profiles;
   const courseRow = Array.isArray(enrollment.courses) ? enrollment.courses[0] : enrollment.courses;
@@ -129,9 +139,30 @@ export async function PATCH(req: NextRequest) {
     const { error } = await supabaseAdmin
       .from("enrollments")
       .update(updates)
-      .eq("id", body.id);
+      .eq("id", body.id)
+      .eq("payment_status", "pending");
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Record the confirmed payment in the unified ledger (wire or cash). Token
+    // enrollments verified on-chain at creation are excluded (the tx already
+    // owns the payment_events tx_hash uniqueness on their own path). Best-effort:
+    // the enrollment is already the source of truth for course access, so a
+    // ledger hiccup must not fail the approval — but log it. The single-confirmed
+    // invariant still guards against duplicates.
+    if (enrollment!.payment_method === "bank" || isCash) {
+      const { error: ledgerErr } = await supabaseAdmin.rpc("apply_payment_event", {
+        p_order_kind:        "enrollment",
+        p_order_id:          body.id,
+        p_method:            isCash ? "cash" : "wire",
+        p_amount_cop:        enrollment!.final_price_cop ?? undefined,
+        p_bank_account_id:   enrollment!.bank_account_id ?? undefined,
+        p_comprobante_url:   enrollment!.comprobante_url ?? undefined,
+        p_recorded_by_admin: adminEmail,
+        p_reason:            isCash ? cashNote : "Transferencia aprobada por el equipo",
+      });
+      if (ledgerErr) console.error("apply_payment_event failed for enrollment", body.id, ledgerErr.message);
+    }
 
     if (userEmail) {
       sendCourseOrderApprovedEmail({
@@ -156,7 +187,8 @@ export async function PATCH(req: NextRequest) {
         reviewed_by:      adminEmail,
         reviewed_at:      new Date().toISOString(),
       })
-      .eq("id", body.id);
+      .eq("id", body.id)
+      .eq("payment_status", "pending");
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

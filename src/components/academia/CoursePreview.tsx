@@ -29,6 +29,7 @@ interface Props {
   sessions: Session[];
   masterName: string | null;
   masterPhoto: string | null;
+  cashEnabled?: boolean;
 }
 
 const CAT_STYLE: Record<string, { badge: string; accent: string }> = {
@@ -93,7 +94,7 @@ function IntroPlayer({ courseId }: { courseId: number }) {
   );
 }
 
-export function CoursePreview({ course, modules, sessions, masterName, masterPhoto }: Props) {
+export function CoursePreview({ course, modules, sessions, masterName, masterPhoto, cashEnabled = false }: Props) {
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [checkout, setCheckout] = useState(false);
@@ -366,6 +367,7 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
           course={course}
           walletAddress={walletAddress}
           recipientAddress={recipientAddress}
+          cashEnabled={cashEnabled}
           getAccessToken={getAccessToken}
           onClose={() => setCheckout(false)}
         />

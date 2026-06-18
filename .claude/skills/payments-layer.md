@@ -72,10 +72,13 @@ tables exposed to the anon key.
 ## Rollout state
 - **v2.42.0-data** (shipped) — schema + RPC + `methodRegistry`/`paymentEvents` + tests.
 - **v2.42.0** (shipped) — admin Métodos de Pago config page + `orderKind`.
-- **v2.43.0** (shipped) — **cash** method live on **tournament entry** (user-selected →
-  admin-approved with a note → `apply_payment_event` → register). Methods now gated by the
-  per-service config. RLS hardening on the payment tables.
-- **next** — replicate cash + ledger to pass / academia courses / token-purchase.
+- **v2.43.0** (shipped) — **cash** on **tournament entry** (user-selected → admin-approved with a
+  note → `apply_payment_event` → register). Methods now gated by the per-service config. RLS
+  hardening on the payment tables.
+- **v2.44.0** (shipped) — **cash** on **academia courses** (`src/lib/courseEnrollment.ts`; same
+  pattern; fulfillment = `payment_status` → `approved`).
+- **next** — cash on **$1UP purchases** (`token_purchase_orders` — approval still requires an admin
+  on-chain send), then **1UP Pass** (COP = `price_token × 1.000`).
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.

@@ -1,12 +1,16 @@
 /**
  * /api/user/course-orders — POST
  *
- * Course enrollment via $1UP token or bank transfer.
+ * Course enrollment via $1UP token, bank transfer, or cash.
  * Token path: on-chain verification, auto-confirmed.
- * Bank path: upload comprobante, pending admin review.
+ * Bank path:  upload comprobante, pending admin review.
+ * Cash path:  user-selected → admin-approved with a note. No comprobante upload;
+ *             reuses the manual-review (bank) path. Gated by the per-service
+ *             `enrollment` cash toggle in service_payment_methods.
  *
  * Body — token: { courseId, paymentMethod: "token", txHash, walletAddress }
  * Body — bank:  { courseId, paymentMethod: "bank",  bankAccountId, comprobantePath, comprobanteUrl }
+ * Body — cash:  { courseId, paymentMethod: "cash" }
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,6 +22,11 @@ import { revalidatePath } from "next/cache";
 import { sendCourseOrderPlacedEmail, sendCourseOrderConfirmedEmail } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
 import { rateLimitByUser, limiters } from "@/lib/rateLimit";
+import {
+  canSelectCourseMethod,
+  DEFAULT_ENROLLMENT_METHOD_FLAGS,
+  type EnrollmentMethodFlags,
+} from "@/lib/courseEnrollment";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -64,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json() as {
     courseId?:        number;
-    paymentMethod?:   "token" | "bank";
+    paymentMethod?:   "token" | "bank" | "cash";
     txHash?:          string;
     walletAddress?:   string;
     bankAccountId?:   number;
@@ -76,8 +85,8 @@ export async function POST(req: NextRequest) {
   if (!courseId || typeof courseId !== "number")
     return NextResponse.json({ error: "courseId requerido" }, { status: 400 });
 
-  if (paymentMethod !== "token" && paymentMethod !== "bank")
-    return NextResponse.json({ error: "paymentMethod debe ser token o bank" }, { status: 400 });
+  if (paymentMethod !== "token" && paymentMethod !== "bank" && paymentMethod !== "cash")
+    return NextResponse.json({ error: "paymentMethod debe ser token, bank o cash" }, { status: 400 });
 
   const { data: course } = await supabaseAdmin
     .from("courses")
@@ -88,6 +97,19 @@ export async function POST(req: NextRequest) {
   if (!course) return NextResponse.json({ error: "Curso no encontrado" }, { status: 404 });
   if (!course.is_active) return NextResponse.json({ error: "Curso no disponible" }, { status: 410 });
   if (!course.price_cop) return NextResponse.json({ error: "Curso sin precio configurado" }, { status: 400 });
+
+  // Which methods this service accepts is admin-configurable; default to today's
+  // live behavior (token + wire) if the config row is somehow absent.
+  const { data: cfgRow } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("token_enabled, wire_enabled, cash_enabled, card_enabled")
+    .eq("service", "enrollment")
+    .maybeSingle();
+  const cfg: EnrollmentMethodFlags = cfgRow ?? DEFAULT_ENROLLMENT_METHOD_FLAGS;
+
+  const methodGate = canSelectCourseMethod(course, paymentMethod, cfg);
+  if (!methodGate.ok)
+    return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
 
   const profile = await getOrCreateProfile(claims.userId, email ?? undefined);
   if (!profile?.id)
@@ -109,6 +131,52 @@ export async function POST(req: NextRequest) {
   const finalPrice    = Math.round(originalPrice * (1 - discountPct / 100));
 
   const displayName = ([profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || email || `#${profile.id}`);
+
+  // ── CASH PATH ─────────────────────────────────────────────────
+  // The user commits to paying in person; the enrollment lands `pending` (no
+  // comprobante) and an admin confirms receipt with a mandatory note. Mirrors
+  // the bank path minus the upload — the admin's approval is the attestation.
+  if (paymentMethod === "cash") {
+    const { data: enrollment, error: insertErr } = await supabaseAdmin
+      .from("enrollments")
+      .insert({
+        user_profile_id:      profile.id,
+        product_type:         "course",
+        course_id:            courseId,
+        original_price_cop:   originalPrice,
+        discount_rule_id:     ruleId,
+        discount_pct_applied: discountPct,
+        final_price_cop:      finalPrice,
+        payment_method:       "cash",
+        payment_status:       "pending",
+      })
+      .select()
+      .single();
+
+    if (insertErr || !enrollment)
+      return NextResponse.json({ error: insertErr?.message ?? "Error creando inscripción" }, { status: 500 });
+
+    revalidatePath("/academia");
+    revalidatePath("/admin/enrollments");
+    revalidatePath("/app/academia");
+
+    if (email) {
+      sendCourseOrderPlacedEmail({
+        userEmail:     email,
+        userName:      displayName,
+        enrollmentId:  enrollment.id,
+        courseName:    course.name,
+        finalPriceCop: finalPrice,
+        bankName:      "Pago en efectivo (presencial en 1UP Gaming Tower)",
+      }).catch(() => null);
+    }
+
+    return NextResponse.json({
+      enrollmentId:  enrollment.id,
+      status:        "pending",
+      paymentMethod: "cash",
+    }, { status: 201 });
+  }
 
   // ── TOKEN PATH ────────────────────────────────────────────────
   if (paymentMethod === "token") {

@@ -5,6 +5,36 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.44.0] — 2026-06-18
+
+### Added — cash payment on academia courses (Phase 2b rollout 2/3)
+
+Replicates the v2.43.0 cash pattern to course enrollments: the user picks **"Efectivo"**, the
+enrollment lands `pending`, and an admin approves it with a **mandatory note** → the confirmed
+cash payment is recorded in the unified ledger via `apply_payment_event` → course access is
+granted (`payment_status` → `approved`). No migration — `enrollments.payment_method` is free text.
+
+- **`src/lib/courseEnrollment.ts`** (new, pure, +19 tests) — `availableCourseMethods(course, cfg)`
+  gates methods by BOTH the course price unit AND the admin's `service_payment_methods`
+  (`service='enrollment'`) toggles; `canSelectCourseMethod`; `canReviewEnrollment` (only `pending`,
+  allows cash, idempotent 409s).
+- **User** — `/api/user/course-orders` gains a cash branch (pending enrollment, no comprobante),
+  gated server-side; `CourseCheckoutWizard` shows an "Efectivo" option (threaded `cashEnabled`
+  computed server-side via `supabaseAdmin`).
+- **Admin** — `/api/admin/enrollments` requires a `note` for cash approval; approve flips
+  `pending → approved` (`.eq("payment_status","pending")` idempotency guard) then records the
+  payment best-effort. `AdminEnrollmentsClient`: cash rows show "Efectivo" + "sin comprobante",
+  inline required-note before approve.
+- Methods now governed by the **Métodos de Pago** config for courses too (defaults unchanged).
+
+### QA
+- **319 tests** (new `courseEnrollment.test.ts`, 19); `npm run build` clean. RLS-safe — every
+  read of the deny-all tables uses `supabaseAdmin`, including in the academia Server Components.
+
+> Next: $1UP purchases (`token_purchase_orders`), then 1UP Pass (COP = `price_token × 1.000`).
+
+---
+
 ## [2.43.0] — 2026-06-18
 
 ### Security — RLS enabled on the payment tables (applied live immediately)
