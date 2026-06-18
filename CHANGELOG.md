@@ -5,6 +5,59 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.42.0-data] — 2026-06-18
+
+### Added — unified payment layer: data spine (Phase 1, behavior-neutral)
+
+Foundation for one **admin-selectable payment-method set across every paid service**
+(1UP Pass, paid tournaments, $1UP purchases, academia courses; marketplace later) —
+`token` ($1UP on-chain) · `wire` (the existing bank-comprobante flow, relabeled) · `cash`
+(admin records an in-person payment) · `card`/Apple Pay (Stripe, reserved). **No user-facing
+change** — nothing reads or writes the new objects yet; the routes adopt them in v2.42.0.
+This phase reflects an adversarial security audit that moved money-state consistency **into
+the database**.
+
+**Architecture** — a shared layer the existing order tables plug into, **not** a big-bang
+table merge (each keeps its audited state machine). Locked decisions: **deposits deferred**
+(v1 fulfills only on a single FULL payment → at most one confirmed event per order; no
+SUM-math, no cache columns), **Stripe = reserved schema/env only** (no webhook route until it
+goes live), legacy `payment_method='bank'` values **not renamed** (bridged in code).
+
+**Schema** (`20260617000000_payments_shared_layer.sql`, applied live + verified):
+- Enums `payment_method('token','wire','cash','card')`, `payment_event_status`,
+  `order_kind('pass','tournament_entry','token_purchase','enrollment')`.
+- `payment_events` ledger — one row per payment, polymorphically linked to any order via
+  `(order_kind, order_id)` (no FK, same precedent as `enrollments.product_type`). CHECKs:
+  exactly one denominating unit (COP **or** tokens), positive amount, and **cash must carry
+  `recorded_by_admin` + `reason`** (admin-attested). **Global** unique `lower(tx_hash)`
+  (cross-kind on-chain replay block) + unique `stripe_payment_intent_id`. Reserved-nullable
+  `stripe_*` columns.
+- `service_payment_methods` — per-service enabled-methods config (token/wire on, cash/card
+  off by default), seeded for the four services.
+- **`apply_payment_event()` RPC — the atomic cornerstone.** Serializes concurrent callers on
+  the same order via a transaction-scoped advisory lock, enforces the v1 single-confirmed
+  invariant, and returns `became_paid` true for **exactly one** caller (fulfillment fires iff
+  `became_paid`). Confirms an existing pending event (wire approval) **or** inserts a new
+  confirmed event (token success, cash). Amount-correctness stays with the caller (token =
+  on-chain exact-match verify); the RPC owns the race/idempotency guarantee only.
+
+**Pure libs (unit-tested, DB-free):**
+- `src/lib/payments/methodRegistry.ts` — canonical methods, `METHOD_META`,
+  `normalizeMethod`/`toLegacyMethod` (legacy `bank`↔`wire`, fails closed on unknown),
+  `enabledMethods`/`isMethodEnabled` (card hidden unless `PAYMENTS_CARD_LIVE`).
+- `src/lib/payments/paymentEvents.ts` — `validateEventAmount` + `validateCashEvent` (mirror
+  the DB CHECKs), `canTransition` (append-only event state machine).
+- *(ownership + expected-amount helpers land in v2.42.0 with the route wiring.)*
+
+### QA
+- **Tier-1 (live SQL):** structure + a functional RPC test (single-confirmed → `already_paid`,
+  global tx replay → `duplicate`, cash-without-reason → CHECK blocked) — all assertions passed,
+  sentinel rows cleaned up.
+- **Tier-2 (Vitest):** `src/__tests__/lib/payments/{methodRegistry,paymentEvents}.test.ts` —
+  **31 new tests.** `npm run build` clean.
+
+---
+
 ## [2.41.0] — 2026-06-12
 
 ### Added — paid tournament entry (Phases 2–4: payment flows + UI + cockpit)

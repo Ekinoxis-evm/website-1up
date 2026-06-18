@@ -194,6 +194,119 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_events: {
+        Row: {
+          amount_cop: number | null
+          amount_tokens: number | null
+          bank_account_id: number | null
+          block_number: number | null
+          comprobante_url: string | null
+          created_at: string
+          id: number
+          idempotency_key: string | null
+          method: Database["public"]["Enums"]["payment_method"]
+          order_id: number
+          order_kind: Database["public"]["Enums"]["order_kind"]
+          reason: string | null
+          recorded_by_admin: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["payment_event_status"]
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          tx_hash: string | null
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount_cop?: number | null
+          amount_tokens?: number | null
+          bank_account_id?: number | null
+          block_number?: number | null
+          comprobante_url?: string | null
+          created_at?: string
+          id?: number
+          idempotency_key?: string | null
+          method: Database["public"]["Enums"]["payment_method"]
+          order_id: number
+          order_kind: Database["public"]["Enums"]["order_kind"]
+          reason?: string | null
+          recorded_by_admin?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_event_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount_cop?: number | null
+          amount_tokens?: number | null
+          bank_account_id?: number | null
+          block_number?: number | null
+          comprobante_url?: string | null
+          created_at?: string
+          id?: number
+          idempotency_key?: string | null
+          method?: Database["public"]["Enums"]["payment_method"]
+          order_id?: number
+          order_kind?: Database["public"]["Enums"]["order_kind"]
+          reason?: string | null
+          recorded_by_admin?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_event_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      service_payment_methods: {
+        Row: {
+          card_enabled: boolean
+          cash_enabled: boolean
+          service: Database["public"]["Enums"]["order_kind"]
+          token_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+          wire_enabled: boolean
+        }
+        Insert: {
+          card_enabled?: boolean
+          cash_enabled?: boolean
+          service: Database["public"]["Enums"]["order_kind"]
+          token_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          wire_enabled?: boolean
+        }
+        Update: {
+          card_enabled?: boolean
+          cash_enabled?: boolean
+          service?: Database["public"]["Enums"]["order_kind"]
+          token_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          wire_enabled?: boolean
+        }
+        Relationships: []
+      }
       bracket_matches: {
         Row: {
           bracket_id: number
@@ -2097,6 +2210,9 @@ export type Database = {
       discount_applies_to: "courses" | "pass" | "all"
       discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
       match_state: "pending" | "ready" | "in_progress" | "completed" | "bye"
+      order_kind: "pass" | "tournament_entry" | "token_purchase" | "enrollment"
+      payment_event_status: "pending" | "confirmed" | "rejected" | "cancelled"
+      payment_method: "token" | "wire" | "cash" | "card"
       pass_order_status:
         | "pending_tx"
         | "confirmed"
