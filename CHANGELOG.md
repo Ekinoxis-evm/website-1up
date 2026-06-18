@@ -5,6 +5,45 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.42.0] — 2026-06-18
+
+### Added — admin "Métodos de Pago" config + payments foundation (Phase 2a)
+
+Builds on the v2.42.0-data spine. **Admins can now choose which payment methods each paid
+service accepts**, from a new admin page — the headline "optional payments from the admin"
+capability.
+
+- **`/admin/payment-methods`** (new) — a matrix of the four services (1UP Pass, inscripción a
+  torneo, compra de $1UP, inscripción a curso) × four methods (`$1UP` / `transferencia` /
+  `efectivo` / `tarjeta·Apple Pay`). Toggles persist to `service_payment_methods`. `$1UP` and
+  `transferencia` already operate in the live purchase flows; `efectivo` (manual admin recording)
+  and `tarjeta` roll out progressively — enabling them here pre-configures the service. The
+  **tarjeta** toggle carries a lock note (needs `PAYMENTS_CARD_LIVE`). Linked under **Sistema**
+  in the admin sidebar.
+- **`GET|PATCH /api/admin/service-payment-methods`** (new) — `checkAdmin`; PATCH validates the
+  `service` via `isOrderKind`, requires all four booleans, stamps `updated_by` + `updated_at`,
+  revalidates the page.
+- **`src/lib/payments/orderKind.ts`** (new, pure) — `order_kind` → table + Spanish label +
+  revalidate paths; `isOrderKind` guard. The polymorphic dispatch map the cash/ledger wiring
+  builds on next.
+
+### Knowledge base
+- `.claude/skills/payments-layer.md` (new) — canonical reference for the unified payment layer
+  (methods, the `apply_payment_event` RPC contract, hard rules, rollout state); auto-loads on
+  `src/lib/payments/**` + the payment admin routes.
+- `.claude/skills/database.md` — `payment_events` + `service_payment_methods` tables, the
+  `apply_payment_event` RPC, and the two new admin endpoints documented.
+- `CLAUDE.md` — `PAYMENTS_CARD_LIVE` + reserved Stripe env vars; the new skill mapping + route.
+
+### QA
+- **Tier-2:** `src/__tests__/lib/payments/orderKind.test.ts` (6 tests) — **293 total**.
+  `npm run build` clean.
+
+> Next (Phase 2b): the **cash** method live end-to-end on tournament entry (record a payment via
+> `apply_payment_event` → fulfill on `became_paid`), then replicated to pass / courses.
+
+---
+
 ## [2.42.0-data] — 2026-06-18
 
 ### Added — unified payment layer: data spine (Phase 1, behavior-neutral)
