@@ -26,6 +26,7 @@ interface Props {
   walletAddress: string;
   onClose: () => void;
   getAccessToken: () => Promise<string | null>;
+  cashEnabled?: boolean;
 }
 
 function formatCop(n: number) {
@@ -34,8 +35,9 @@ function formatCop(n: number) {
 
 const RATE = 1000;
 
-export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Props) {
+export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEnabled = false }: Props) {
   const [step, setStep]             = useState(1);
+  const [method, setMethod]         = useState<"bank" | "cash">("bank");
   const [copAmount, setCopAmount]   = useState("");
   const [bankAccounts, setBankAccounts]   = useState<BankListItem[]>([]);
   const [selectedBank, setSelectedBank]   = useState<BankAccount | null>(null);
@@ -153,8 +155,33 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
     setStep(4);
   }
 
+  async function handleSubmitCash() {
+    setSubmitLoading(true); setSubmitError(null);
+
+    const token = await getAccessToken();
+    const res = await fetch("/api/user/token-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        walletAddress,
+        copAmount: copInt,
+        paymentMethod: "cash",
+      }),
+    });
+
+    setSubmitLoading(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setSubmitError(d.error ?? "Error al crear la orden");
+      return;
+    }
+    const data = await res.json() as { id: number };
+    setOrderId(data.id);
+    setStep(4);
+  }
+
   function handleClose() {
-    setStep(1); setCopAmount(""); setSelectedBank(null); setBankAccounts([]);
+    setStep(1); setMethod("bank"); setCopAmount(""); setSelectedBank(null); setBankAccounts([]);
     setComprobantePath(null); setComprobantePreview(null);
     setSubmitError(null); setUploadError(null); setOrderId(null);
     onClose();
@@ -212,17 +239,60 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
                 </span>
               </div>
 
+              {cashEnabled && (
+                <div className="mb-6">
+                  <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-2">
+                    Método de pago
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setMethod("bank")}
+                      className={`flex items-center gap-2 p-3 text-left transition-colors ${
+                        method === "bank"
+                          ? "bg-tertiary/10 border-2 border-tertiary"
+                          : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-tertiary">account_balance</span>
+                      <span className="font-headline font-bold text-xs uppercase text-on-surface">Transferencia</span>
+                    </button>
+                    <button
+                      onClick={() => setMethod("cash")}
+                      className={`flex items-center gap-2 p-3 text-left transition-colors ${
+                        method === "cash"
+                          ? "bg-tertiary/10 border-2 border-tertiary"
+                          : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-tertiary">payments</span>
+                      <span className="font-headline font-bold text-xs uppercase text-on-surface">Efectivo</span>
+                    </button>
+                  </div>
+                  {method === "cash" && (
+                    <p className="font-body text-[10px] text-on-surface/40 mt-2">
+                      Paga en efectivo de forma presencial en 1UP Gaming Tower. El equipo confirmará tu pago y te enviará tus $1UP.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <p className="font-body text-[10px] text-on-surface/30 text-center mb-6">
                 Tasa fija: 1 $1UP = {formatCop(RATE)}
               </p>
 
+              {submitError && method === "cash" && (
+                <div className="mb-4 p-3 bg-error/10">
+                  <p className="font-body text-sm text-error">{submitError}</p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
-                  onClick={goToStep2}
-                  disabled={!copValid}
+                  onClick={() => (method === "cash" ? handleSubmitCash() : goToStep2())}
+                  disabled={!copValid || (method === "cash" && submitLoading)}
                   className="flex-1 bg-tertiary text-background font-headline font-black py-3 uppercase disabled:opacity-40 transition-opacity"
                 >
-                  CONTINUAR
+                  {method === "cash" ? (submitLoading ? "ENVIANDO..." : "PAGAR EN EFECTIVO") : "CONTINUAR"}
                 </button>
                 <button onClick={handleClose} className="flex-1 bg-surface-container-highest font-headline font-black py-3">
                   CANCELAR
@@ -444,7 +514,9 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken }: Prop
               </span>
               <h2 className="font-headline font-black text-2xl uppercase mb-2">ORDEN ENVIADA</h2>
               <p className="font-body text-sm text-on-surface/50 mb-8">
-                El equipo de 1UP revisará tu comprobante y enviará los tokens a tu wallet.
+                {method === "cash"
+                  ? "Pago en efectivo — el equipo de 1UP confirmará tu pago presencial y enviará los tokens a tu wallet."
+                  : "El equipo de 1UP revisará tu comprobante y enviará los tokens a tu wallet."}
               </p>
 
               <div className="bg-surface-container-lowest p-4 text-left space-y-2 mb-8">

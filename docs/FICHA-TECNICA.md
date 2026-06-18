@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.19 |
+| **Versión** | 2.20 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | 18 de junio de 2026 |
-| **Versión en producción** | v2.44.0 |
+| **Versión en producción** | v2.45.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |

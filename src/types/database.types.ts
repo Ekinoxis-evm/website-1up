@@ -1649,13 +1649,14 @@ export type Database = {
           approved_tx_hash: string | null
           bank_account_id: number | null
           celular_contacto: string
-          comprobante_url: string
+          comprobante_url: string | null
           cop_amount: number
           created_at: string
           email: string
           exchange_rate_cop: number
           id: number
           nombre: string
+          payment_method: string
           privy_user_id: string
           rejection_reason: string | null
           reviewed_at: string | null
@@ -1671,13 +1672,14 @@ export type Database = {
           approved_tx_hash?: string | null
           bank_account_id?: number | null
           celular_contacto: string
-          comprobante_url: string
+          comprobante_url?: string | null
           cop_amount: number
           created_at?: string
           email: string
           exchange_rate_cop?: number
           id?: number
           nombre: string
+          payment_method?: string
           privy_user_id: string
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -1693,13 +1695,14 @@ export type Database = {
           approved_tx_hash?: string | null
           bank_account_id?: number | null
           celular_contacto?: string
-          comprobante_url?: string
+          comprobante_url?: string | null
           cop_amount?: number
           created_at?: string
           email?: string
           exchange_rate_cop?: number
           id?: number
           nombre?: string
+          payment_method?: string
           privy_user_id?: string
           rejection_reason?: string | null
           reviewed_at?: string | null

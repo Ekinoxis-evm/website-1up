@@ -5,6 +5,11 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { revalidatePath } from "next/cache";
 import { sendTokenOrderEmails } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
+import {
+  canSelectTokenMethod,
+  DEFAULT_TOKEN_PURCHASE_METHOD_FLAGS,
+  type TokenPurchaseMethodFlags,
+} from "@/lib/tokenPurchase";
 
 async function getPrivyUser(req: NextRequest) {
   const claims = await verifyToken(req.headers.get("authorization"));
@@ -45,11 +50,13 @@ export async function POST(req: NextRequest) {
     copAmount?: number;
     bankAccountId?: number;
     comprobantePath?: string;
+    paymentMethod?: "bank" | "cash";
     nombre?: string;
     celular?: string;
   };
 
   const { walletAddress: bodyWallet, copAmount, bankAccountId, comprobantePath } = body;
+  const paymentMethod = body.paymentMethod ?? "bank";
 
   const walletLookup = await getVerifiedWallet(user.userId, bodyWallet);
   if (!walletLookup.ok) {
@@ -64,24 +71,42 @@ export async function POST(req: NextRequest) {
   if (!copAmount || !Number.isInteger(copAmount) || copAmount < 1000 || copAmount % 1000 !== 0)
     return NextResponse.json({ error: "Monto COP inválido (mínimo 1,000, múltiplo de 1,000)" }, { status: 400 });
 
-  if (!bankAccountId)
-    return NextResponse.json({ error: "Cuenta bancaria requerida" }, { status: 400 });
+  // Which methods this service accepts is admin-configurable; bank is always on,
+  // cash is gated by the per-service toggle. Default to today's live behavior
+  // (cash off) if the config row is somehow absent.
+  const { data: cfgRow } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("cash_enabled")
+    .eq("service", "token_purchase")
+    .maybeSingle();
+  const cfg: TokenPurchaseMethodFlags = cfgRow ?? DEFAULT_TOKEN_PURCHASE_METHOD_FLAGS;
 
-  if (!comprobantePath)
-    return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
+  const methodGate = canSelectTokenMethod(paymentMethod, cfg);
+  if (!methodGate.ok)
+    return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
 
-  if (!comprobantePath.startsWith("pending/"))
-    return NextResponse.json({ error: "Ruta de comprobante inválida" }, { status: 400 });
+  // Bank orders carry a bank account + comprobante; cash orders are admin-attested
+  // (no upload, no bank account). Validate per-method.
+  if (paymentMethod === "bank") {
+    if (!bankAccountId)
+      return NextResponse.json({ error: "Cuenta bancaria requerida" }, { status: 400 });
 
-  const { data: bankAccount } = await supabaseAdmin
-    .from("bank_accounts")
-    .select("id")
-    .eq("id", bankAccountId)
-    .eq("is_active", true)
-    .single();
+    if (!comprobantePath)
+      return NextResponse.json({ error: "Comprobante requerido" }, { status: 400 });
 
-  if (!bankAccount)
-    return NextResponse.json({ error: "Cuenta no disponible" }, { status: 400 });
+    if (!comprobantePath.startsWith("pending/"))
+      return NextResponse.json({ error: "Ruta de comprobante inválida" }, { status: 400 });
+
+    const { data: bankAccount } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("id")
+      .eq("id", bankAccountId)
+      .eq("is_active", true)
+      .single();
+
+    if (!bankAccount)
+      return NextResponse.json({ error: "Cuenta no disponible" }, { status: 400 });
+  }
 
   // Ensure profile exists, pull nombre/phone if available
   const { data: profile } = await supabaseAdmin
@@ -111,7 +136,6 @@ export async function POST(req: NextRequest) {
   const profileCelular = profile?.phone_number ?? null;
 
   const tokenAmount = copAmount / 1000;
-  const ext = comprobantePath.split(".").pop() || "jpg";
 
   const { data: order, error: insertError } = await supabaseAdmin
     .from("token_purchase_orders")
@@ -125,8 +149,9 @@ export async function POST(req: NextRequest) {
       cop_amount:       copAmount,
       token_amount:     tokenAmount,
       exchange_rate_cop: 1000,
-      bank_account_id:  bankAccountId,
-      comprobante_url:  comprobantePath,
+      payment_method:   paymentMethod,
+      bank_account_id:  paymentMethod === "bank" ? bankAccountId : null,
+      comprobante_url:  paymentMethod === "bank" ? comprobantePath : null,
       status:           "pending",
     })
     .select("id")
@@ -138,31 +163,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  // Move comprobante from pending/ to final path
-  try {
-    // M-A5.3: pin the pending object to the caller's namespace.
-    const finalUrl = await moveComprobanteToOrder(comprobantePath, order.id, ext, user.userId);
-    await supabaseAdmin
-      .from("token_purchase_orders")
-      .update({ comprobante_url: finalUrl })
-      .eq("id", order.id);
-  } catch {
-    await supabaseAdmin
-      .from("token_purchase_orders")
-      .update({ status: "cancelled" })
-      .eq("id", order.id);
-    return NextResponse.json({ error: "Error al guardar el comprobante. Intenta de nuevo." }, { status: 502 });
+  // Bank orders carry a comprobante that must move from pending/ to the order
+  // path. Cash orders have no upload — the admin attests the COP receipt on
+  // approval — so skip the move entirely.
+  if (paymentMethod === "bank") {
+    const ext = comprobantePath!.split(".").pop() || "jpg";
+    try {
+      // M-A5.3: pin the pending object to the caller's namespace.
+      const finalUrl = await moveComprobanteToOrder(comprobantePath!, order.id, ext, user.userId);
+      await supabaseAdmin
+        .from("token_purchase_orders")
+        .update({ comprobante_url: finalUrl })
+        .eq("id", order.id);
+    } catch {
+      await supabaseAdmin
+        .from("token_purchase_orders")
+        .update({ status: "cancelled" })
+        .eq("id", order.id);
+      return NextResponse.json({ error: "Error al guardar el comprobante. Intenta de nuevo." }, { status: 502 });
+    }
   }
 
   revalidatePath("/admin/token-orders");
   revalidatePath("/app");
 
   if (user.email) {
-    const { data: bankAccount } = await supabaseAdmin
-      .from("bank_accounts")
-      .select("bank_name")
-      .eq("id", bankAccountId)
-      .single();
+    const bankName = paymentMethod === "cash"
+      ? "Pago en efectivo (presencial en 1UP Gaming Tower)"
+      : (await supabaseAdmin
+          .from("bank_accounts")
+          .select("bank_name")
+          .eq("id", bankAccountId!)
+          .single()).data?.bank_name ?? "—";
 
     sendTokenOrderEmails({
       userEmail:    user.email,
@@ -171,7 +203,7 @@ export async function POST(req: NextRequest) {
       copAmount:    copAmount,
       tokenAmount:  tokenAmount,
       walletAddress,
-      bankName:     bankAccount?.bank_name ?? "—",
+      bankName,
     }).catch(() => null);
   }
 
