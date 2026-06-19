@@ -5,6 +5,38 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.47.1] — 2026-06-19
+
+### Fixed — Google login broke when triggered from any non-allowlisted public page
+
+Privy's OAuth (Google) flow returns the user to the **exact URL** where login was initiated, and
+that URL must be an exact match in the Privy dashboard's *Allowed OAuth redirect URLs*. Several
+public pages called Privy's `login()` **inline**, so initiating Google login from a deep or dynamic
+page (`/torneos/[slug]`, `/academia/[courseId]`, `/torneos/[slug]/checkin`, or any page reached by
+cross-navigation) sent a `redirect_to` that wasn't — and could never be — allowlisted, so Privy
+401'd `/oauth/init`. Email login still worked because it skips the OAuth redirect, which masked the
+bug. Google worked only from the few allowlisted URLs (e.g. the homepage).
+
+- **`src/lib/loginRedirect.ts`** (new) — `goToLogin()`: stashes the current public-site page and
+  sends the user to `app.1upesports.org/login?redirect=<page>`, the single allowlisted public login
+  page. The Privy session cookie is shared across all `*.1upesports.org` subdomains, so the user
+  returns to the public site already authenticated, on the page they started from.
+- **`TopAppBar`, `CourseCatalog` (`/academia`), `CoursePreview` (`/academia/[courseId]`),
+  `TournamentCheckinClient` (`/torneos/[slug]/checkin`)** — replaced inline `login()` with
+  `goToLogin()`.
+- **`app/login`** — hardened: on mount it moves `?redirect=` into `sessionStorage` and strips the
+  query string from the URL, so its own OAuth `redirect_to` stays a clean exact-match URL (a
+  lingering `?redirect=` would re-trigger the 401). Open-redirect protection (`safeRedirectTarget`,
+  same-origin only) is preserved.
+- **Dashboard (no code)** — allowlist now needs only `https://app.1upesports.org/login` +
+  `https://admin.1upesports.org/login`; no per-page entries.
+
+### QA
+- `npm run build` clean · **337 tests** · no schema/route changes (the only new route attempt, a
+  public `/login` page, was dropped in favor of reusing `app/login`).
+
+---
+
 ## [2.47.0] — 2026-06-19
 
 ### Added — card / Stripe Checkout payment (the `card` method goes from design-only to built)

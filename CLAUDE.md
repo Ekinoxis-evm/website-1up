@@ -50,7 +50,7 @@ All public routes use the single `(main)` layout group — TopAppBar + MobileBot
 | `/juegos` | `(main)` | **Redirects to `/gaming-tower`** — games are now part of the Tower page |
 | `/team` | `(main)` | **Redirects to `/`** — Masters on `/academia`, recruitment on `/torneos` |
 | `/torneos/[slug]` | `(main)` | Tournament detail — cover, badges, prizes podium, sponsor strip, RegisterButton CTA. `generateMetadata` with per-tournament OG. Numeric ID fallback for old QR codes/bookmarks. |
-| `/torneos/[slug]/checkin` | `(main)` | QR check-in — inline Privy login (no redirect), validates registration, marks `attended` via POST /api/user/tournament-checkin. Numeric ID fallback for old QR codes. |
+| `/torneos/[slug]/checkin` | `(main)` | QR check-in — login via `goToLogin()` (routes to `app/login`, returns here authenticated), validates registration, marks `attended` via POST /api/user/tournament-checkin. Numeric ID fallback for old QR codes. |
 | `/torneos/[slug]/tv` | `(bare)` | **TV / venue display view** (v2.35.0). Fullscreen, no chrome. Huge tournament title + cover, bracket scaled to viewport with avatar-aware match cards (56px avatars, big typography), sponsor strip at bottom. Polls `/api/tournaments/[slug]/bracket` every 15s for live updates as the cockpit records winners. The `(bare)` route group is a sibling of `(main)` so this page inherits no TopAppBar / Footer. |
 | `/academia` | `(main)` | Course catalog + Masters profiles + CommunitySection + token/bank checkout (MercadoPago not yet active) |
 | `/academia/[courseId]` | `(main)` | Public course preview — hero card (image, master, stats, price), playable intro video (CF Stream signed token via `/api/public/course-intro-token`), full module + session list with lock icons, INSCRIBIRSE CTA. `generateMetadata` with per-course OG. |
@@ -235,13 +235,18 @@ Do NOT use `https://privy.1upesports.org/api/v1/oauth/callback` — Privy always
 
 ### Privy Dashboard (one-time)
 - **Allowed origins**: `https://1upesports.org`, `https://www.1upesports.org`, `https://app.1upesports.org`, `https://admin.1upesports.org` *(www is required because Vercel auto-redirects the apex to www — login attempts from the public marketing site would otherwise hit an origin Privy doesn't recognize)*
-- **Allowed OAuth redirect URLs**: `https://app.1upesports.org/login` (this is the `redirect_to` Privy sends to its own `/oauth/init` endpoint — must be an exact match, no trailing slash)
+- **Allowed OAuth redirect URLs**: `https://app.1upesports.org/login` **and** `https://admin.1upesports.org/login` (this is the `redirect_to` Privy sends to its own `/oauth/init` endpoint — must be an exact match, no trailing slash). **Both subdomain login pages must be listed** — Google login is triggered from each one, and the list is exact-match: if a page's URL isn't on it, Privy 401s `/oauth/init` and only Google breaks (email still works, since email skips the OAuth redirect). Any new origin that shows a Google login button needs its exact URL added here too.
 
 ### Debugging checklist
 If Google login breaks again (401 from `privy.1upesports.org/api/v1/oauth/init`):
 1. Privy is rejecting the `redirect_to` → check **Allowed OAuth redirect URLs** in Privy dashboard
 2. If it reaches Google and returns `redirect_uri_mismatch` → the Google Cloud Console is missing `https://auth.privy.io/api/v1/oauth/callback`
 3. The exact rejected URI is encoded in the Google error page URL (`authError` param, base64 protobuf) — decode to confirm
+
+### Login routing — NEVER call Privy `login()` inline on a public page
+Privy's OAuth (Google) flow returns the user to the **exact URL where login was initiated**, and that URL must be an exact match in **Allowed OAuth redirect URLs**. Public pages with dynamic slugs (`/torneos/[slug]`, `/academia/[courseId]`, `/torneos/[slug]/checkin`) can never be allowlisted, so triggering `login()` inline there breaks Google login (email still works — it skips the redirect).
+
+**Rule:** any login trigger on a public page must call `goToLogin()` from `src/lib/loginRedirect.ts`, which sends the user to `app.1upesports.org/login?redirect=<page they came from>` — the single allowlisted public login page. The Privy session cookie is shared across all `*.1upesports.org` subdomains, so the user returns to the public site already authenticated and lands back on the page they started from. `app/login` strips its `?redirect=` query into `sessionStorage` on mount so its own OAuth `redirect_to` stays a clean, exact-match URL. Allowlist only needs `app/login` + `admin/login` — no per-page entries.
 
 ---
 

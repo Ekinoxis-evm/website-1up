@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
+import { goToLogin } from "@/lib/loginRedirect";
 
 interface Tournament {
   id:     number;
@@ -19,7 +20,7 @@ type Registration = {
 type ProfileLike = { username: string | null } | null;
 
 export function TournamentCheckinClient({ tournament }: { tournament: Tournament }) {
-  const { ready, authenticated, login, getAccessToken, user } = usePrivy();
+  const { ready, authenticated, getAccessToken, user } = usePrivy();
   const [loadingReg, setLoadingReg]   = useState(false);
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [profile, setProfile]         = useState<ProfileLike>(null);
@@ -126,7 +127,7 @@ export function TournamentCheckinClient({ tournament }: { tournament: Tournament
                 Inicia sesión para confirmar tu asistencia al torneo.
               </p>
               <button
-                onClick={() => login()}
+                onClick={goToLogin}
                 className="w-full bg-primary-container text-white font-headline font-black text-sm py-3 skew-fix hover:neo-shadow-pink transition-all"
               >
                 <span className="block skew-content">INICIAR SESIÓN</span>
