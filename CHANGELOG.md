@@ -5,6 +5,36 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.48.0] — 2026-06-19
+
+### Added — Treasury wallets + "Cuentas y Tesorerías" (admin cleanup, phase 1)
+
+First step of the admin reorganization: stop pasting EVM addresses per tournament — pick a saved
+wallet from a list.
+
+- **Migration** `20260619120000_treasury_wallets.sql` (applied live) — new `treasury_wallets`
+  table (`label`, `address` with EVM CHECK, `chain_id` default 8453/Base, `is_active`, `sort_order`),
+  **RLS deny-all** (service-role only).
+- **`/api/admin/treasury-wallets`** (new, `checkAdmin`) — GET/POST/PUT/DELETE; validates label +
+  EVM address (reuses `isValidTreasuryAddress`).
+- **"Cuentas y Tesorerías"** — the bank-accounts page (`/admin/bank-accounts`) gains a **Wallets de
+  Tesorería** section (CRUD), and the page is **moved to the Sistema** sidebar group, relabeled
+  "Cuentas y Tesorerías" (icon `account_balance_wallet`).
+- **Tournament editor** — the per-tournament **Tesorería** field is now a **dropdown** of active
+  wallets (was a paste input). It still writes `tournaments.treasury_address` (the chosen wallet's
+  address), so `parseEntryFeeInput`'s token-fee↔treasury coupling and the on-chain verification are
+  unchanged. Backward-compat: an existing address not in the list shows as "(personalizada)";
+  no active wallets → disabled with a link to add one.
+
+Also: a small card-checkout error-logging improvement (`createCardCheckoutSession` failures now
+log the Stripe reason).
+
+> Next admin-cleanup phases: 1UP Pass page → Configuración + current-holders table (orders page
+> = orders only); Pass benefits → Sitio Web; remove the Pass's standalone treasury (use the wallet
+> list); tournament creation **wizard** + better name display.
+
+### QA
+- `npm run build` clean · **337 tests** · RLS-safe (treasury_wallets read/written only via `supabaseAdmin`).
 ## [2.47.1] — 2026-06-19
 
 ### Fixed — Google login broke when triggered from any non-allowlisted public page

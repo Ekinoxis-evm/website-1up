@@ -503,8 +503,9 @@ async function handleCardEntry(opts: {
     });
     revalidateEntryPaths();
     return NextResponse.json({ id: inserted.id, checkoutUrl: url, status: "pending_bank", paymentMethod: "card" }, { status: 201 });
-  } catch {
+  } catch (e) {
     // Couldn't start the session — cancel the dangling order so it doesn't block retries.
+    console.error("[card] createCardCheckoutSession failed:", e instanceof Error ? e.message : e);
     await supabaseAdmin.from("tournament_entry_orders").update({ status: "cancelled" }).eq("id", inserted.id);
     return NextResponse.json({ error: "No se pudo iniciar el pago con tarjeta. Intenta de nuevo." }, { status: 502 });
   }
