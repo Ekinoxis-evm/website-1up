@@ -5,6 +5,44 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.47.0] — 2026-06-19
+
+### Added — card / Stripe Checkout payment (the `card` method goes from design-only to built)
+
+The easy "pay online" method via **Stripe Checkout** (hosted, dynamic payment methods → cards +
+Apple Pay / Google Pay automatically, no card-element/PCI work). Built end-to-end on **tournament
+entry** first; the core is reusable for the other services. **Gated by `PAYMENTS_CARD_LIVE`** —
+inert until keys + the flag are set, so this ships safely dark.
+
+- **`src/lib/payments/stripe.ts`** (new) — Stripe client, `createCardCheckoutSession` (COP × 100
+  for Stripe's two-decimal handling; references the per-service catalog Product via
+  `STRIPE_PRODUCT_*` env, inline fallback otherwise; `(order_kind, order_id)` in session +
+  PaymentIntent metadata), `constructStripeEvent` (signature verify), `isCardLive`.
+- **`src/lib/payments/stripeWebhookDecision.ts`** (new, pure, +6 tests) — decides fulfillment from
+  a `checkout.session.completed` + `paid` event; rejects bad/unknown metadata.
+- **`/api/webhooks/stripe`** (new) — inert unless `PAYMENTS_CARD_LIVE` + secret set; verifies the
+  signature FIRST, then records the card payment via `apply_payment_event` (idempotent:
+  single-confirmed + `stripe_payment_intent_id` UNIQUE) and registers the player. At-least-once
+  delivery safe; the manual-refund path holds if a tournament fills post-capture.
+- **User** — `/api/user/tournament-entry-orders` `card` branch creates a `pending_bank` order +
+  a Checkout Session, returns `checkoutUrl`; the wizard's **"Tarjeta / pago en línea"** option
+  redirects to Stripe. `availableEntryMethods` gates card by `card_enabled` AND `PAYMENTS_CARD_LIVE`.
+- **Migration** `20260619000000_tournament_entry_allow_card.sql` (applied live) — allows `'card'`.
+- **Stripe account (via MCP)** — created the four live catalog Products: `1UP Pass`
+  (`prod_UjRIsruufYyfZ1`), `Inscripción a Torneo` (`prod_UjRJcahnu5MvhM`), `Compra de $1UP`
+  (`prod_UjRJv0xIFH2mwg`), `Curso — Academia 1UP` (`prod_UjRJBpraVBjwUm`).
+
+### Go-live (pending — needs Stripe keys + dashboard webhook)
+Add `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` /
+`STRIPE_PRODUCT_*` / `PAYMENTS_CARD_LIVE=true`; create the webhook endpoint
+(`/api/webhooks/stripe`, event `checkout.session.completed`) in the Stripe Dashboard; enable card
+for tournaments in **Métodos de Pago**; test. Then replicate `card` to pass / courses / $1UP.
+
+### QA
+- **337 tests** (new `stripeWebhookDecision.test.ts`); `npm run build` clean.
+
+---
+
 ## [2.46.0] — 2026-06-19
 
 ### Added — cash payment on 1UP Pass — cash rollout COMPLETE (Phase 2b finished)

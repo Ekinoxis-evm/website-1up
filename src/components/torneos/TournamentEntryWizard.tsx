@@ -33,7 +33,8 @@ type View =
   | "method" | "no_method"
   | "token_confirm" | "token_sending" | "token_confirming" | "token_registering" | "token_success" | "token_error"
   | "bank_data" | "bank_comprobante" | "bank_success"
-  | "cash_confirm";
+  | "cash_confirm"
+  | "card_redirecting";
 
 interface Props {
   tournamentId:    number;
@@ -42,6 +43,7 @@ interface Props {
   entryFeeCop:     number | null;
   treasuryAddress: string | null;
   cashEnabled:     boolean;
+  cardEnabled:     boolean;
   walletAddress:   string | null;
   getAccessToken:  () => Promise<string | null>;
   onClose:         () => void;
@@ -58,7 +60,7 @@ function fmtCop(n: number): string {
 const TREASURY_RE = /^0x[a-fA-F0-9]{40}$/;
 
 export function TournamentEntryWizard({
-  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, walletAddress,
+  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, walletAddress,
   getAccessToken, onClose, onRegistered, onPending,
 }: Props) {
   const { sendTransaction } = useSendTransaction();
@@ -69,16 +71,20 @@ export function TournamentEntryWizard({
   // Cash is collected in pesos at the venue, so it requires a COP fee + the
   // admin toggle (server enforces both — this just mirrors it for the UI).
   const cashAvailable  = cashEnabled && entryFeeCop != null && entryFeeCop > 0;
+  // Card is charged in pesos via Stripe Checkout, so it requires a COP fee + the
+  // admin toggle + the live flag (server enforces all — this mirrors it).
+  const cardAvailable  = cardEnabled && entryFeeCop != null && entryFeeCop > 0;
   const canPayToken    = tokenAvailable && !!walletAddress;
   // Whether more than one method exists — drives the method-choice screen and
   // the "ATRÁS" affordances on each sub-flow.
-  const methodCount = [tokenAvailable, bankAvailable, cashAvailable].filter(Boolean).length;
+  const methodCount = [tokenAvailable, bankAvailable, cashAvailable, cardAvailable].filter(Boolean).length;
 
   const [view, setView] = useState<View>(() => {
     if (methodCount > 1) return "method";
     if (tokenAvailable) return "token_confirm";
     if (bankAvailable)  return "bank_data";
     if (cashAvailable)  return "cash_confirm";
+    if (cardAvailable)  return "card_redirecting";
     // Paid-token tournament whose treasury isn't configured yet — fail closed.
     return "no_method";
   });
@@ -105,6 +111,9 @@ export function TournamentEntryWizard({
   // ── Cash state ──────────────────────────────────────────────────────
   const [cashLoading, setCashLoading] = useState(false);
   const [cashError, setCashError]     = useState<string | null>(null);
+
+  // ── Card state ──────────────────────────────────────────────────────
+  const [cardError, setCardError] = useState<string | null>(null);
 
   async function authHeader(): Promise<Record<string, string>> {
     const token = await getAccessToken();
@@ -303,6 +312,46 @@ export function TournamentEntryWizard({
     onPending();
   }
 
+  // ── Card flow (Stripe Checkout) ─────────────────────────────────────
+  // The server creates a pending order + a Stripe-hosted Checkout session and
+  // returns its URL. We full-page-redirect the browser there; payment is
+  // confirmed asynchronously by a Stripe webhook (the user leaves the site).
+  async function handleCardSubmit() {
+    setCardError(null);
+    setView("card_redirecting");
+
+    const token = await getAccessToken();
+    const res = await fetch("/api/user/tournament-entry-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ tournamentId, paymentMethod: "card" }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.checkoutUrl) {
+      setCardError(
+        body.reason === "method_unavailable"
+          ? "Este torneo no acepta pago con tarjeta."
+          : (body.error ?? "Error al iniciar el pago con tarjeta."),
+      );
+      setView("method");
+      return;
+    }
+
+    window.location.href = body.checkoutUrl as string;
+  }
+
+  // Card-only tournaments open straight into the redirect view — kick off the
+  // POST once on mount so the user doesn't see an empty loading screen.
+  const cardKickedOff = useRef(false);
+  useEffect(() => {
+    if (view === "card_redirecting" && !cardKickedOff.current) {
+      cardKickedOff.current = true;
+      handleCardSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const closable = ["method", "no_method", "token_confirm", "token_success", "token_error", "bank_data", "bank_comprobante", "bank_success", "cash_confirm"].includes(view);
 
   return (
@@ -382,6 +431,21 @@ export function TournamentEntryWizard({
                   </p>
                 </div>
               )}
+              {cardAvailable && (
+                <div className="space-y-1">
+                  <button
+                    onClick={handleCardSubmit}
+                    className="w-full bg-surface-container-high text-on-background font-headline font-black uppercase tracking-tighter py-4 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">credit_card</span>
+                    TARJETA / PAGO EN LÍNEA
+                  </button>
+                  <p className="font-body text-xs text-on-surface/50">
+                    Paga con tarjeta, Apple Pay o Google Pay.
+                  </p>
+                </div>
+              )}
+              {cardError && <p className="font-body text-xs text-error">{cardError}</p>}
             </div>
           )}
 
@@ -738,6 +802,19 @@ export function TournamentEntryWizard({
               >
                 CERRAR
               </button>
+            </div>
+          )}
+
+          {/* ── Card: redirecting to Stripe Checkout ── */}
+          {view === "card_redirecting" && (
+            <div className="flex flex-col items-center gap-6 py-10 text-center">
+              <span className="material-symbols-outlined text-primary text-5xl animate-spin">refresh</span>
+              <div className="space-y-1">
+                <p className="font-headline font-black text-lg uppercase tracking-tighter">Redirigiendo a la pasarela de pago…</p>
+                <p className="font-body text-sm text-on-surface/50">
+                  Te llevamos a la página segura de pago. No cierres esta ventana.
+                </p>
+              </div>
             </div>
           )}
         </div>

@@ -136,10 +136,14 @@ export default async function TournamentDetailPage(
   // the admin client (safe: this is a Server Component).
   const { data: methodCfg } = await supabaseAdmin
     .from("service_payment_methods")
-    .select("cash_enabled")
+    .select("cash_enabled, card_enabled")
     .eq("service", "tournament_entry")
     .maybeSingle();
   const cashEnabled = !!methodCfg?.cash_enabled && (t.entry_fee_cop ?? 0) > 0;
+  // Card (Stripe Checkout) needs a COP fee, the admin toggle, AND the live flag.
+  // The server enforces all three — this mirrors it so the option only shows when
+  // a POST would actually succeed.
+  const cardEnabled = !!methodCfg?.card_enabled && (t.entry_fee_cop ?? 0) > 0 && process.env.PAYMENTS_CARD_LIVE === "true";
 
   const dateLong = t.date
     ? new Date(t.date).toLocaleDateString("es-CO", {
@@ -241,6 +245,7 @@ export default async function TournamentDetailPage(
                 entryFeeCop={t.entry_fee_cop}
                 treasuryAddress={t.treasury_address}
                 cashEnabled={cashEnabled}
+                cardEnabled={cardEnabled}
               />
             )}
             {!t.is_registration_open && t.status !== "completed" && (
