@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { Avatar } from "@/components/ui/Avatar";
+import { goToLogin } from "@/lib/loginRedirect";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
 
@@ -20,7 +21,7 @@ const NAV_LINKS = [
 
 export function TopAppBar() {
   const pathname = usePathname();
-  const { logout, authenticated, ready, login, user, getAccessToken } = usePrivy();
+  const { logout, authenticated, ready, user, getAccessToken } = usePrivy();
 
   const displayName =
     user?.google?.name ??
@@ -118,7 +119,7 @@ export function TopAppBar() {
             </div>
           ) : (
             <button
-              onClick={login}
+              onClick={goToLogin}
               className="bg-primary-container text-white px-6 py-2 font-headline font-black skew-fix hover:bg-secondary hover:neo-shadow-blue transition-all"
             >
               <span className="block skew-content">INGRESAR</span>

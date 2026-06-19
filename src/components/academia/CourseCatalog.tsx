@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
+import { goToLogin } from "@/lib/loginRedirect";
 import { CourseCheckoutWizard } from "./CourseCheckoutWizard";
 
 type MasterSummary = { id: number; name: string; photo_url: string | null };
@@ -28,7 +29,7 @@ const CAT_STYLE: Record<string, { badge: string; border: string }> = {
 export function CourseCatalog({ courses, masters, cashEnabled = false }: Props) {
   const [active, setActive] = useState<Cat>("All");
   const [activeMaster, setActiveMaster] = useState<number | "all">("all");
-  const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { ready, authenticated, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [isAffiliate, setIsAffiliate] = useState(false);
   const [checkoutCourse, setCheckoutCourse] = useState<Course | null>(null);
@@ -74,7 +75,7 @@ export function CourseCatalog({ courses, masters, cashEnabled = false }: Props) 
 
   function handleEnroll(course: Course) {
     if (!ready) return;
-    if (!authenticated) { login(); return; }
+    if (!authenticated) { goToLogin(); return; }
     if (!course.price_cop) return;
     setCheckoutCourse(course);
   }

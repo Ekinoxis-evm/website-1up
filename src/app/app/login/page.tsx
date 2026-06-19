@@ -8,6 +8,8 @@ import { usePrivy } from "@privy-io/react-auth";
 const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
+const REDIRECT_KEY = "1up_app_login_redirect";
+
 function safeRedirectTarget(raw: string | null): string {
   if (!raw) return APP_URL;
   try {
@@ -24,10 +26,25 @@ function AppLoginInner() {
   const { login, authenticated, ready } = usePrivy();
   const search = useSearchParams();
 
+  // Move ?redirect into sessionStorage and strip it from the URL on mount, so
+  // the Google OAuth redirect_to (this page's URL) stays an exact match for the
+  // Privy allowlist — any query string would break the match and 401 the flow.
+  useEffect(() => {
+    const raw = search.get("redirect");
+    if (raw) {
+      try { sessionStorage.setItem(REDIRECT_KEY, raw); } catch { /* ignore */ }
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [search]);
+
   useEffect(() => {
     if (ready && authenticated) {
-      const target = safeRedirectTarget(search.get("redirect"));
-      window.location.href = target;
+      let stored: string | null = null;
+      try {
+        stored = sessionStorage.getItem(REDIRECT_KEY);
+        sessionStorage.removeItem(REDIRECT_KEY);
+      } catch { /* ignore */ }
+      window.location.href = safeRedirectTarget(stored ?? search.get("redirect"));
     }
   }, [ready, authenticated, search]);
 

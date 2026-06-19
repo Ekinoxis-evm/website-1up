@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Course } from "@/types/database.types";
 import { formatCop } from "@/lib/utils";
+import { goToLogin } from "@/lib/loginRedirect";
 import { CourseCheckoutWizard } from "./CourseCheckoutWizard";
 
 type Module = {
@@ -95,7 +96,7 @@ function IntroPlayer({ courseId }: { courseId: number }) {
 }
 
 export function CoursePreview({ course, modules, sessions, masterName, masterPhoto, cashEnabled = false }: Props) {
-  const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { ready, authenticated, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [checkout, setCheckout] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
@@ -113,7 +114,7 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
 
   function handleEnroll() {
     if (!ready) return;
-    if (!authenticated) { login(); return; }
+    if (!authenticated) { goToLogin(); return; }
     if (!course.price_cop) return;
     setCheckout(true);
   }
