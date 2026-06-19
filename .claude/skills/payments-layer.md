@@ -80,7 +80,12 @@ tables exposed to the anon key.
 - **v2.45.0** (shipped) — **cash** on **$1UP purchases** (`src/lib/tokenPurchase.ts`). Nuance:
   fulfillment is the admin's on-chain $1UP send (`verifyTokenTransfer` + `approved_tx_hash`) — cash
   only records the COP receipt; approve still requires the txHash.
-- **next** — **1UP Pass** cash (COP = `price_token × 1.000`), then the Stripe / Apple Pay track.
+- **v2.46.0** (shipped) — **cash** on **1UP Pass** (`src/lib/passPurchase.ts`; COP =
+  `price_token × 1.000`; approve reuses the bank activation path). **Cash rollout COMPLETE across
+  all four paid services.**
+- **next** — the **Stripe / Apple Pay (`card`)** track (design-only behind `PAYMENTS_CARD_LIVE`:
+  stand up the Stripe MCP + a signature-verified webhook first); and the deferred **deposits**
+  feature (needs a reservation lifecycle + reconciliation panel).
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.
