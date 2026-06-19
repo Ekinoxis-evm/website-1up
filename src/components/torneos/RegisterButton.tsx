@@ -19,6 +19,9 @@ interface Props {
   // v2.41.x — cash ("Efectivo") method, gated server-side. Defaults off; only
   // the detail page (which fetches the method config) turns it on.
   cashEnabled?:   boolean;
+  // v2.44.x — card (Stripe Checkout) method, gated server-side. Defaults off;
+  // only the detail page (which fetches the method config + live flag) turns it on.
+  cardEnabled?:   boolean;
   compact?:       boolean;
   onRegistered?:  () => void;
 }
@@ -26,7 +29,7 @@ interface Props {
 const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
-export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, compact, onRegistered }: Props) {
+export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, compact, onRegistered }: Props) {
   const { authenticated, ready, user, getAccessToken } = usePrivy();
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -246,6 +249,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
           entryFeeCop={feeCop}
           treasuryAddress={treasuryAddress ?? null}
           cashEnabled={cashEnabled ?? false}
+          cardEnabled={cardEnabled ?? false}
           walletAddress={user?.wallet?.address ?? null}
           getAccessToken={getAccessToken}
           onClose={() => setWizardOpen(false)}

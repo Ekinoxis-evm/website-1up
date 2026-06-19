@@ -7,6 +7,7 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
 import { rateLimitByUser, limiters } from "@/lib/rateLimit";
 import { canCreateEntryOrder, tournamentEntryFee, paidRegistrationFailureMessage, isValidTreasuryAddress, DEFAULT_ENTRY_METHOD_FLAGS, type ServiceMethodFlags } from "@/lib/tournamentEntry";
+import { createCardCheckoutSession, isCardLive } from "@/lib/payments/stripe";
 import { sendTournamentRegistrationEmail, sendTournamentEntryTokenAdminEmail, sendTournamentEntryBankEmails } from "@/lib/email";
 import { buildGoogleCalendarUrl } from "@/lib/calendar";
 
@@ -69,7 +70,10 @@ export async function POST(req: NextRequest) {
   if (!Number.isFinite(tournamentId) || tournamentId <= 0) {
     return NextResponse.json({ error: "tournamentId inválido." }, { status: 400 });
   }
-  const method = paymentMethod === "bank" ? "bank" : paymentMethod === "cash" ? "cash" : "token";
+  const method = paymentMethod === "bank" ? "bank"
+    : paymentMethod === "cash" ? "cash"
+    : paymentMethod === "card" ? "card"
+    : "token";
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
@@ -99,7 +103,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const cfg: ServiceMethodFlags = cfgRow ?? DEFAULT_ENTRY_METHOD_FLAGS;
 
-  const gate = canCreateEntryOrder(tournament, method, cfg);
+  const gate = canCreateEntryOrder(tournament, method, cfg, { cardLiveEnv: isCardLive() });
   if (!gate.ok) return NextResponse.json({ error: gate.error, reason: gate.reason }, { status: gate.status });
   const fee = tournamentEntryFee(tournament!)!;
 
@@ -129,6 +133,18 @@ export async function POST(req: NextRequest) {
       ? "Ya tienes un pago en revisión para este torneo. Espera la aprobación del equipo."
       : "Ya tienes un pago confirmado para este torneo.";
     return NextResponse.json({ error: msg, reason: "order_in_flight" }, { status: 409 });
+  }
+
+  if (method === "card") {
+    return handleCardEntry({
+      privyUserId:    claims.userId,
+      userProfileId:  profile.id,
+      userEmail:      profile.email ?? null,
+      tournamentId,
+      tournamentName: tournament!.name,
+      tournamentSlug: tournament!.slug ?? String(tournamentId),
+      amountCop:      fee.cop!,
+    });
   }
 
   if (method === "cash") {
@@ -438,4 +454,58 @@ async function handleCashEntry(opts: {
   }
 
   return NextResponse.json({ id: inserted.id, status: "pending_bank", paymentMethod: "cash" }, { status: 201 });
+}
+
+// Card (Stripe Checkout): create the order pending_bank, then a hosted Checkout
+// Session. The webhook (checkout.session.completed) is the source of truth — it
+// confirms the order + registers the player. We return the URL to redirect to.
+async function handleCardEntry(opts: {
+  privyUserId:    string;
+  userProfileId:  number;
+  userEmail:      string | null;
+  tournamentId:   number;
+  tournamentName: string;
+  tournamentSlug: string;
+  amountCop:      number;
+}): Promise<NextResponse> {
+  const { privyUserId, userProfileId, userEmail, tournamentId, tournamentName, tournamentSlug, amountCop } = opts;
+
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("tournament_entry_orders")
+    .insert({
+      tournament_id:   tournamentId,
+      user_profile_id: userProfileId,
+      privy_user_id:   privyUserId,
+      payment_method:  "card",
+      amount_cop:      amountCop,
+      status:          "pending_bank",
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      return NextResponse.json({ error: "Ya tienes un pago en curso para este torneo." }, { status: 409 });
+    }
+    return NextResponse.json({ error: insertErr.message }, { status: 500 });
+  }
+
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
+  try {
+    const { url } = await createCardCheckoutSession({
+      orderKind:     "tournament_entry",
+      orderId:       inserted.id,
+      amountCop,
+      productName:   `Inscripción — ${tournamentName}`,
+      customerEmail: userEmail,
+      successUrl:    `${BASE_URL}/torneos/${tournamentSlug}?pago=ok`,
+      cancelUrl:     `${BASE_URL}/torneos/${tournamentSlug}?pago=cancelado`,
+    });
+    revalidateEntryPaths();
+    return NextResponse.json({ id: inserted.id, checkoutUrl: url, status: "pending_bank", paymentMethod: "card" }, { status: 201 });
+  } catch {
+    // Couldn't start the session — cancel the dangling order so it doesn't block retries.
+    await supabaseAdmin.from("tournament_entry_orders").update({ status: "cancelled" }).eq("id", inserted.id);
+    return NextResponse.json({ error: "No se pudo iniciar el pago con tarjeta. Intenta de nuevo." }, { status: 502 });
+  }
 }

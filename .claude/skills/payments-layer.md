@@ -83,9 +83,14 @@ tables exposed to the anon key.
 - **v2.46.0** (shipped) — **cash** on **1UP Pass** (`src/lib/passPurchase.ts`; COP =
   `price_token × 1.000`; approve reuses the bank activation path). **Cash rollout COMPLETE across
   all four paid services.**
-- **next** — the **Stripe / Apple Pay (`card`)** track (design-only behind `PAYMENTS_CARD_LIVE`:
-  stand up the Stripe MCP + a signature-verified webhook first); and the deferred **deposits**
-  feature (needs a reservation lifecycle + reconciliation panel).
+- **v2.47.0** (built, go-live pending keys) — **`card` via Stripe Checkout** (hosted, dynamic
+  methods → Apple/Google Pay auto). `src/lib/payments/stripe.ts` + `stripeWebhookDecision.ts` +
+  `/api/webhooks/stripe` (signature-verified, `apply_payment_event(card)` → fulfill). Live on
+  **tournament entry** first; gated by `PAYMENTS_CARD_LIVE`. Four catalog Products built in Stripe
+  via the MCP (IDs in CLAUDE.md / `STRIPE_PRODUCT_*`). COP charged at ×100 (two-decimal). Account:
+  Ekinoxis Labs, LLC (`acct_1TgnjyBYH4gcyfom`). Stripe ops are done **via the Stripe MCP**.
+- **next** — flip card live (keys + Dashboard webhook + enable in Métodos de Pago + test), then
+  replicate `card` to pass / courses / $1UP; then the deferred **deposits** feature.
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.
