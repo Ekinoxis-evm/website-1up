@@ -7,6 +7,11 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { sendPassTokenEmails, sendPassBankEmails } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
 import { rateLimitByUser, limiters } from "@/lib/rateLimit";
+import {
+  canSelectPassMethod,
+  DEFAULT_PASS_METHOD_FLAGS,
+  type PassMethodFlags,
+} from "@/lib/passPurchase";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -78,11 +83,34 @@ export async function POST(req: NextRequest) {
   }
   const walletAddress = walletLookup.wallet;
 
-  const method = paymentMethod === "bank" ? "bank" : "token";
+  const method =
+    paymentMethod === "bank" ? "bank" :
+    paymentMethod === "cash" ? "cash" :
+    "token";
+
+  // Which methods this service accepts is admin-configurable; token + bank are
+  // always on, cash is gated by the per-service toggle. Default to today's live
+  // behavior (cash off) if the config row is somehow absent.
+  const { data: cfgRow } = await supabaseAdmin
+    .from("service_payment_methods")
+    .select("cash_enabled")
+    .eq("service", "pass")
+    .maybeSingle();
+  const methodFlags: PassMethodFlags = cfgRow ?? DEFAULT_PASS_METHOD_FLAGS;
+
+  const methodGate = canSelectPassMethod(method, methodFlags);
+  if (!methodGate.ok)
+    return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
 
   // Bank transfer path
   if (method === "bank") {
     return handleBankOrder(claims.userId, walletAddress, bankAccountId, comprobantePath);
+  }
+
+  // Cash (in-person) path — lands pending_bank like a wire, but with no
+  // comprobante and no bank account. The admin attests + activates on approval.
+  if (method === "cash") {
+    return handleCashOrder(claims.userId, walletAddress);
   }
 
   // Token (blockchain) path
@@ -288,6 +316,60 @@ async function handleBankOrder(
       tokenAmount:  config.price_token,
       durationDays: config.duration_days,
       bankName:     bankAccount?.bank_name ?? "—",
+    }).catch(() => null);
+  }
+
+  return NextResponse.json({ id: inserted.id, status: "pending_bank" }, { status: 201 });
+}
+
+async function handleCashOrder(
+  privyUserId: string,
+  walletAddress: `0x${string}`,
+): Promise<NextResponse> {
+  const { data: config } = await supabaseAdmin.from("pass_config").select("*").eq("id", 1).single();
+  if (!config?.is_active) return NextResponse.json({ error: "La venta del 1UP Pass está desactivada." }, { status: 400 });
+
+  const email = await resolveUserEmail(privyUserId);
+  const profile = await getOrCreateProfile(privyUserId, email ?? undefined);
+  if (!profile) return NextResponse.json({ error: "No se pudo crear el perfil." }, { status: 500 });
+
+  // Mirror the bank order, minus the comprobante + bank account. token_amount_paid
+  // is the pass's nominal price_token so the `payment_method='admin_grant' OR
+  // token_amount_paid > 0` CHECK passes (cash isn't a grant). Activation happens
+  // on admin approval, identical to the bank path.
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("pass_orders")
+    .insert({
+      user_profile_id:         profile.id,
+      privy_user_id:           privyUserId,
+      email:                   email ?? null,
+      wallet_address:          walletAddress,
+      payment_method:          "cash",
+      status:                  "pending_bank",
+      token_price_at_purchase: config.price_token,
+      token_amount_paid:       config.price_token,
+      recipient_address:       config.recipient_address,
+      duration_days:           config.duration_days,
+      discount_pct_applied:    0,
+      verification_attempts:   0,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  revalidatePath("/app/pass");
+  revalidatePath("/admin/pass-orders");
+
+  if (email) {
+    const displayName = [profile.nombre, profile.apellidos].filter(Boolean).join(" ").trim() || email;
+    sendPassBankEmails({
+      userEmail:    email,
+      userName:     displayName,
+      orderId:      inserted.id,
+      tokenAmount:  config.price_token,
+      durationDays: config.duration_days,
+      bankName:     "Pago en efectivo (presencial en 1UP Gaming Tower)",
     }).catch(() => null);
   }
 

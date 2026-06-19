@@ -114,22 +114,35 @@ export async function PATCH(req: NextRequest) {
   if (!await isAdmin(email)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, adminNotes, action, rejectionReason } =
-    body as { id?: number; adminNotes?: string; action?: "approve" | "reject"; rejectionReason?: string };
+  const { id, adminNotes, action, rejectionReason, note } =
+    body as { id?: number; adminNotes?: string; action?: "approve" | "reject"; rejectionReason?: string; note?: string };
 
   if (!id) return NextResponse.json({ error: "id es requerido." }, { status: 400 });
 
-  // approve or reject bank pass orders
+  // approve or reject manual-review pass orders (bank wire or cash). Both land in
+  // pending_bank and activate the pass identically on approval; cash additionally
+  // records the COP receipt in the unified ledger.
   if (action === "approve" || action === "reject") {
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from("pass_orders")
       .select("*, user_profiles(nombre, apellidos, email)")
       .eq("id", id)
-      .eq("payment_method", "bank")
+      .in("payment_method", ["bank", "cash"])
       .eq("status", "pending_bank")
       .single();
 
     if (fetchErr || !order) return NextResponse.json({ error: "Orden no encontrada o ya procesada." }, { status: 404 });
+
+    // Cash is admin-attested: confirming it records a payment_events row whose
+    // CHECK requires a reason. Demand the note up front so we never half-confirm.
+    const isCash   = order.payment_method === "cash";
+    const cashNote = (note ?? adminNotes ?? "").trim();
+    if (action === "approve" && isCash && !cashNote) {
+      return NextResponse.json(
+        { error: "Indica una nota/motivo para confirmar el pago en efectivo (p. ej. recibido en taquilla)." },
+        { status: 400 },
+      );
+    }
 
     const profile = Array.isArray(order.user_profiles) ? order.user_profiles[0] : order.user_profiles;
     const userEmail = profile?.email ?? order.email ?? null;
@@ -199,6 +212,26 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Record the COP receipt in the unified ledger. The pass activation above is
+    // the fulfillment; this is the money-in side. cash = admin-attested with the
+    // mandatory note; bank = best-effort wire write mirroring courses/token. COP
+    // for a pass = token_amount_paid × 1.000 (1 $1UP = 1.000 COP convention).
+    // Best-effort: the order is already the source of truth, so a ledger hiccup
+    // must not fail the approval — but log it. The single-confirmed invariant in
+    // the RPC still guards against duplicates.
+    const amountCop = Math.round(Number(order.token_amount_paid) * 1000);
+    const { error: ledgerErr } = await supabaseAdmin.rpc("apply_payment_event", {
+      p_order_kind:        "pass",
+      p_order_id:          order.id,
+      p_method:            isCash ? "cash" : "wire",
+      p_amount_cop:        amountCop,
+      p_bank_account_id:   isCash ? undefined : (order.bank_account_id ?? undefined),
+      p_comprobante_url:   isCash ? undefined : (order.comprobante_url ?? undefined),
+      p_recorded_by_admin: email,
+      p_reason:            isCash ? cashNote : "Transferencia aprobada por el equipo",
+    });
+    if (ledgerErr) console.error("apply_payment_event failed for pass order", order.id, ledgerErr.message);
 
     if (userEmail) {
       sendPassBankApprovedEmail({

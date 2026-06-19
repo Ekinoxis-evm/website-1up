@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.46.0] — 2026-06-19
+
+### Added — cash payment on 1UP Pass — cash rollout COMPLETE (Phase 2b finished)
+
+Cash on `pass_orders`, the **last** of the four paid services. **No migration** —
+`pass_orders.payment_method` is free text; a cash order sets `token_amount_paid = price_token`
+(satisfies the existing `admin_grant OR > 0` CHECK), and the cash COP = `price_token × 1.000`.
+
+- **`src/lib/passPurchase.ts`** (new, pure, +tests) — `passCashAvailable` / `canSelectPassMethod`
+  gating by the `service_payment_methods` (`service='pass'`) toggle.
+- **User** — `/api/user/pass-orders` cash branch (`pending_bank`, no comprobante, server-gated);
+  new `BuyPassCashWizard` shown in `PassPurchasePanel` when cash is enabled (computed server-side).
+- **Admin** — `/api/admin/pass-orders` approves cash through the **same activation path** as bank
+  (`.in("payment_method", ["bank","cash"])`; pass-window/stacking logic untouched), requires a
+  `note`, then records the cash receipt via `apply_payment_event` (COP = `token_amount_paid × 1000`).
+  `AdminPassOrdersClient`: new "Efectivo" tab, cash rows show "sin comprobante" + a required
+  approve note.
+
+### 🎉 Cash is now live across ALL paid services
+tournament entry (2.43.0) · academia courses (2.44.0) · $1UP purchases (2.45.0) · **1UP Pass
+(2.46.0)** — every one governed by the admin **Métodos de Pago** page, every confirmed payment
+recorded in the unified `payment_events` ledger via the atomic `apply_payment_event` RPC.
+
+### QA
+- **331 tests** (new `passPurchase.test.ts`); `npm run build` clean. RLS-safe throughout.
+
+> Next track: **Stripe / Apple Pay** (`card`) — currently design-only behind `PAYMENTS_CARD_LIVE`.
+> Requires standing up the Stripe MCP against the account + a signature-verified webhook before
+> going live. Deposits ("pay the missing part") also remain deferred (needs a reservation
+> lifecycle + reconciliation panel).
+
+---
+
 ## [2.45.0] — 2026-06-18
 
 ### Added — cash payment on $1UP purchases (Phase 2b rollout 3/3)

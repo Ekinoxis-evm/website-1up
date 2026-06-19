@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { BuyPassWizard } from "./BuyPassWizard";
 import { BuyPassBankWizard } from "./BuyPassBankWizard";
+import { BuyPassCashWizard } from "./BuyPassCashWizard";
 import { PassCalendar } from "./PassCalendar";
 import type { PassConfig, PassBenefit, PassOrder, PassOrderStatus } from "@/types/database.types";
 
@@ -26,16 +27,18 @@ const STATUS_COLORS: Record<PassOrderStatus, string> = {
 };
 
 interface Props {
-  config:   PassConfig | null;
-  benefits: PassBenefit[];
+  config:      PassConfig | null;
+  benefits:    PassBenefit[];
+  cashEnabled: boolean;
 }
 
-export function PassPurchasePanel({ config, benefits }: Props) {
+export function PassPurchasePanel({ config, benefits, cashEnabled }: Props) {
   const { getAccessToken, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
 
   const [buyOpen, setBuyOpen]         = useState(false);
   const [buyBankOpen, setBuyBankOpen] = useState(false);
+  const [buyCashOpen, setBuyCashOpen] = useState(false);
   const [orders, setOrders]           = useState<PassOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -167,6 +170,15 @@ export function PassPurchasePanel({ config, benefits }: Props) {
                   <span className="material-symbols-outlined text-base">account_balance</span>
                   PAGAR CON BANCO
                 </button>
+                {cashEnabled && (
+                  <button
+                    onClick={() => setBuyCashOpen(true)}
+                    className="bg-surface-container text-on-background border border-primary-container/30 px-6 py-3 font-headline font-black text-sm uppercase tracking-tighter hover:border-primary-container transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    <span className="material-symbols-outlined text-base">payments</span>
+                    PAGAR EN EFECTIVO
+                  </button>
+                )}
               </>
             )}
 
@@ -300,6 +312,17 @@ export function PassPurchasePanel({ config, benefits }: Props) {
           walletAddress={walletAddress}
           getAccessToken={getAccessToken}
           onClose={() => setBuyBankOpen(false)}
+          onSuccess={handleSuccess}
+        />
+      ) : null}
+
+      {buyCashOpen && config && walletAddress ? (
+        <BuyPassCashWizard
+          priceToken={config.price_token}
+          durationDays={config.duration_days}
+          walletAddress={walletAddress}
+          getAccessToken={getAccessToken}
+          onClose={() => setBuyCashOpen(false)}
           onSuccess={handleSuccess}
         />
       ) : null}

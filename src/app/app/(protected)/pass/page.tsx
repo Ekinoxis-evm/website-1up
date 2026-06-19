@@ -5,10 +5,13 @@ import { MisPases } from "@/components/perfil/MisPases";
 export const metadata = { title: "1UP Pass — 1UP App" };
 
 export default async function AppPassPage() {
-  const [{ data: config }, { data: benefits }] = await Promise.all([
+  const [{ data: config }, { data: benefits }, { data: methodCfg }] = await Promise.all([
     supabaseAdmin.from("pass_config").select("*").eq("id", 1).single(),
     supabaseAdmin.from("pass_benefits").select("*").order("sort_order").order("id"),
+    supabaseAdmin.from("service_payment_methods").select("cash_enabled").eq("service", "pass").maybeSingle(),
   ]);
+
+  const cashEnabled = methodCfg?.cash_enabled === true;
 
   return (
     <div className="space-y-8">
@@ -21,7 +24,7 @@ export default async function AppPassPage() {
 
       <MisPases />
 
-      <PassPurchasePanel config={config ?? null} benefits={benefits ?? []} />
+      <PassPurchasePanel config={config ?? null} benefits={benefits ?? []} cashEnabled={cashEnabled} />
     </div>
   );
 }

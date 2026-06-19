@@ -47,7 +47,7 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed:          "Confirmado",
   failed:             "Fallido",
   expired_unverified: "No Verificado",
-  pending_bank:       "Pendiente Banco",
+  pending_bank:       "Pendiente",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -73,7 +73,7 @@ function userName(o: Order) {
   return u ? ([u.nombre, u.apellidos].filter(Boolean).join(" ") || u.username || u.email || `#${o.id}`) : `#${o.id}`;
 }
 
-type TabKey = "token" | "banco" | "grant";
+type TabKey = "token" | "banco" | "efectivo" | "grant";
 
 export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Props) {
   const { getAccessToken } = usePrivy();
@@ -99,16 +99,19 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
 
   const tokenOrders = orders.filter((o) => o.payment_method === "token");
   const bancoOrders = orders.filter((o) => o.payment_method === "bank");
+  const cashOrders  = orders.filter((o) => o.payment_method === "cash");
   const grantOrders = orders.filter((o) => o.payment_method === "admin_grant");
 
   const activeList =
-    tab === "token" ? tokenOrders :
-    tab === "banco" ? bancoOrders :
+    tab === "token"    ? tokenOrders :
+    tab === "banco"    ? bancoOrders :
+    tab === "efectivo" ? cashOrders :
     grantOrders;
 
   const statusOptions =
-    tab === "token"  ? ["all", "confirmed", "pending_tx", "failed", "expired_unverified"] :
-    tab === "banco"  ? ["all", "pending_bank", "confirmed", "failed"] :
+    tab === "token"    ? ["all", "confirmed", "pending_tx", "failed", "expired_unverified"] :
+    tab === "banco"    ? ["all", "pending_bank", "confirmed", "failed"] :
+    tab === "efectivo" ? ["all", "pending_bank", "confirmed", "failed"] :
     ["all", "confirmed", "failed"];
 
   const filtered = statusFilter === "all"
@@ -120,6 +123,7 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
     (o) => o.status === "confirmed" && o.expires_at && new Date(o.expires_at) > new Date()
   ).length;
   const pendingBanco   = bancoOrders.filter((o) => o.status === "pending_bank").length;
+  const pendingCash    = cashOrders.filter((o) => o.status === "pending_bank").length;
 
   const profileResults = useMemo(() => {
     const q = grantSearch.trim().toLowerCase();
@@ -148,11 +152,23 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
   }
 
   async function doAction(id: number, action: "approve" | "reject") {
+    // Cash approvals require a note/reason: it lands in the unified payment ledger
+    // (apply_payment_event), whose CHECK demands a reason. Block before the PATCH.
+    if (action === "approve" && tab === "efectivo" && !notes.trim()) {
+      setErr("Indica una nota/motivo para confirmar el pago en efectivo.");
+      return;
+    }
     setSaving(true); setErr("");
     const res = await fetch("/api/admin/pass-orders", {
       method: "PATCH",
       headers: await authHeaders(),
-      body: JSON.stringify({ id, action, adminNotes: notes || undefined, rejectionReason: rejectionReason || undefined }),
+      body: JSON.stringify({
+        id,
+        action,
+        adminNotes: notes || undefined,
+        note: tab === "efectivo" ? notes.trim() || undefined : undefined,
+        rejectionReason: rejectionReason || undefined,
+      }),
     });
     setSaving(false);
     if (!res.ok) { const d = await res.json(); setErr(d.error ?? "Error"); return; }
@@ -251,6 +267,7 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
         {([
           { key: "token" as TabKey, label: `Token $1UP (${tokenOrders.length})` },
           { key: "banco" as TabKey, label: `Banco (${bancoOrders.length})${pendingBanco > 0 ? ` · ${pendingBanco} pendientes` : ""}` },
+          { key: "efectivo" as TabKey, label: `Efectivo (${cashOrders.length})${pendingCash > 0 ? ` · ${pendingCash} pendientes` : ""}` },
           { key: "grant" as TabKey, label: `Admin Grant (${grantOrders.length})` },
         ]).map(({ key, label }) => (
           <button
@@ -308,7 +325,7 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
             {filtered.map((o) => {
               const isExpired = o.expires_at ? new Date(o.expires_at) < new Date() : true;
               const isOpen    = actionId === o.id;
-              const canApprove = tab === "banco" && o.status === "pending_bank";
+              const canApprove = (tab === "banco" || tab === "efectivo") && o.status === "pending_bank";
 
               return (
                 <Fragment key={o.id}>
@@ -334,10 +351,12 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
                       <span className={`font-headline text-[10px] px-2 py-0.5 uppercase whitespace-nowrap ${
                         o.payment_method === "token" ? "bg-tertiary/20 text-tertiary" :
                         o.payment_method === "bank"  ? "bg-secondary-container/40 text-secondary" :
+                        o.payment_method === "cash"  ? "bg-secondary-container/40 text-secondary" :
                         "bg-primary-container/20 text-primary-container"
                       }`}>
                         {o.payment_method === "token" ? "$1UP Token" :
-                         o.payment_method === "bank"  ? "Banco" : "Admin Grant"}
+                         o.payment_method === "bank"  ? "Banco" :
+                         o.payment_method === "cash"  ? "Efectivo" : "Admin Grant"}
                       </span>
                       {o.bank_accounts && (
                         <p className="font-body text-[10px] text-outline mt-1">{o.bank_accounts.bank_name}</p>
@@ -398,6 +417,8 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
                           <span className="material-symbols-outlined text-sm">open_in_new</span>
                           Ver
                         </a>
+                      ) : o.payment_method === "cash" ? (
+                        <span className="font-headline text-[10px] uppercase text-outline whitespace-nowrap">sin comprobante</span>
                       ) : (
                         <span className="text-outline text-xs">—</span>
                       )}
@@ -424,13 +445,15 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
                         <div className="flex flex-wrap gap-4 items-start">
                           <div className="flex-1 min-w-[220px]">
                             <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-1">
-                              Notas internas
+                              {tab === "efectivo" && canApprove
+                                ? "Nota / motivo (obligatorio para aprobar)"
+                                : "Notas internas"}
                             </label>
                             <textarea
                               value={notes}
                               onChange={(e) => setNotes(e.target.value)}
                               rows={2}
-                              placeholder="Notas opcionales…"
+                              placeholder={tab === "efectivo" && canApprove ? "Ej: recibido en taquilla…" : "Notas opcionales…"}
                               className="w-full bg-surface-container-lowest p-2.5 font-body text-sm border-none resize-none focus:outline-none"
                             />
                           </div>
@@ -453,7 +476,7 @@ export function AdminPassOrdersClient({ orders, profiles, defaultDuration }: Pro
                               <>
                                 <button
                                   onClick={() => doAction(o.id, "approve")}
-                                  disabled={saving}
+                                  disabled={saving || (tab === "efectivo" && !notes.trim())}
                                   className="bg-tertiary text-white font-headline font-black text-xs uppercase px-5 py-2.5 disabled:opacity-50 flex items-center gap-1"
                                 >
                                   <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
