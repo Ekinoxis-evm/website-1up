@@ -20,12 +20,18 @@ type TournamentRich = Tournament & {
   tournament_prizes: TournamentPrize[];
 };
 
+type TreasuryWalletOption = { id: number; label: string; address: string };
+
 interface Props {
   tournament:      TournamentRich;
   games:           Pick<Game, "id" | "name">[];
   defaultPassDays: number;
+  treasuryWallets: TreasuryWalletOption[];
   onSaved?:        () => void;
 }
+
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
+const CUSTOM_TREASURY = "__custom__";
 
 // Colombia is always UTC-5 (no DST). Formats a stored UTC ISO string for datetime-local input.
 function toColombiaInput(utcIso: string | null): string {
@@ -51,7 +57,7 @@ function prizeToFormRow(p: TournamentPrize, fallbackPassDays: number): PrizeForm
 const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" } as const;
 const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary-container", completed: "text-outline" } as const;
 
-export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, onSaved }: Props) {
+export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, treasuryWallets, onSaved }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -88,6 +94,14 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
 
   const tokenFeeSet  = entryFeeTokens.trim() !== "" && Number(entryFeeTokens) > 0;
   const treasuryOk   = /^0x[a-fA-F0-9]{40}$/.test(treasuryAddress.trim());
+
+  // The dropdown lists the active treasury wallets. If the tournament already
+  // carries a treasury_address that isn't in that list (e.g. a previously-pasted
+  // custom wallet, or a wallet later deactivated), surface it as a selected
+  // "(personalizada)" option so editing never silently drops it.
+  const hasWallets    = treasuryWallets.length > 0;
+  const treasuryInList = treasuryWallets.some((w) => w.address.toLowerCase() === treasuryAddress.trim().toLowerCase());
+  const showCustomOption = treasuryAddress.trim() !== "" && !treasuryInList;
 
   async function handleSave() {
     if (!name.trim()) { setError("El nombre es requerido."); return; }
@@ -313,18 +327,42 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
             <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
               Tesorería (wallet) {tokenFeeSet && <span className="text-error">*</span>}
             </label>
-            <input
-              value={treasuryAddress}
-              onChange={(e) => setTreasuryAddress(e.target.value)}
-              placeholder="0x… (dirección EVM en Base)"
-              spellCheck={false}
-              className={`w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none focus:outline-none ${
-                treasuryAddress.trim() !== "" && !treasuryOk ? "ring-2 ring-error" : ""
+            <select
+              value={showCustomOption ? CUSTOM_TREASURY : treasuryAddress.trim()}
+              onChange={(e) => {
+                // The "(personalizada)" sentinel keeps whatever address is already
+                // saved — selecting a wallet swaps to that wallet's address.
+                if (e.target.value === CUSTOM_TREASURY) return;
+                setTreasuryAddress(e.target.value);
+              }}
+              disabled={!hasWallets}
+              className={`w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none disabled:opacity-50 ${
+                tokenFeeSet && !treasuryOk ? "ring-2 ring-error" : ""
               }`}
-            />
+            >
+              <option value="">— Sin tesorería —</option>
+              {treasuryWallets.map((w) => (
+                <option key={w.id} value={w.address}>{w.label} — {w.address}</option>
+              ))}
+              {showCustomOption && (
+                <option value={CUSTOM_TREASURY}>(personalizada) — {treasuryAddress.trim()}</option>
+              )}
+            </select>
+            {!hasWallets && (
+              <p className="font-body text-[10px] text-outline mt-1 leading-snug">
+                No hay wallets activas.{" "}
+                <a
+                  href={`${ADMIN_URL}/admin/bank-accounts`}
+                  className="text-tertiary underline"
+                >
+                  Agrega una wallet en Cuentas y Tesorerías
+                </a>
+                .
+              </p>
+            )}
             {tokenFeeSet && !treasuryOk && (
               <p className="font-body text-[10px] text-error mt-1 leading-snug">
-                Obligatoria para cobrar en $1UP — los pagos del torneo se enviarán a esta wallet.
+                Obligatoria para cobrar en $1UP — selecciona la wallet a la que se enviarán los pagos del torneo.
               </p>
             )}
           </div>

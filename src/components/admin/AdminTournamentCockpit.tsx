@@ -52,7 +52,10 @@ interface Props {
   games:           Pick<Game, "id" | "name">[];
   defaultPassDays: number;
   entryOrders:     EntryOrderRow[];
+  treasuryWallets: TreasuryWalletOption[];
 }
+
+export type TreasuryWalletOption = { id: number; label: string; address: string };
 
 const STATUS_LABELS: Record<string, string> = {
   upcoming: "Próximo", live: "En vivo", completed: "Finalizado",
@@ -94,7 +97,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "premios",       label: "Premios",       icon: "emoji_events"  },
 ];
 
-export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays, entryOrders }: Props) {
+export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays, entryOrders, treasuryWallets }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -493,6 +496,7 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
             tournament={tournament}
             games={games}
             defaultPassDays={defaultPassDays}
+            treasuryWallets={treasuryWallets}
             onSaved={() => router.refresh()}
           />
         )}

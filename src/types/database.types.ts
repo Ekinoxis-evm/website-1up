@@ -307,6 +307,39 @@ export type Database = {
         }
         Relationships: []
       }
+      treasury_wallets: {
+        Row: {
+          address: string
+          chain_id: number
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          chain_id?: number
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          chain_id?: number
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bracket_matches: {
         Row: {
           bracket_id: number
@@ -2424,6 +2457,7 @@ export type AcademiaContent  = Database["public"]["Tables"]["academia_content"][
 export type SocialLink       = Database["public"]["Tables"]["social_links"]["Row"];
 export type SiteContent      = Database["public"]["Tables"]["site_content"]["Row"];
 export type BankAccount      = Database["public"]["Tables"]["bank_accounts"]["Row"];
+export type TreasuryWallet   = Database["public"]["Tables"]["treasury_wallets"]["Row"];
 export type TokenPurchaseOrder  = Database["public"]["Tables"]["token_purchase_orders"]["Row"];
 export type TokenPurchaseStatus = Database["public"]["Enums"]["token_purchase_status"];
 export type PassConfig       = Database["public"]["Tables"]["pass_config"]["Row"];

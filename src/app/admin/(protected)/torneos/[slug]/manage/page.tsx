@@ -41,6 +41,7 @@ export default async function AdminTournamentManagePage({
     { data: games },
     { data: passConfig },
     { data: entryOrders },
+    { data: treasuryWallets },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -67,6 +68,13 @@ export default async function AdminTournamentManagePage({
       .select("*, user_profiles(nombre, apellidos, email, username, avatar_url)")
       .eq("tournament_id", tournament.id)
       .order("created_at", { ascending: false }),
+    // Active treasury wallets — the Info tab's per-tournament treasury dropdown.
+    supabaseAdmin
+      .from("treasury_wallets")
+      .select("id, label, address")
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("id"),
   ]);
 
   // Comprobantes live in a private bucket — sign them for the admin preview.
@@ -85,6 +93,7 @@ export default async function AdminTournamentManagePage({
       games={games ?? []}
       defaultPassDays={passConfig?.duration_days ?? 30}
       entryOrders={entryOrdersSigned}
+      treasuryWallets={treasuryWallets ?? []}
     />
   );
 }

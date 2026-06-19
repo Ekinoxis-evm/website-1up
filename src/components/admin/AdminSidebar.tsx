@@ -50,7 +50,6 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/1pass",         icon: "card_membership",  label: "1UP Pass"       },
       { href: "/admin/pass-orders",   icon: "verified",         label: "Órdenes Pass"   },
       { href: "/admin/token-orders",  icon: "currency_exchange",label: "Órdenes $1UP"   },
-      { href: "/admin/bank-accounts", icon: "account_balance",  label: "Cuentas Banco"  },
     ],
   },
   {
@@ -58,6 +57,7 @@ const GROUPS: NavGroup[] = [
     icon: "settings",
     items: [
       { href: "/admin/user-profiles", icon: "people",               label: "Usuarios"     },
+      { href: "/admin/bank-accounts", icon: "account_balance_wallet", label: "Cuentas y Tesorerías" },
       { href: "/admin/payment-methods",icon: "payments",            label: "Métodos de Pago" },
       { href: "/admin/referral-codes",icon: "confirmation_number",  label: "Referidos"    },
       { href: "/admin/submissions",   icon: "inbox",                label: "Solicitudes"  },
