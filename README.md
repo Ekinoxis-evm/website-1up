@@ -21,14 +21,14 @@ Built and maintained by **Ekinoxis**. Three subdomains, one monorepo:
 | Database | Supabase (`@supabase/supabase-js`) — full schema versioned in `supabase/migrations/` (1097-line idempotent baseline + incremental migrations) |
 | File Storage | Supabase Storage — `images` bucket (public, 5MB) + `comprobantes` bucket (private, magic-byte sniffed, caller-namespace pinned) + `course-docs` bucket (private, 25MB, session documents) |
 | Video Streaming | Cloudflare Stream — signed RS256 JWTs (1h) bound to caller IP via `accessRules`, direct upload from admin browser |
-| Payments | MercadoPago (`mercadopago` SDK v2) — `id;request-id;ts` HMAC manifest + ±10 min replay window + allowed-transition idempotency map |
+| Payments | **Unified payment layer** — one admin-selectable method set (`token` / `wire` / `cash` / `card`) live across all four paid services (tournament entry, academia, $1UP, 1UP Pass); every confirmed payment recorded in the `payment_events` ledger via the atomic `apply_payment_event()` RPC. **Stripe** (`stripe` SDK) for `card` Checkout (hosted, card + Apple Pay / Google Pay; gated by `PAYMENTS_CARD_LIVE`). MercadoPago (`mercadopago` SDK v2) scaffolded but inactive — `id;request-id;ts` HMAC manifest + ±10 min replay window + allowed-transition idempotency map |
 | Rate limiting | Upstash Ratelimit + Upstash Redis (`@upstash/ratelimit 2.0.8` + `@upstash/redis 1.38.0`) — sliding window, IP + per-user buckets; **live in production** as of 2026-05-23 |
 | Image optimization | `next/image` on all public content + `next/og` for 1200×630 OG cards (every section has its own `opengraph-image.tsx`) |
 | ISR | `revalidate` declared on every public page; admin mutations bust the cache via `revalidatePath` |
 | QR Codes | `react-qr-code` — admin tournament QR + check-in flow |
 | User avatars | `users/{user_profile_id}/avatar` in Supabase Storage `images` bucket; deterministic initials-gradient fallback via `<Avatar />`. Surfaced on Hall of Fame, admin participant lists, top app bar, bracket match cards (regular + TV + admin scales) — v2.31.0 |
 | Tournament brackets | `@g-loot/react-tournament-brackets 1.0.31-rc` with a custom avatar-aware `matchComponent` (regular / TV / admin scales). Standard mirror-recursive seeding (v2.36.10) for power-of-2 N. Single-elim non-pow2 uses a **play-in round** (v2.36.13). Double-elim non-pow2 uses **bye-cascading** (v2.36.14) so phantom losers-bracket slots auto-collapse. Responsive `ResponsiveScale` wrapper fits any viewport (v2.36.9) + admin Pantalla completa overlay (v2.36.7). |
-| Testing | Vitest — **194 tests**, all green (`npm run test:run`) |
+| Testing | Vitest — **337 tests**, all green (`npm run test:run`) |
 | Runtime | Node.js 24 |
 
 ---
@@ -131,12 +131,16 @@ ADMIN_EMAILS=                 # Comma-separated root admin emails
 MERCADOPAGO_ACCESS_TOKEN=
 MERCADOPAGO_WEBHOOK_SECRET=
 
-# Card / Apple Pay (Stripe) — RESERVED, design-only until card goes live (v2.42.0-data).
-# With PAYMENTS_CARD_LIVE unset/false, card never appears to users and no webhook acts.
+# Card / Apple Pay (Stripe Checkout) — BUILT (v2.47.0), gated by the PAYMENTS_CARD_LIVE flag.
+# With PAYMENTS_CARD_LIVE unset/false, card never appears to users and the webhook is inert.
 PAYMENTS_CARD_LIVE=                # "true" to flip card on (kill-switch)
-STRIPE_SECRET_KEY=                 # not used until card is live
-STRIPE_WEBHOOK_SECRET=             # not used until card is live
+STRIPE_SECRET_KEY=                 # inert until card is live
+STRIPE_WEBHOOK_SECRET=             # inert until card is live
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_PRODUCT_PASS=              # per-service catalog Product ids (inline fallback if unset)
+STRIPE_PRODUCT_TOURNAMENT_ENTRY=
+STRIPE_PRODUCT_TOKEN_PURCHASE=
+STRIPE_PRODUCT_ENROLLMENT=
 
 # Subdomains
 NEXT_PUBLIC_BASE_URL=https://1upesports.org
@@ -234,7 +238,7 @@ npm run dev
 | `/gaming-tower` | 6-floor breakdown, 1UP Pass benefits, per-category games showcase (category image + game cards), Map |
 | `/privacidad` | Política de Privacidad y Tratamiento de Datos (Ley 1581) |
 | `/team` | Redirects to `/` — roster removed; Masters live on `/academia` |
-| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + token/$1UP and bank transfer checkout (MercadoPago not yet active). Each course card links to its public preview. |
+| `/academia` | Course catalog + Masters profiles (full bio, social links, courses per master) + checkout via the unified payment methods (cash/$1UP/wire live; card via Stripe gated by `PAYMENTS_CARD_LIVE`; MercadoPago scaffolded but inactive). Each course card links to its public preview. |
 | `/academia/[courseId]` | Public course preview — hero card (image, master, stats, price), playable intro video (Cloudflare Stream, no login required), full module + session list with lock icons, `INSCRIBIRSE` CTA. Dynamic OG metadata per course. |
 | `/juegos` | Redirects to `/gaming-tower` — games integrated into Tower page |
 | `/recreativo` | Casual gaming section |
@@ -249,7 +253,7 @@ npm run dev
 | `/app/mis-torneos` | My tournament registrations — card list with status badges (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), links to tournament detail pages |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
 | `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
-| `/app/pass` | 1UP Pass status + purchase — two payment methods: $1UP tokens (on-chain, instant) or bank transfer (manual admin approval, max 24h) |
+| `/app/pass` | 1UP Pass status + purchase — payment methods governed by Métodos de Pago: $1UP tokens (on-chain, instant), bank transfer (manual admin approval, max 24h), and cash (in-person, admin-approved with a note — v2.46.0) |
 | `/app/academia` | My enrolled courses — course cards with "Ver curriculum" link |
 | `/app/academia/[courseId]` | Per-course curriculum — intro video, module tabs, session accordion (lazy video player + signed doc downloads) — enrollment required |
 | `/app/ajustes` | Settings — two tabs: IDENTIDAD (profile data, nombre/apellidos/@username/phone/games/document) + SEGURIDAD (linked accounts). `/app/identidad` and `/app/settings` redirect here. |
@@ -269,16 +273,18 @@ npm run dev
 | `/admin/courses` | Academia course list — `+ NUEVO CURSO` (→ `/courses/new`) + per-row `Editar` (→ full editor) + `Eliminar` |
 | `/admin/courses/new` | Quick-create course (name + category) → redirects to full editor |
 | `/admin/courses/[id]/edit` | Full course editor — **Información** tab (all fields + CF Stream intro video + cover image) + **Contenido** tab (drag-reorder modules, expandable session list per module, slide-in session editor with video upload/docs/links) |
-| `/admin/1pass` | 1UP Pass — config card (price, recipient wallet, duration, active toggle) + KPIs + inline benefits CRUD (add/edit/delete) |
-| `/admin/pass-orders` | On-chain pass purchase orders — KPIs, status/active badges, BaseScan TX links, admin notes |
+| `/admin/1pass` | 1UP Pass (v2.49.0) — **Configuración del Pass** (price, treasury wallet **dropdown** from `treasury_wallets`, duration, active toggle) + **current pass-holders table** (`AdminPassesList`, from the `passes` table). Benefits editing moved to Beneficios Pass (Sitio Web). |
+| `/admin/pass-orders` | Pass purchase orders only (v2.49.0) — KPIs, status/active badges, BaseScan TX links, admin notes. Cash + bank tabs approve through the same activation path. |
+| `/admin/pass-benefits` | **Beneficios Pass** — 1UP Pass perks CRUD (add/edit/delete). In the **Sitio Web** sidebar group (v2.49.0). |
+| `/admin/payment-methods` | **Métodos de Pago (v2.42.0)** — matrix of the 4 paid services × 4 methods (`$1UP`/`transferencia`/`efectivo`/`tarjeta`), backed by `service_payment_methods`. `tarjeta` (Stripe) locked until `PAYMENTS_CARD_LIVE`. In the **Sistema** sidebar group. |
 | `/admin/pass-bank-orders` | Bank-transfer pass orders — approve (calculates expiry + stacking) or reject (with rejection reason). Pending orders require admin review within 24h. |
 | `/admin/discounts` | Discount rule CRUD (trigger: Comfenalco/promo/manual/auto + aliado link) |
 | `/admin/enrollments` | Course enrollment table — filterable by status (approved/pending/rejected/cancelled) AND payment method (MercadoPago/Banco/$1UP Token). Inline approve/reject panel for pending token/bank enrollments. Revenue KPI at top. |
 | `/admin/privy-users` | All Privy users — table view with columns: Usuario / Wallet·$1UP / Cédula / Juegos / Cursos / Registrado. Search by email/wallet/cédula/nombre/@username, sort by $1UP balance or date, filter by game. |
 | `/admin/user-profiles` | Supabase user profiles — table view (Email / Documento / Comfenalco / Privy ID / Registro). Legacy read-only. |
 | `/admin/token-orders` | $1UP token purchase purchase orders — filterable by status, comprobante preview, wallet-send approve (admin sends $1UP on-chain from connected wallet), reject |
-| `/admin/bank-accounts` | Bank accounts CRUD + treasury wallet — COP bank accounts shown to users in the BUY modal, plus the $1UP treasury wallet (`pass_config.recipient_address`) that receives all token payments (Pass + Courses) |
-| `/admin/torneos` | Tournament CRUD — name, game, date, image, description, max participants, location type, status, prize structure (1°/2°/3° — tokens/COP/both/Pase 1UP), sponsor (name/website/logo), sort order. Slug auto-generated from name. |
+| `/admin/bank-accounts` | **Cuentas y Tesorerías (v2.48.0)** — COP bank accounts CRUD (shown to users in the BUY modal) **+ treasury wallets CRUD** (`treasury_wallets`). Moved to the **Sistema** sidebar group; tournaments + the 1UP Pass pick their $1UP treasury from this wallet list. |
+| `/admin/torneos` | Tournament directory + **creation wizard (v2.50.0)** — `TournamentCreateWizard` (5 steps: Básico → Inscripción [gratis/pago: $1UP and/or COP + tesorería dropdown] → Premios *(saltable)* → Presentación *(saltable)* → Revisar y crear) replaces the name-only quick-create. Rows show a prominent name + status pill + date. Per-tournament fields: prize structure (1°/2°/3° — tokens/COP/both/Pase 1UP), sponsor, entry fee, treasury. Slug auto-generated from name. |
 | `/admin/tournament-registrations` | All tournament registrations — filter by tournament/status, mark attended/no_show, CSV export |
 | `/admin/torneos-internacionales` | International tournament CRUD — country, city, organizer, external registration link |
 | `/admin/torneos/[slug]/manage` | **Per-tournament cockpit (v2.36.0).** Single page with stats strip, 4-step phase stepper (Inscripciones → Borrador → En curso → Finalizado, driven by bracket lifecycle), Pública/TV/QR/Share/Cancelar/Eliminar toolbar, and 5 tabs: **Información** (inline-editable form incl. entry fee — v2.41.0), **Inscripciones** (status mgmt + CSV), **Pagos** (entry-fee orders: approve/reject pending bank payments with comprobante preview + manual-refund flags — v2.41.0), **Bracket** (seeding, start, record winners, undo), **Premios** (podium + on-chain $1UP delivery with one click, or manual tx-hash/comprobante; **one-click 1UP Pass delivery** when a position's prize includes a pass — v2.37.0). Replaces the prior standalone `/admin/tournament-brackets` and `/admin/tournament-results` pages — both deleted in 2.36.0. |
@@ -340,8 +346,9 @@ npm run dev
 | `international_tournaments` | International tournaments — organizer, country, city, game FK, registration_link (external). No prizes/registrations/capacity lifecycle |
 | `tournament_results` | Podium results — tournament FK, user_profile FK, position (1–3), points, awarded_by, prize_status (`no_prize`/`pending`/`sent`), prize_tx_hash, prize_sent_at, prize_sent_by, prize_comprobante_url, **pass_order_id** (legacy v2.37.0 link), **pass_id** (FK → `passes` — the claimable pass issued as a prize, partial UNIQUE for idempotency, v2.39.0). UNIQUE per tournament+position and per tournament+user |
 | `hall_of_fame` | PostgreSQL VIEW — aggregates gold/silver/bronze counts + total_points per player, ordered by points DESC then golds DESC |
-| `payment_events` | **Unified payment ledger (v2.42.0-data)** — one row per payment, polymorphically linked to any order via `(order_kind, order_id)` (no FK). `method` (`token`/`wire`/`cash`/`card`), `amount_cop` **xor** `amount_tokens`, `status` (`pending`/`confirmed`/`rejected`/`cancelled`), method refs (`tx_hash`, `comprobante_url`, `recorded_by_admin`+`reason` for cash, reserved `stripe_*`). Global UNIQUE `lower(tx_hash)` (cross-kind replay block). Written by the `apply_payment_event()` RPC (advisory-lock serialized, single-confirmed invariant, returns `became_paid`). Not yet read/written by routes — Phase 1 spine |
-| `service_payment_methods` | Per-service enabled-methods config (v2.42.0-data) — `service` (`order_kind` PK), `token_enabled`/`wire_enabled`/`cash_enabled`/`card_enabled`. Admin-editable; card stays hidden until `PAYMENTS_CARD_LIVE` |
+| `payment_events` | **Unified payment ledger (v2.42.0-data)** — one row per payment, polymorphically linked to any order via `(order_kind, order_id)` (no FK). `method` (`token`/`wire`/`cash`/`card`), `amount_cop` **xor** `amount_tokens`, `status` (`pending`/`confirmed`/`rejected`/`cancelled`), method refs (`tx_hash`, `comprobante_url`, `recorded_by_admin`+`reason` for cash, reserved `stripe_*`). Global UNIQUE `lower(tx_hash)` (cross-kind replay block) + UNIQUE `stripe_payment_intent_id`. Written by the `apply_payment_event()` RPC (advisory-lock serialized, single-confirmed invariant, returns `became_paid`). **Live across all four paid services** (tournament entry, academia, $1UP, 1UP Pass) — the cash rollout (v2.43.0→v2.46.0) + the card path (v2.47.0) record here |
+| `service_payment_methods` | Per-service enabled-methods config (v2.42.0-data) — `service` (`order_kind` PK), `token_enabled`/`wire_enabled`/`cash_enabled`/`card_enabled`. Admin-editable from **Métodos de Pago**; card stays hidden until `PAYMENTS_CARD_LIVE` |
+| `treasury_wallets` | **Admin-managed on-chain destination wallets for $1UP (v2.48.0)** — `label`, `address` (EVM, CHECK), `chain_id` (default 8453/Base), `is_active`, `sort_order`. RLS deny-all (service-role only). Managed on the **Cuentas y Tesorerías** page; tournaments + the 1UP Pass select their treasury from this list (the chosen `address` is written into `tournaments.treasury_address` / the Pass config, so on-chain verification is unchanged) |
 
 ---
 

@@ -8,8 +8,8 @@
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
 | **Versión** | 2.24 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 19 de junio de 2026 |
-| **Versión en producción** | v2.46.0 |
+| **Última actualización** | 21 de junio de 2026 |
+| **Versión en producción** | v2.50.0 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -297,7 +297,6 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/user/course-orders` | POST | Inscripción a curso (token o banco) | 20/min/user |
 | `/api/user/tournament-registrations` | GET, POST, DELETE | Inscripciones a torneos (tournamentId coerced) | — |
 | `/api/user/tournament-entry-orders` | GET, POST | v2.41.0 — pago de inscripción a torneo: $1UP verificado on-chain contra la **tesorería propia del torneo** (cupo asignado vía RPC al confirmar; sin tesorería configurada → 503) o transferencia bancaria con comprobante (queda `pending_bank` hasta aprobación admin). Notifica por email a usuario y admin en cada evento. Sin reembolsos automáticos | 20/min/user (POST) |
-| `/api/admin/service-payment-methods` | GET, PATCH | v2.42.0 — capa de pagos unificada: configura qué métodos (`$1UP`/transferencia/efectivo/tarjeta) acepta cada servicio. Respaldado por la tabla `service_payment_methods` + el RPC atómico `apply_payment_event`. Tarjeta (Stripe) reservado hasta `PAYMENTS_CARD_LIVE` | — |
 | `/api/user/tournament-checkin` | POST | Check-in QR en torneo live | — |
 | `/api/user/stream-token` | POST | Token CF Stream (legacy `academia_content`) — IP bound | — |
 | `/api/user/course-intro-token` | POST | Token CF Stream para video intro autenticado — IP bound | — |
@@ -334,6 +333,9 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/admin/tournaments` | GET, POST, PUT, DELETE | CRUD de torneos (status derivado del bracket) |
 | `/api/admin/tournament-registrations` | GET, PATCH | Listado + cambio de estado |
 | `/api/admin/tournament-entry-orders` | GET, PATCH | v2.41.0 — órdenes de pago de inscripción: listado con comprobantes firmados + aprobar (inscribe vía RPC; torneo lleno → 409 con instrucción de reembolso manual) / rechazar con motivo |
+| `/api/admin/service-payment-methods` | GET, PATCH | v2.42.0 — lee/actualiza la matriz de métodos habilitados por servicio (`service_payment_methods`); `card` persiste pero queda oculto hasta `PAYMENTS_CARD_LIVE` |
+| `/api/admin/payment-events` | POST, PATCH | v2.42.0 — registra un pago **en efectivo** contra una orden vía `apply_payment_event` (nota obligatoria) → fulfillment si `became_paid`; PATCH anula con un evento `cancelled` compensatorio |
+| `/api/admin/treasury-wallets` | GET, POST, PUT, DELETE | v2.48.0 — CRUD de wallets de tesorería (`treasury_wallets`); valida label + address EVM |
 | `/api/admin/tournament-results` | POST, DELETE | Upsert podio + delete |
 | `/api/admin/tournament-results/deliver-pass` | POST | Emite un Pase 1UP **reclamable** al ganador (v2.39.0) — crea fila en `passes` (estado `issued`), idempotente |
 | `/api/user/passes` | GET | Lista los pases del usuario (objeto `passes`) con estado |
@@ -347,6 +349,7 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | Endpoint | Emisor | Seguridad |
 |----------|--------|-----------|
 | `/api/webhooks/mercadopago` | MercadoPago | Manifiesto canónico `id;request-id;ts` + verificación HMAC-SHA256 con `timingSafeEqual` + ventana de freshness ±10 min + idempotencia por `mp_payment_id` + transition guard |
+| `/api/webhooks/stripe` | Stripe | v2.47.0 — verificación de firma **primero** (`constructStripeEvent`), luego registra el pago `card` vía `apply_payment_event` (idempotente: single-confirmed + `stripe_payment_intent_id` UNIQUE). **Inerte salvo `PAYMENTS_CARD_LIVE` + `STRIPE_WEBHOOK_SECRET`** |
 
 ---
 
@@ -409,9 +412,30 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 
 | Medio | Canal | Confirmación |
 |-------|-------|--------------|
-| Tarjeta débito / crédito | MercadoPago | Automática — webhook canónico `id;request-id;ts` HMAC-SHA256 + ventana ±10 min + dedupe `mp_payment_id` |
-| Transferencia bancaria OTC | Manual + admin | Comprobante con magic-byte sniffing, namespace por uploader; aprobación admin |
 | Token $1UP (ERC-20) | Base L2 | Verificación on-chain — exact amount + ≥3 confirmaciones; sender pin-eado a wallet verificada |
+| Transferencia bancaria (`wire`) | Manual + admin | Comprobante con magic-byte sniffing, namespace por uploader; aprobación admin |
+| Efectivo (`cash`) | En persona + admin | Seleccionado por el usuario, aprobado por el admin con nota obligatoria (sin comprobante — el admin atestigua) — v2.43.0→v2.46.0 |
+| Tarjeta / Apple Pay (`card`) | Stripe Checkout (hosted) | Webhook `checkout.session.completed` con verificación de firma; idempotente (`stripe_payment_intent_id` UNIQUE). Construido (v2.47.0), **gated por `PAYMENTS_CARD_LIVE`** |
+| Tarjeta débito / crédito | MercadoPago | SDK presente pero **inactivo** — webhook canónico `id;request-id;ts` HMAC-SHA256 + ventana ±10 min + dedupe `mp_payment_id` |
+
+### 11.1.1 Capa de pagos unificada (v2.42.0 → v2.50.0)
+
+A partir de la **v2.42.0** la plataforma cuenta con una **capa de pagos unificada**: un único conjunto de métodos seleccionable por el admin — **`token` (·$1UP on-chain) · `wire` (transferencia) · `cash` (efectivo) · `card` (Stripe)** — que opera de forma idéntica sobre **los cuatro servicios de pago** (inscripción a torneo, cursos de academia, compra de $1UP y 1UP Pass).
+
+| Componente | Detalle |
+|-----------|---------|
+| **Ledger `payment_events`** | Una fila por pago, ligada polimórficamente a cualquier orden vía `(order_kind, order_id)`. CHECK: COP **xor** tokens; `cash` exige `recorded_by_admin` + `reason`. UNIQUE global `lower(tx_hash)` (replay cross-kind) + UNIQUE `stripe_payment_intent_id`. |
+| **RPC `apply_payment_event()`** | Cornerstone atómico — serializa callers concurrentes sobre la misma orden vía advisory lock transaccional, impone el invariante v1 single-confirmed (≤1 evento confirmado por orden) y retorna `became_paid` **true para exactamente un caller** (el fulfillment dispara sólo si `became_paid`). |
+| **Config `service_payment_methods`** | Matriz por servicio de métodos habilitados, editable desde la página admin **Métodos de Pago**. `card` permanece oculto al usuario hasta `PAYMENTS_CARD_LIVE`. |
+| **Flujo efectivo** | El usuario elige "Efectivo", la orden queda en revisión y el admin la aprueba con una nota obligatoria → el pago se registra en el ledger → se otorga el servicio. |
+| **Flujo tarjeta (Stripe)** | Construido end-to-end (`/api/webhooks/stripe`, firma verificada primero); 4 Productos de catálogo creados en la cuenta Stripe. Inerte hasta fijar las claves + `PAYMENTS_CARD_LIVE`. |
+| **Endurecimiento RLS** | Se habilitó RLS (deny-all) sobre 4 tablas expuestas — `payment_events`, `service_payment_methods`, `tournament_entry_orders` y `passes` — aplicado en vivo (v2.43.0). Ninguna tabla del schema público queda con RLS deshabilitado. |
+
+### 11.1.2 Reorganización del panel admin (v2.48.0 → v2.50.0)
+
+- **Cuentas y Tesorerías** — nueva tabla `treasury_wallets` (wallets de destino on-chain administradas: label, address EVM, chain_id default 8453/Base, is_active; RLS deny-all). La página de cuentas bancarias se relabeló y movió al grupo **Sistema**, y aloja tanto las cuentas bancarias como las wallets de tesorería. La tesorería por torneo y la del Pass son ahora **dropdowns** que eligen de esa lista (sin pegar direcciones).
+- **1UP Pass** — `/admin/1pass` = Configuración + tabla de pases activos; `/admin/pass-orders` = sólo órdenes; **Beneficios Pass** movido al grupo **Sitio Web**.
+- **Wizard de creación de torneos (5 pasos)** — `/admin/torneos` reemplaza el quick-create por-nombre con un wizard guiado (Básico → Inscripción → Premios → Presentación → Revisar y crear); las filas del directorio muestran nombre prominente + pill de estado + fecha.
 
 ### 11.2 Token $1UP
 
