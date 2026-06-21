@@ -27,10 +27,19 @@ Backlog schema: `Name` (title) · `Status` (Idea/Backlog/Planned/In Progress/Shi
 
 ## Source of truth
 
-The full doc bodies are the repo Markdown (`docs/FICHA-TECNICA.md`, `docs/ESTADO_ENTREGA_*.md`,
-`docs/CUENTA DE COBRO_*.md`, `AUDIT.md`). Notion holds summary cards + (optionally) the full
-body via native **Markdown import** (`··· → Import → Markdown`) — do NOT hand-transcribe long
-docs through the API; it's lossy on tables and wasteful. Keep the summary versions current.
+The repo is **PUBLIC**. Two classes of doc:
+
+- **Public docs (in the repo):** `docs/FICHA-TECNICA.md` (institutional tech sheet) and `AUDIT.md`
+  (closed findings). Keep these current in the repo.
+- **PRIVATE docs (gitignored — local + Notion only, NEVER commit/push):**
+  `docs/ESTADO_ENTREGA_*.md`, `docs/CUENTA DE COBRO_*.md`, `docs/SEGUIMIENTO-FEEDBACK.md`. These
+  are delivery/billing/internal-feedback artifacts. They live on disk locally and their canonical
+  home is **Notion (private)**. They're in `.gitignore` — do **not** re-add them to the repo, and
+  never paste their billing amounts anywhere public. Update them locally + in Notion only.
+
+Notion holds summary cards + (optionally) the full body via native **Markdown import**
+(`··· → Import → Markdown`) — do NOT hand-transcribe long docs through the API; it's lossy on
+tables and wasteful. Keep the summary versions current.
 
 ## Drift warning
 

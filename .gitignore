@@ -41,3 +41,8 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branches/
 .claude/worktrees/
+
+# Private delivery/billing docs — keep local only, never in the public repo
+docs/CUENTA DE COBRO_*.md
+docs/ESTADO_ENTREGA_*.md
+docs/SEGUIMIENTO-FEEDBACK.md
