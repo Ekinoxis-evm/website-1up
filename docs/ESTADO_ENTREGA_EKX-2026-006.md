@@ -3,6 +3,7 @@
 **Fecha de corte:** 23 de mayo de 2026   
 **Versión en producción al corte:** v2.30.5   
 **Versión vigente al 24 mayo:** v2.36.15 *(trabajo post-cierre — ver Anexo A)*   
+**Versión vigente:** v2.50.0 *(trabajo post-cierre — ver Anexo A y Anexo B)*   
 **Referencia contractual:** EKX-2026-005 (Cuenta de Cobro firmada — 8 de abril, 2026\)
 
 ## **RESUMEN EJECUTIVO**
@@ -626,3 +627,31 @@ Detalle completo del overhaul: ver `docs/SEGUIMIENTO-FEEDBACK.md` §8 y `CHANGEL
 | 100/100 passing | **194/194 passing** |
 
 Tests nuevos: 7 (sniff de avatar), 7 (podium derivation), 45 (bracket seeding correctness — regression-pin del bug v2.36.10), 33 (play-in seeding), 2 (DE bye-cascading prerequisite).
+
+---
+
+## **ANEXO B — TRABAJO POST-CIERRE (v2.41.0 → v2.50.0).**
+
+Tras el Anexo A se ejecutó un segundo ciclo de trabajo, centrado en **pagos** y en la **reorganización del panel de administración**. Al igual que el Anexo A, **este trabajo NO está incluido en la facturación de esta cuenta** — se documenta aquí únicamente para transparencia del estado actual de la plataforma. La negociación sobre el alcance y la facturación de estas piezas se hace en un anexo separado.
+
+### **B.1 Pagos + reorganización admin — v2.41.0 → v2.50.0**
+
+| Pieza | Versión |
+| :---- | :---- |
+| **Inscripción paga a torneos** — $1UP on-chain (tesorería propia por torneo) + transferencia bancaria con comprobante + aprobación admin; null = gratis (flujo libre intacto) | v2.41.0 |
+| **Capa de pagos unificada** — ledger `payment_events` + RPC atómico `apply_payment_event` (un evento confirmado por orden, idempotencia/race garantizada en BD) | v2.42.0-data → v2.42.0 |
+| **Método "efectivo"** — selección del usuario → aprobación admin con nota obligatoria; **vivo en los 4 servicios** (torneos, cursos, compra de $1UP, 1UP Pass) | v2.43.0 → v2.46.0 |
+| **Página admin "Métodos de Pago"** — matriz servicio × método (token / transferencia / efectivo / tarjeta) que gobierna qué acepta cada servicio | v2.42.0 |
+| **Corrección de seguridad (RLS)** — Row-Level Security habilitado en 4 tablas expuestas a la clave pública anónima (2 de ellas vivas en producción); ninguna tabla del esquema público queda sin RLS | v2.43.0 |
+| **Pago con tarjeta / Stripe Checkout** — Checkout alojado (Apple/Google Pay automáticos), detrás del flag `PAYMENTS_CARD_LIVE`; 4 productos de catálogo creados; activa en inscripción a torneos, pendiente de extender a los otros servicios | v2.47.0 |
+| **Wallets de tesorería + "Cuentas y Tesorerías"** — tabla `treasury_wallets`, página admin para gestionarlas; selección de tesorería por torneo/Pass desde lista (sin pegar direcciones) | v2.48.0 → v2.49.0 |
+| **Rework del 1UP Pass admin** — página "1UP Pass" = Configuración + tabla de pases activos; "Órdenes Pass" = solo órdenes; "Beneficios" movidos a Sitio Web | v2.49.0 |
+| **Asistente (wizard) de creación de torneos** + directorio de torneos más legible (nombre + pill de estado + fecha) | v2.50.0 |
+
+Detalle completo: ver `CHANGELOG.md` entradas v2.41.0 → v2.50.0.
+
+### **B.2 Estado de tests**
+
+| Antes (v2.36.15) | Después (v2.50.0) |
+| ----: | ----: |
+| 194/194 passing | **337/337 passing (28 archivos)** |

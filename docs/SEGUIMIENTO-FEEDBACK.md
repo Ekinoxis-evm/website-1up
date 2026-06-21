@@ -9,8 +9,8 @@ Documento único que consolida **todo** el feedback de revisión, testing y audi
 - **Auditoría de seguridad del 22 de mayo de 2026** (38 hallazgos)
 - **Tournament UX Overhaul del 23-24 de mayo de 2026** (sesión completa de operación de torneos)
 
-**Última actualización:** 24 de mayo de 2026
-**Versión en producción:** v2.36.15
+**Última actualización:** 21 de junio de 2026
+**Versión en producción:** v2.50.0
 
 **Leyenda:** ✅ resuelto · ⏳ en diagnóstico · ⬜ pendiente (decisión de diseño / tweak visual) · 🔒 bloqueo externo
 
@@ -447,5 +447,38 @@ Las 4 situaciones tienen ahora un fix permanente en código (v2.36.6, .8, .10, .
 
 ---
 
-*Preparado por Ekinoxis Labs — 24 de mayo de 2026*
+## 11. Pagos + reorganización admin — junio 2026 (v2.41.0 → v2.50.0) ✅ COMPLETAMENTE CERRADO
+
+Segundo ciclo post-cierre, enfocado en **pagos** y en la **reorganización del panel de administración**. Todo el feedback de este bloque quedó resuelto y en producción entre las v2.41.0 y v2.50.0.
+
+### 11.1 Pagos
+
+| # | Ítem | Estado | Versión |
+|---|------|--------|---------|
+| 1 | Inscripción paga a torneos ($1UP on-chain con tesorería propia por torneo + transferencia bancaria con comprobante + aprobación admin; gratis sigue igual) | ✅ | v2.41.0 |
+| 2 | Capa de pagos unificada — ledger `payment_events` + RPC atómico `apply_payment_event` (idempotencia y consistencia de estado movidas a la BD) | ✅ | v2.42.0 |
+| 3 | Métodos de pago opcionales desde el admin — página "Métodos de Pago" (matriz servicio × método: token / transferencia / efectivo / tarjeta) | ✅ | v2.42.0 |
+| 4 | Pago en **efectivo** en los 4 servicios (torneos, cursos, compra de $1UP, 1UP Pass) — usuario lo elige, admin confirma con nota obligatoria | ✅ | v2.43.0 → v2.46.0 |
+| 5 | Pago con **tarjeta** (Stripe Checkout — Apple/Google Pay automáticos), detrás del flag `PAYMENTS_CARD_LIVE`; activo en torneos, pendiente de extender al resto | ✅ (gated) | v2.47.0 |
+
+### 11.2 Seguridad
+
+| # | Ítem | Estado | Versión |
+|---|------|--------|---------|
+| 6 | Corrección RLS — Row-Level Security habilitado en 4 tablas que estaban expuestas a la clave pública anónima (2 vivas en producción); ninguna tabla del esquema público queda sin RLS | ✅ | v2.43.0 |
+
+### 11.3 Reorganización del panel admin
+
+| # | Ítem | Estado | Versión |
+|---|------|--------|---------|
+| 7 | Wallets de tesorería seleccionables desde una lista (sin pegar direcciones) + página "Cuentas y Tesorerías" | ✅ | v2.48.0 → v2.49.0 |
+| 8 | Selección de tesorería por torneo y por Pass desde dropdown (sin pegar direcciones) | ✅ | v2.48.0 → v2.49.0 |
+| 9 | Reorganización del 1UP Pass admin — "1UP Pass" = Configuración + pases activos; "Órdenes Pass" = solo órdenes; "Beneficios" movidos a Sitio Web | ✅ | v2.49.0 |
+| 10 | Asistente (wizard) de creación de torneos + directorio de torneos más legible (nombre + pill de estado + fecha) | ✅ | v2.50.0 |
+
+> Detalle completo: ver `CHANGELOG.md` entradas v2.41.0 → v2.50.0 y `docs/ESTADO_ENTREGA_EKX-2026-006.md` Anexo B.
+
+---
+
+*Preparado por Ekinoxis Labs — 24 de mayo de 2026 · actualizado 21 de junio de 2026*
 *Referencia: EKX-2026-005 + ESTADO_ENTREGA_EKX-2026-006*
