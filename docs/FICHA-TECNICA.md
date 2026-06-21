@@ -6,7 +6,7 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.23 |
+| **Versión** | 2.24 |
 | **Fecha de emisión** | Mayo de 2026 |
 | **Última actualización** | 19 de junio de 2026 |
 | **Versión en producción** | v2.46.0 |
