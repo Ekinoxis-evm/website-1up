@@ -1,12 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { AdminPassOrdersClient } from "@/components/admin/AdminPassOrdersClient";
-import { AdminPassesList } from "@/components/admin/AdminPassesList";
 import { getComprobanteSignedUrl } from "@/lib/blob";
 
 export const metadata = { title: "Órdenes 1UP Pass — Admin" };
 
 export default async function AdminPassOrdersPage() {
-  const [{ data: orders }, { data: profiles }, { data: config }, { data: passes }] = await Promise.all([
+  const [{ data: orders }, { data: profiles }, { data: config }] = await Promise.all([
     supabaseAdmin
       .from("pass_orders")
       .select("*, user_profiles(nombre, apellidos, email, username), bank_accounts(bank_name, account_type, account_number, holder_name)")
@@ -18,11 +17,6 @@ export default async function AdminPassOrdersPage() {
       .not("onboarding_completed_at", "is", null)
       .order("nombre"),
     supabaseAdmin.from("pass_config").select("duration_days").eq("id", 1).single(),
-    supabaseAdmin
-      .from("passes")
-      .select("id, state, source, source_ref, duration_days, activated_at, expires_at, owner_user_profile_id, user_profiles!passes_owner_user_profile_id_fkey(nombre, apellidos, email)")
-      .order("issued_at", { ascending: false })
-      .limit(500),
   ]);
 
   const enriched = await Promise.all(
@@ -34,13 +28,10 @@ export default async function AdminPassOrdersPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <AdminPassOrdersClient
-        orders={enriched}
-        profiles={profiles ?? []}
-        defaultDuration={config?.duration_days ?? 30}
-      />
-      <AdminPassesList passes={passes ?? []} />
-    </div>
+    <AdminPassOrdersClient
+      orders={enriched}
+      profiles={profiles ?? []}
+      defaultDuration={config?.duration_days ?? 30}
+    />
   );
 }
