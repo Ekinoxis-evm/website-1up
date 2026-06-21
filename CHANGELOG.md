@@ -5,6 +5,29 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.50.0] — 2026-06-21
+
+### Added — tournament creation wizard + clearer directory (admin cleanup, phase 3 · final)
+
+Replaces the name-only quick-create with a **guided 5-step wizard**, and makes the tournament
+directory scannable.
+
+- **`TournamentCreateWizard`** (new) — **Básico** (nombre/juego/fecha/ubicación/cupo) → **Inscripción**
+  (gratis o de pago: $1UP y/o COP + **wallet de tesorería** dropdown, with the $1UP-fee-requires-treasury
+  coupling) → **Premios** *(saltable)* → **Presentación** *(saltable: imagen/descripción/patrocinador)*
+  → **Revisar y crear**. A **"Crear ahora"** shortcut is available from step 2 on. Reuses the cockpit's
+  prize editor + image upload; POSTs the full tournament to the (unchanged) `/api/admin/tournaments`
+  (server-validated via `parseEntryFeeInput`/`validatePrizes`), then jumps to the cockpit.
+- **Directory rows** — prominent name + **status pill** (Próximo/En curso/Finalizado) + the date
+  (`es-CO`) inline; the wallet list is threaded from the page.
+
+This completes the admin-cleanup roadmap (treasury wallets · 1UP Pass rework · creation wizard).
+
+### QA
+- `npm run build` clean · **337 tests**.
+
+---
+
 ## [2.49.0] — 2026-06-21
 
 ### Changed — 1UP Pass admin rework (admin cleanup, phase 2)

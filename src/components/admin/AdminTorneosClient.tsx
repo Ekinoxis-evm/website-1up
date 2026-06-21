@@ -11,9 +11,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
 import QRCode from "react-qr-code";
+import { TournamentCreateWizard } from "@/components/admin/TournamentCreateWizard";
 import type { Tournament, TournamentPrize, Game } from "@/types/database.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
@@ -23,13 +22,22 @@ type TournamentWithGame = Tournament & {
   tournament_prizes: TournamentPrize[];
 };
 
+type TreasuryWalletOption = { id: number; label: string; address: string };
+
 interface Props {
-  tournaments: TournamentWithGame[];
-  games:       Pick<Game, "id" | "name">[];
+  tournaments:     TournamentWithGame[];
+  games:           Pick<Game, "id" | "name">[];
+  treasuryWallets: TreasuryWalletOption[];
+  defaultPassDays: number;
 }
 
-const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" };
-const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary", completed: "text-outline" };
+const STATUS_LABELS = { upcoming: "Próximo", live: "En curso", completed: "Finalizado" };
+// Status pill — 0px radius chip, background-tone difference only (no borders).
+const STATUS_PILL = {
+  upcoming:  "bg-secondary-container/30 text-secondary",
+  live:      "bg-tertiary/20 text-tertiary",
+  completed: "bg-surface-container-high text-outline",
+};
 const LOC_LABELS    = { presencial: "Presencial", online: "Online", mixto: "Mixto" };
 
 function firstPrizeSummary(prizes: TournamentPrize[]): string {
@@ -48,50 +56,9 @@ function firstPrizeSummary(prizes: TournamentPrize[]): string {
   return "—";
 }
 
-export function AdminTorneosClient({ tournaments, games }: Props) {
-  const router = useRouter();
-  const { getAccessToken } = usePrivy();
-
+export function AdminTorneosClient({ tournaments, games, treasuryWallets, defaultPassDays }: Props) {
   const [qrTournament, setQrTournament] = useState<{ id: number; slug: string | null; name: string } | null>(null);
   const [createOpen, setCreateOpen]     = useState(false);
-  const [newName, setNewName]           = useState("");
-  const [newGameId, setNewGameId]       = useState("");
-  const [creating, setCreating]         = useState(false);
-  const [createError, setCreateError]   = useState<string | null>(null);
-
-  // Name-only quick-create — POST a stub tournament then jump straight to
-  // the cockpit where the admin fills in the rest inline. Mirrors the
-  // /admin/courses/new pattern documented in CLAUDE.md.
-  async function handleCreate() {
-    if (!newName.trim()) { setCreateError("El nombre es requerido."); return; }
-    setCreating(true); setCreateError(null);
-    try {
-      const token = await getAccessToken();
-      const res = await fetch("/api/admin/tournaments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name:   newName.trim(),
-          gameId: newGameId || null,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setCreateError(err.error ?? "No se pudo crear el torneo.");
-        return;
-      }
-      const data: { slug: string | null; id: number } = await res.json();
-      if (data.slug) {
-        router.push(`/admin/torneos/${data.slug}/manage`);
-      } else {
-        // Defensive fallback — slug is normally always set by the API.
-        router.refresh();
-        setCreateOpen(false);
-      }
-    } finally {
-      setCreating(false);
-    }
-  }
 
   return (
     <div>
@@ -106,7 +73,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
           </p>
         </div>
         <button
-          onClick={() => { setNewName(""); setNewGameId(""); setCreateError(null); setCreateOpen(true); }}
+          onClick={() => setCreateOpen(true)}
           className="bg-primary-container text-white font-headline font-black text-sm px-6 py-3 skew-fix hover:neo-shadow-pink transition-all"
         >
           <span className="block skew-content">+ NUEVO TORNEO</span>
@@ -118,7 +85,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-container-high">
-              {["Torneo", "Juego", "Fecha", "1° Premio", "Estado", "Ubicación", "Reg.", ""].map((h) => (
+              {["Torneo", "Juego", "1° Premio", "Ubicación", "Reg.", ""].map((h) => (
                 <th key={h} className="px-4 py-3 text-left font-headline font-black text-xs uppercase tracking-widest text-outline">
                   {h}
                 </th>
@@ -132,22 +99,26 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
                   <div className="flex items-center gap-3">
                     {t.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={t.image_url} alt={t.name} className="w-10 h-10 object-cover shrink-0" />
+                      <img src={t.image_url} alt={t.name} className="w-12 h-12 object-cover shrink-0" />
                     )}
-                    <span className="font-headline font-bold text-on-surface">{t.name}</span>
+                    <div className="min-w-0">
+                      <span className="block font-headline font-black text-base text-on-surface tracking-tight leading-tight truncate">
+                        {t.name}
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`inline-block px-2 py-0.5 font-headline font-bold text-[9px] uppercase tracking-widest ${STATUS_PILL[t.status as keyof typeof STATUS_PILL]}`}>
+                          {STATUS_LABELS[t.status as keyof typeof STATUS_LABELS]}
+                        </span>
+                        <span className="font-body text-xs text-outline whitespace-nowrap">
+                          {t.date ? new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }) : "Sin fecha"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">{t.games?.name ?? "—"}</td>
-                <td className="px-4 py-3 font-body text-on-surface/70 whitespace-nowrap">
-                  {t.date ? new Date(t.date).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }) : "—"}
-                </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">
                   {firstPrizeSummary(t.tournament_prizes ?? [])}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`font-headline font-bold text-xs uppercase ${STATUS_COLORS[t.status as keyof typeof STATUS_COLORS]}`}>
-                    {STATUS_LABELS[t.status as keyof typeof STATUS_LABELS]}
-                  </span>
                 </td>
                 <td className="px-4 py-3 font-body text-on-surface/70">{LOC_LABELS[t.location_type as keyof typeof LOC_LABELS]}</td>
                 <td className="px-4 py-3">
@@ -181,7 +152,7 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
             ))}
             {tournaments.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
+                <td colSpan={6} className="py-16 text-center">
                   <span className="material-symbols-outlined text-4xl text-outline/30">emoji_events</span>
                   <p className="font-headline text-sm text-outline/50 uppercase mt-2">Sin torneos aún</p>
                 </td>
@@ -191,66 +162,14 @@ export function AdminTorneosClient({ tournaments, games }: Props) {
         </table>
       </div>
 
-      {/* Quick-create modal */}
+      {/* Guided create wizard */}
       {createOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
-          onClick={() => !creating && setCreateOpen(false)}
-        >
-          <div
-            className="bg-surface-container w-full max-w-md p-8 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setCreateOpen(false)}
-              disabled={creating}
-              className="absolute top-4 right-4 text-outline hover:text-on-surface disabled:opacity-40"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
-
-            <h2 className="font-headline font-black text-2xl uppercase tracking-tighter mb-2">
-              NUEVO <span className="text-primary-container">TORNEO</span>
-            </h2>
-            <p className="font-body text-sm text-outline mb-6">
-              Empieza con un nombre. Al guardar te llevamos al panel del torneo donde editas todo lo demás.
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Nombre *</label>
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ej: Copa 1UP — Valorant S1"
-                  autoFocus
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Juego (opcional)</label>
-                <select
-                  value={newGameId}
-                  onChange={(e) => setNewGameId(e.target.value)}
-                  className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
-                >
-                  <option value="">— Asignar después —</option>
-                  {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-              </div>
-
-              {createError && <p className="font-body text-sm text-error">{createError}</p>}
-
-              <button
-                onClick={handleCreate}
-                disabled={creating || !newName.trim()}
-                className="w-full bg-primary-container text-white font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-40 hover:neo-shadow-pink transition-all"
-              >
-                {creating ? "CREANDO…" : "CREAR Y EDITAR"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <TournamentCreateWizard
+          games={games}
+          treasuryWallets={treasuryWallets}
+          defaultPassDays={defaultPassDays}
+          onClose={() => setCreateOpen(false)}
+        />
       )}
 
       {/* QR Check-in modal */}
