@@ -1,6 +1,6 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.41.0):** 21 Vitest files, **256 tests passing**, <1s wall time.
+> **Current state (v2.50.0):** 28 Vitest files, **337 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
@@ -50,7 +50,7 @@ flow" instincts are actually a missing pure-function test plus a data-validation
 
 ## What's covered today
 
-All test files live under `src/__tests__/lib/`:
+Test files live under `src/__tests__/lib/` (the unified payment-layer tests under `src/__tests__/lib/payments/`):
 
 | File | What it covers |
 |---|---|
@@ -71,7 +71,14 @@ All test files live under `src/__tests__/lib/`:
 | `tournamentPrizes.test.ts` | `validatePrizes()` — mirrors the `tournament_prizes` pass invariant (pass_days > 0 when a prize includes a pass) |
 | `passWindow.test.ts` | `computePassWindow()` — pass-stacking math (stacks onto an active pass, starts now otherwise, exact duration) |
 | `passActivation.test.ts` | `canActivatePass()` / `canRevokePass()` — claim-later + revoke preconditions (ownership, state machine, 404/409s) |
-| `tournamentEntry.test.ts` | Paid tournament entry (v2.41.0) — `tournamentEntryFee()` (null/0 = gratis), `parseEntryFeeInput()` (admin fee validation), `isValidTreasuryAddress()` + fee/treasury coupling (token fee requires a valid per-tournament treasury, bank-only doesn't), `canCreateEntryOrder()` (free/closed/method gates), `canReviewEntryOrder()` (only `pending_bank` reviewable, idempotent 409s), manual-refund messaging |
+| `tournamentEntry.test.ts` | Paid tournament entry (v2.41.0; expanded v2.43.0 + v2.47.0) — `tournamentEntryFee()` (null/0 = gratis), `parseEntryFeeInput()` (admin fee validation), `isValidTreasuryAddress()` + fee/treasury coupling (token fee requires a valid per-tournament treasury, bank-only doesn't), `availableEntryMethods()` + `canCreateEntryOrder()` (free/closed/method gates, **cash + card** gated by the per-tournament fee unit AND `service_payment_methods`; card additionally needs `PAYMENTS_CARD_LIVE`), `canReviewEntryOrder()` (only `pending_bank` reviewable, idempotent 409s, cash needs a note), manual-refund messaging |
+| `payments/methodRegistry.test.ts` | Unified payment layer — canonical methods, `METHOD_META`, `normalizeMethod`/`toLegacyMethod` (legacy `bank`↔`wire`, fails closed on unknown), `enabledMethods`/`isMethodEnabled` (card hidden unless `PAYMENTS_CARD_LIVE`) |
+| `payments/paymentEvents.test.ts` | `validateEventAmount` + `validateCashEvent` (mirror the DB CHECKs — COP xor tokens, cash requires `recorded_by_admin`+`reason`), `canTransition` (append-only event state machine) |
+| `payments/orderKind.test.ts` | `order_kind` → table + Spanish label + revalidate paths; `isOrderKind` guard |
+| `payments/stripeWebhookDecision.test.ts` | Card path (v2.47.0) — decides fulfillment from a `checkout.session.completed` + `paid` event; rejects bad/unknown metadata |
+| `courseEnrollment.test.ts` | Cash on academia courses (v2.44.0) — `availableCourseMethods()` (gates by course price unit AND `service_payment_methods`), `canSelectCourseMethod`, `canReviewEnrollment` (only `pending`, allows cash, idempotent 409s) |
+| `tokenPurchase.test.ts` | Cash on $1UP purchases (v2.45.0) — `tokenPurchaseCashAvailable` / `canSelectTokenMethod` gating by the `service_payment_methods` (`token_purchase`) toggle |
+| `passPurchase.test.ts` | Cash on 1UP Pass (v2.46.0) — `passCashAvailable` / `canSelectPassMethod` gating by the `service_payment_methods` (`pass`) toggle |
 | `utils.test.ts` | Misc shared utilities |
 
 ---
