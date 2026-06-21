@@ -11,7 +11,6 @@ const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
 
 interface Props {
   accounts: BankAccount[];
-  treasuryAddress: string;
   wallets: TreasuryWallet[];
 }
 
@@ -33,7 +32,7 @@ type WalletFormState = {
 
 const WALLET_EMPTY: WalletFormState = { label: "", address: "", isActive: true, sortOrder: 0 };
 
-export function AdminBankAccountsClient({ accounts, treasuryAddress, wallets }: Props) {
+export function AdminBankAccountsClient({ accounts, wallets }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
   const { showError, showSuccess } = useAdminToast();
@@ -43,43 +42,12 @@ export function AdminBankAccountsClient({ accounts, treasuryAddress, wallets }: 
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Treasury wallet (pass-config — global $1UP destination) state
-  const [editingTreasury, setEditingTreasury] = useState(false);
-  const [treasuryInput, setTreasuryInput] = useState(treasuryAddress);
-  const [treasuryLoading, setTreasuryLoading] = useState(false);
-  const [treasuryError, setTreasuryError] = useState<string | null>(null);
-  const [treasuryCopied, setTreasuryCopied] = useState(false);
-
   // Treasury wallet directory (treasury_wallets table) state
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletEditing, setWalletEditing] = useState<TreasuryWallet | null>(null);
   const [walletForm, setWalletForm] = useState<WalletFormState>(WALLET_EMPTY);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
-
-  function copyTreasury() {
-    navigator.clipboard.writeText(treasuryAddress);
-    setTreasuryCopied(true);
-    setTimeout(() => setTreasuryCopied(false), 2000);
-  }
-
-  async function saveTreasury() {
-    setTreasuryLoading(true); setTreasuryError(null);
-    const token = await getAccessToken();
-    const res = await fetch("/api/admin/pass-config", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ recipientAddress: treasuryInput.trim() }),
-    });
-    setTreasuryLoading(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setTreasuryError(d.error ?? "Error al guardar");
-      return;
-    }
-    setEditingTreasury(false);
-    router.refresh();
-  }
 
   async function authHeaders() {
     const token = await getAccessToken();
@@ -181,89 +149,6 @@ export function AdminBankAccountsClient({ accounts, treasuryAddress, wallets }: 
           CUENTAS Y <span className="text-primary-container">TESORERÍAS</span>
         </h1>
         <div className="h-1 w-20 bg-primary-container mt-2" />
-      </div>
-
-      {/* ── Global $1UP treasury (pass-config) ──────────────────── */}
-      <div className="bg-surface-container border-l-8 border-tertiary p-6 mb-10">
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-tertiary text-2xl shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>
-              account_balance_wallet
-            </span>
-            <div>
-              <p className="font-headline text-[10px] uppercase tracking-widest text-tertiary mb-0.5">Destinos de pago — $1UP</p>
-              <h2 className="font-headline font-black text-xl uppercase tracking-tighter">Wallet de Tesorería</h2>
-            </div>
-          </div>
-          {!editingTreasury && (
-            <button
-              onClick={() => { setTreasuryInput(treasuryAddress); setEditingTreasury(true); setTreasuryError(null); }}
-              className="flex items-center gap-1 font-headline font-bold text-xs uppercase text-secondary hover:text-secondary-container transition-colors shrink-0"
-            >
-              <span className="material-symbols-outlined text-sm">edit</span>
-              Editar
-            </button>
-          )}
-        </div>
-
-        <p className="font-body text-xs text-on-surface/50 mb-4">
-          Esta wallet recibe <strong>todos los pagos en $1UP</strong> de la plataforma — inscripciones a cursos y compras del 1UP Pass pagadas con tokens.
-        </p>
-
-        {!editingTreasury ? (
-          <div className="bg-surface-container-low p-4 flex items-center justify-between gap-4 flex-wrap">
-            {treasuryAddress ? (
-              <>
-                <p className="font-mono text-sm text-on-surface break-all">{treasuryAddress}</p>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={copyTreasury}
-                    className="flex items-center gap-1 font-headline text-xs uppercase text-outline hover:text-tertiary transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">{treasuryCopied ? "check" : "content_copy"}</span>
-                    {treasuryCopied ? "Copiado" : "Copiar"}
-                  </button>
-                  <a
-                    href={`${BASESCAN_ADDR}${treasuryAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 font-headline text-xs uppercase text-outline hover:text-tertiary transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">open_in_new</span>
-                    BaseScan
-                  </a>
-                </div>
-              </>
-            ) : (
-              <p className="font-body text-sm text-error">No configurada — los pagos con tokens fallarán.</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <input
-              value={treasuryInput}
-              onChange={(e) => setTreasuryInput(e.target.value)}
-              placeholder="0x..."
-              className="w-full bg-surface-container-lowest text-on-background p-3 font-mono text-sm border-none focus:outline-none"
-            />
-            {treasuryError && <p className="font-body text-xs text-error">{treasuryError}</p>}
-            <div className="flex gap-3">
-              <button
-                onClick={saveTreasury}
-                disabled={treasuryLoading || !treasuryInput.trim()}
-                className="flex-1 bg-tertiary text-background font-headline font-black py-2.5 text-sm uppercase disabled:opacity-40"
-              >
-                {treasuryLoading ? "GUARDANDO…" : "GUARDAR WALLET"}
-              </button>
-              <button
-                onClick={() => setEditingTreasury(false)}
-                className="flex-1 bg-surface-container-highest font-headline font-black py-2.5 text-sm"
-              >
-                CANCELAR
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Treasury wallet directory (treasury_wallets) ────────── */}

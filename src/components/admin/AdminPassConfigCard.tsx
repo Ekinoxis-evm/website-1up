@@ -6,9 +6,14 @@ import { useRouter } from "next/navigation";
 import { isAddress } from "viem";
 import type { PassConfig } from "@/types/database.types";
 
-interface Props { config: PassConfig }
+type TreasuryWalletOption = { id: number; label: string; address: string };
 
-export function AdminPassConfigCard({ config }: Props) {
+interface Props { config: PassConfig; treasuryWallets: TreasuryWalletOption[] }
+
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.1upesports.org";
+const CUSTOM_TREASURY = "__custom__";
+
+export function AdminPassConfigCard({ config, treasuryWallets }: Props) {
   const { getAccessToken } = usePrivy();
   const router = useRouter();
 
@@ -20,6 +25,14 @@ export function AdminPassConfigCard({ config }: Props) {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
   const [copied, setCopied]       = useState(false);
+
+  // The dropdown lists active treasury wallets. If the saved recipient_address
+  // isn't in that list (a previously-pasted custom wallet, or one later
+  // deactivated), surface it as a "(personalizada)" option so editing never
+  // silently drops it.
+  const hasWallets       = treasuryWallets.length > 0;
+  const recipientInList  = treasuryWallets.some((w) => w.address.toLowerCase() === recipient.trim().toLowerCase());
+  const showCustomOption = recipient.trim() !== "" && !recipientInList;
 
   function copyAddress() {
     navigator.clipboard.writeText(config.recipient_address);
@@ -186,12 +199,34 @@ export function AdminPassConfigCard({ config }: Props) {
         <p className="font-body text-xs text-on-surface/60">
           Recibe todos los pagos en $1UP: compras del 1UP Pass e inscripciones a cursos pagadas con tokens.
         </p>
-        <input
-          value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
-          placeholder="0x..."
-          className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-mono text-sm"
-        />
+        <select
+          value={showCustomOption ? CUSTOM_TREASURY : recipient.trim()}
+          onChange={(e) => {
+            // The "(personalizada)" sentinel keeps whatever address is already
+            // saved — selecting a wallet swaps to that wallet's address.
+            if (e.target.value === CUSTOM_TREASURY) return;
+            setRecipient(e.target.value);
+          }}
+          disabled={!hasWallets}
+          className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold focus:outline-none disabled:opacity-50"
+        >
+          <option value="">— Sin tesorería —</option>
+          {treasuryWallets.map((w) => (
+            <option key={w.id} value={w.address}>{w.label} — {w.address}</option>
+          ))}
+          {showCustomOption && (
+            <option value={CUSTOM_TREASURY}>(personalizada) — {recipient.trim()}</option>
+          )}
+        </select>
+        {!hasWallets && (
+          <p className="font-body text-[10px] text-outline leading-snug">
+            No hay wallets activas.{" "}
+            <a href={`${ADMIN_URL}/admin/bank-accounts`} className="text-tertiary underline">
+              Agrega una wallet en Cuentas y Tesorerías
+            </a>
+            .
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

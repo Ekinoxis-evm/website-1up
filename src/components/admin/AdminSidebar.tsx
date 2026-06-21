@@ -18,6 +18,7 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/games",       icon: "sports_esports", label: "Juegos"         },
       { href: "/admin/floors",      icon: "domain",         label: "Gaming Tower"   },
       { href: "/admin/aliados",     icon: "handshake",      label: "Aliados"        },
+      { href: "/admin/pass-benefits", icon: "redeem",       label: "Beneficios Pass" },
       { href: "/admin/site-images", icon: "image",          label: "Imágenes Sitio" },
       { href: "/admin/social-links",icon: "share",          label: "Redes"          },
     ],

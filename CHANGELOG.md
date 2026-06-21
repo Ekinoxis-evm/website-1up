@@ -5,6 +5,34 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.49.0] — 2026-06-21
+
+### Changed — 1UP Pass admin rework (admin cleanup, phase 2)
+
+Reorganizes the Pass admin so each page does one job, and finishes the treasury consolidation
+from v2.48.0.
+
+- **`/admin/1pass` = Configuración del Pass + pases activos.** The inline Beneficios editor is
+  gone from here; the **current pass-holders table** (`AdminPassesList`, from the `passes` table)
+  **moves here**, below the config.
+- **`/admin/pass-orders` = orders only.** `AdminPassesList` removed (no longer double-rendered).
+- **Pass treasury → wallet dropdown.** `AdminPassConfigCard`'s recipient-address paste field is now
+  a **`<select>` of active `treasury_wallets`** (same pattern as the tournament editor) — still
+  submits the chosen wallet's address as `recipient_address`, so the API + on-chain path are
+  unchanged. Backward-compat "(personalizada)" for an off-list saved address.
+- **Beneficios → Sitio Web.** The existing `/admin/pass-benefits` page is added to the **Sitio Web**
+  sidebar group (label "Beneficios Pass") and switched to `supabaseAdmin`.
+- **Removed the stale Pass-treasury banner** on Cuentas y Tesorerías (redundant now the Pass uses
+  the wallet list).
+
+> Next admin-cleanup phase: tournament creation **wizard** + better tournament name display in the
+> dashboard.
+
+### QA
+- `npm run build` clean · **337 tests**.
+
+---
+
 ## [2.48.0] — 2026-06-19
 
 ### Added — Treasury wallets + "Cuentas y Tesorerías" (admin cleanup, phase 1)
