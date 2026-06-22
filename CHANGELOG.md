@@ -5,6 +5,29 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.52.1] — 2026-06-22
+
+### Fixed — tournament bracket resolution + display
+
+- **Recorded winner didn't update the bracket** — the cockpit's bracket re-fetch ran without
+  `cache: "no-store"`, so after picking a winner the browser could serve the stale bracket. Now
+  forced fresh; the view also re-mounts on every result change (keyed to the match states) so the
+  `@g-loot` lib (pinned to React 18) reliably re-renders.
+- **Double-elimination could get stuck** — when the winners-bracket champion won the grand final,
+  the `gf_reset` (second grand final) stayed `ready` forever, so the bracket never reached
+  `completed`. Now: if the WB champion wins, the reset is skipped (and the grand-final loser is
+  eliminated); only an LB-champion win triggers the reset, and the grand-final loser is **not**
+  eliminated prematurely.
+- **`gf_reset` was never rendered** — the reset match now shows once it's actually in play.
+- **Double-elim podium** — `derivePodium` keyed on `next_match_id === null` for the grand final,
+  but the generator points the grand final at `gf_reset`, so the real champion wasn't derived. Now
+  it uses the reset (if played) else the grand final. +2 tests.
+
+### QA
+- `npm run build` clean · **361 tests**.
+
+---
+
 ## [2.52.0] — 2026-06-22
 
 ### Added — card (Stripe Checkout) rolled out to Pass / courses / $1UP

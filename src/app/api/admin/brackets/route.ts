@@ -456,9 +456,26 @@ export async function PATCH(req: NextRequest) {
       await cascadeLbAdvance(match.next_loser_match_id, loserId, match.next_loser_slot as 1 | 2);
     }
 
-    // Eliminated when knocked out of losers / grand final
-    if (match.bracket_side === "losers" || match.bracket_side === "grand_final")
+    // Elimination + grand-final reset handling.
+    if (match.bracket_side === "grand_final") {
+      // Slot 1 is the WB champion (arrived undefeated). If they win the grand
+      // final the tournament is over — the reset is NOT needed, so skip it
+      // (mark 'bye') instead of leaving it `ready` forever, which would block
+      // completion and render a phantom empty match. The WB champ's opponent
+      // (the GF loser) is eliminated. If instead the LB champion (slot 2) wins,
+      // the reset IS needed: the generic advance above already populated and
+      // readied gf_reset, and the GF loser (the WB champ) is NOT yet eliminated.
+      const wbChampWon = winnerId === match.p1_id;
+      if (wbChampWon) {
+        if (match.next_match_id)
+          await supabaseAdmin.from("bracket_matches")
+            .update({ state: "bye", updated_at: new Date().toISOString() })
+            .eq("id", match.next_match_id);
+        await supabaseAdmin.from("bracket_participants").update({ eliminated: true }).eq("id", loserId);
+      }
+    } else if (match.bracket_side === "losers" || match.bracket_side === "gf_reset") {
       await supabaseAdmin.from("bracket_participants").update({ eliminated: true }).eq("id", loserId);
+    }
 
     const { data: allMatches } = await supabaseAdmin
       .from("bracket_matches").select("state").eq("bracket_id", match.bracket_id).neq("state", "bye");
