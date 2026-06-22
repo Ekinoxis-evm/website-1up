@@ -132,12 +132,17 @@ interface Props {
   onUndo?:       (matchId: number) => void;
   /** When true, the admin matchComponent suppresses clicks (request in flight). */
   busy?:         boolean;
+  /**
+   * TV / display only: the DB match id to auto-pan/zoom to (the live match).
+   * Null → whole bracket fitted. Harmless / ignored outside tv scale.
+   */
+  focusMatchId?: number | null;
 }
 
 // ── Component ────────────────────────────────────────────────
 
 export function TournamentBracketView({
-  data, scale = "regular", onPickWinner, onUndo, busy = false,
+  data, scale = "regular", onPickWinner, onUndo, busy = false, focusMatchId,
 }: Props) {
   const { bracket, participants, matches } = data;
 
@@ -186,7 +191,7 @@ export function TournamentBracketView({
 
     return (
       <div className={heightClass}>
-        <BracketViewport key={renderKey} mode={mode}>
+        <BracketViewport key={renderKey} mode={mode} focusId={mode === "display" ? focusMatchId : undefined}>
           <SingleEliminationBracket
             matches={libraryMatches}
             matchComponent={matchComponent}
@@ -229,7 +234,7 @@ export function TournamentBracketView({
 
   return (
     <div className={heightClass}>
-      <BracketViewport key={renderKey} mode={mode}>
+      <BracketViewport key={renderKey} mode={mode} focusId={mode === "display" ? focusMatchId : undefined}>
         <DoubleEliminationBracket
           matches={{ upper, lower }}
           matchComponent={matchComponent}

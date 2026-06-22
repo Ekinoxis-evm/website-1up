@@ -5,6 +5,22 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.54.0] — 2026-06-22
+
+### Added — TV screen follows the live match
+
+The venue/TV view (`/torneos/[slug]/tv`) now **auto-pans/zooms to the match in play** so the audience
+always sees the current game. On each 15s poll it picks the live match (the lowest-order `in_progress`
+match, else the next-up `ready` one) and animates the bracket to it (scale 0.9, keeping surrounding
+context); when nothing is live (not started or fully completed) it fits the whole bracket. Match cards
+carry a `data-match-id` hook and `BracketViewport` gained a `focusId` prop (display mode only) driving
+`zoomToElement`. Interactive (admin/mobile) modes are unchanged.
+
+### QA
+- `npm run build` clean · **361 tests** (presentation only).
+
+---
+
 ## [2.53.0] — 2026-06-22
 
 ### Added — pan/zoom bracket display (mobile · TV · admin)

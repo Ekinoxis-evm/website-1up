@@ -27,11 +27,24 @@ export type BracketViewportMode = "interactive" | "display";
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 2.5;
 
+// Zoom level used when focusing the live match on the TV screen. Deliberately
+// below 1 so the live card never fills the screen edge-to-edge — the audience
+// keeps some surrounding bracket context (the feeding matches + what's next).
+const FOCUS_SCALE = 0.9;
+const FOCUS_ANIM_MS = 700;
+
 export function BracketViewport({
   mode,
+  focusId,
   children,
 }: {
   mode: BracketViewportMode;
+  /**
+   * TV / display only: the DB match id to gently pan+zoom to (the live match).
+   * When null/undefined or the node isn't found, the whole bracket is fitted.
+   * Ignored in interactive mode (admin / mobile stay user-driven).
+   */
+  focusId?: number | null;
   children: React.ReactNode;
 }) {
   const apiRef     = useRef<ReactZoomPanPinchRef | null>(null);
@@ -40,12 +53,24 @@ export function BracketViewport({
 
   const interactive = mode === "interactive";
 
+  // Fit the whole bracket, or — in display mode with a focus target present —
+  // gently zoom to the live match card with surrounding context.
   const fit = useCallback(() => {
     const api = apiRef.current;
     const el  = contentRef.current;
     if (!api || !el) return;
+
+    if (!interactive && focusId != null) {
+      const wrap = wrapRef.current;
+      const target = wrap?.querySelector<HTMLElement>(`[data-match-id="${focusId}"]`);
+      if (target) {
+        api.zoomToElement(target, FOCUS_SCALE, FOCUS_ANIM_MS);
+        return;
+      }
+    }
+
     api.zoomToElement(el, undefined, 0);
-  }, []);
+  }, [interactive, focusId]);
 
   useEffect(() => {
     const t = setTimeout(fit, 80);

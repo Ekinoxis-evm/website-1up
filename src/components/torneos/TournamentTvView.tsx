@@ -10,10 +10,29 @@
 // Bracket tab records a winner, the TV picks up the update next tick. If
 // the API returns null (no published bracket) we show a holding screen.
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { TournamentBracketView, type BracketData } from "@/components/torneos/TournamentBracketView";
 
 const POLL_MS = 15_000;
+
+// "Follow the action": the match the venue screen should auto-pan/zoom to.
+// Priority: the in_progress match with the lowest (round, match_number) — the
+// game currently being played. If none is in_progress, the next-up ready match
+// (also lowest (round, match_number)). If neither exists (not started or fully
+// completed), return null → the whole bracket is fitted.
+function liveMatchId(data: BracketData | null): number | null {
+  if (!data) return null;
+  const byOrder = (a: { round: number; match_number: number }, b: { round: number; match_number: number }) =>
+    a.round - b.round || a.match_number - b.match_number;
+
+  const inProgress = data.matches.filter(m => m.state === "in_progress").sort(byOrder);
+  if (inProgress.length > 0) return inProgress[0].id;
+
+  const ready = data.matches.filter(m => m.state === "ready").sort(byOrder);
+  if (ready.length > 0) return ready[0].id;
+
+  return null;
+}
 
 interface Tournament {
   id:                  number;
@@ -61,7 +80,8 @@ export function TournamentTvView({ tournament }: Props) {
     return () => clearInterval(id);
   }, [load]);
 
-  const game = gameName(tournament);
+  const game    = gameName(tournament);
+  const focusId = useMemo(() => liveMatchId(data), [data]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -101,7 +121,7 @@ export function TournamentTvView({ tournament }: Props) {
       <main className="flex-1 min-h-0 px-12 pb-8 flex items-center justify-center">
         {data ? (
           <div className="w-full h-full">
-            <TournamentBracketView data={data} scale="tv" />
+            <TournamentBracketView data={data} scale="tv" focusMatchId={focusId} />
           </div>
         ) : errored ? (
           <Holding label="Sin conexión" sublabel="Reintentando…" />
