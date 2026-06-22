@@ -688,7 +688,7 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
               Salir (Esc)
             </button>
           </div>
-          <div className="flex-1 overflow-auto px-6 py-4">
+          <div className="flex-1 min-h-0 px-6 py-4">
             <TournamentBracketView
               data={bracketData}
               scale="admin"

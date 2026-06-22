@@ -354,6 +354,9 @@ export default async function TournamentDetailPage(
           <div className="bg-surface-container p-4 md:p-6">
             <TournamentBracketView data={bracketData} />
           </div>
+          <p className="font-body text-xs text-outline mt-2">
+            Desliza para mover · pellizca para hacer zoom
+          </p>
         </section>
       )}
     </div>
