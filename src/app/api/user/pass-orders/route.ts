@@ -7,6 +7,7 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { sendPassTokenEmails, sendPassBankEmails } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
 import { rateLimitByUser, limiters } from "@/lib/rateLimit";
+import { createCardCheckoutSession, isCardLive } from "@/lib/payments/stripe";
 import {
   canSelectPassMethod,
   DEFAULT_PASS_METHOD_FLAGS,
@@ -86,21 +87,29 @@ export async function POST(req: NextRequest) {
   const method =
     paymentMethod === "bank" ? "bank" :
     paymentMethod === "cash" ? "cash" :
+    paymentMethod === "card" ? "card" :
     "token";
 
   // Which methods this service accepts is admin-configurable; token + bank are
-  // always on, cash is gated by the per-service toggle. Default to today's live
-  // behavior (cash off) if the config row is somehow absent.
+  // always on, cash + card are gated by the per-service toggle (card also by the
+  // PAYMENTS_CARD_LIVE env). Default to today's live behavior (cash + card off)
+  // if the config row is somehow absent.
   const { data: cfgRow } = await supabaseAdmin
     .from("service_payment_methods")
-    .select("cash_enabled")
+    .select("cash_enabled, card_enabled")
     .eq("service", "pass")
     .maybeSingle();
   const methodFlags: PassMethodFlags = cfgRow ?? DEFAULT_PASS_METHOD_FLAGS;
 
-  const methodGate = canSelectPassMethod(method, methodFlags);
+  const methodGate = canSelectPassMethod(method, methodFlags, { cardLiveEnv: isCardLive() });
   if (!methodGate.ok)
     return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
+
+  // Card (Stripe Checkout) path — lands pending_bank, then a hosted Checkout
+  // Session. The Stripe webhook confirms + activates the pass on payment.
+  if (method === "card") {
+    return handleCardOrder(claims.userId, walletAddress);
+  }
 
   // Bank transfer path
   if (method === "bank") {
@@ -320,6 +329,69 @@ async function handleBankOrder(
   }
 
   return NextResponse.json({ id: inserted.id, status: "pending_bank" }, { status: 201 });
+}
+
+// Card (Stripe Checkout): create the order pending_bank, then a hosted Checkout
+// Session. The Stripe webhook (checkout.session.completed) is the source of
+// truth — it confirms the order + activates the pass. We return the URL to
+// redirect to. COP for a card pass = price_token × 1.000 (the platform's display
+// rate), mirroring the cash/bank COP convention.
+async function handleCardOrder(
+  privyUserId: string,
+  walletAddress: `0x${string}`,
+): Promise<NextResponse> {
+  const { data: config } = await supabaseAdmin.from("pass_config").select("*").eq("id", 1).single();
+  if (!config?.is_active) return NextResponse.json({ error: "La venta del 1UP Pass está desactivada." }, { status: 400 });
+
+  const email = await resolveUserEmail(privyUserId);
+  const profile = await getOrCreateProfile(privyUserId, email ?? undefined);
+  if (!profile) return NextResponse.json({ error: "No se pudo crear el perfil." }, { status: 500 });
+
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("pass_orders")
+    .insert({
+      user_profile_id:         profile.id,
+      privy_user_id:           privyUserId,
+      email:                   email ?? null,
+      wallet_address:          walletAddress,
+      payment_method:          "card",
+      status:                  "pending_bank",
+      token_price_at_purchase: config.price_token,
+      token_amount_paid:       config.price_token,
+      recipient_address:       config.recipient_address,
+      duration_days:           config.duration_days,
+      discount_pct_applied:    0,
+      verification_attempts:   0,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+  try {
+    const { url } = await createCardCheckoutSession({
+      orderKind:     "pass",
+      orderId:       inserted.id,
+      amountCop:     Math.round(config.price_token * 1000),
+      productName:   "1UP Pass",
+      customerEmail: email,
+      successUrl:    `${BASE_URL}/app/pass?pago=ok`,
+      cancelUrl:     `${BASE_URL}/app/pass?pago=cancelado`,
+    });
+    revalidatePath("/app/pass");
+    revalidatePath("/admin/pass-orders");
+    return NextResponse.json(
+      { id: inserted.id, checkoutUrl: url, status: "pending_bank", paymentMethod: "card" },
+      { status: 201 },
+    );
+  } catch (e) {
+    // Couldn't start the session — fail the dangling order. pass_orders has no
+    // `cancelled` status; `failed` is the safe rollback value.
+    console.error("[card] createCardCheckoutSession failed:", e instanceof Error ? e.message : e);
+    await supabaseAdmin.from("pass_orders").update({ status: "failed" }).eq("id", inserted.id);
+    return NextResponse.json({ error: "No se pudo iniciar el pago con tarjeta. Intenta de nuevo." }, { status: 502 });
+  }
 }
 
 async function handleCashOrder(

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   availableCourseMethods,
   courseCashAvailable,
+  courseCardAvailable,
   canSelectCourseMethod,
   canReviewEnrollment,
   DEFAULT_ENROLLMENT_METHOD_FLAGS,
@@ -43,8 +44,21 @@ describe("availableCourseMethods — price unit AND service toggle", () => {
     expect(availableCourseMethods(course(), flags({ token_enabled: false }))).toEqual(["bank"]);
   });
 
-  it("never offers card (Stripe not live in v1)", () => {
+  it("offers card only with a COP price + card_enabled + cardLiveEnv", () => {
+    // all three present → card offered
+    expect(availableCourseMethods(course(), flags({ card_enabled: true }), { cardLiveEnv: true }))
+      .toEqual(["token", "bank", "card"]);
+  });
+
+  it("never offers card when any of the three is missing", () => {
+    // card_enabled but env off
     expect(availableCourseMethods(course(), flags({ card_enabled: true }))).not.toContain("card");
+    expect(availableCourseMethods(course(), flags({ card_enabled: true }), { cardLiveEnv: false })).not.toContain("card");
+    // env on but card_enabled off
+    expect(availableCourseMethods(course(), flags({ card_enabled: false }), { cardLiveEnv: true })).not.toContain("card");
+    // card_enabled + env on but no COP price
+    expect(availableCourseMethods(course({ price_cop: null }), flags({ card_enabled: true }), { cardLiveEnv: true }))
+      .not.toContain("card");
   });
 
   it("coerces numeric strings (Postgres NUMERIC comes back as string via supabase-js)", () => {
@@ -63,11 +77,42 @@ describe("courseCashAvailable — UI gate for the Efectivo option", () => {
   });
 });
 
+describe("courseCardAvailable — UI gate for the card option", () => {
+  it("true only with a COP price AND card enabled AND cardLiveEnv", () => {
+    expect(courseCardAvailable(course(), flags({ card_enabled: true }), { cardLiveEnv: true })).toBe(true);
+  });
+  it("false when card disabled, env off, or no COP price", () => {
+    expect(courseCardAvailable(course())).toBe(false);
+    expect(courseCardAvailable(course(), flags({ card_enabled: true }))).toBe(false);
+    expect(courseCardAvailable(course(), flags({ card_enabled: true }), { cardLiveEnv: false })).toBe(false);
+    expect(courseCardAvailable(course(), flags({ card_enabled: false }), { cardLiveEnv: true })).toBe(false);
+    expect(courseCardAvailable(course({ price_cop: null }), flags({ card_enabled: true }), { cardLiveEnv: true })).toBe(false);
+  });
+});
+
 describe("canSelectCourseMethod — gate for the user POST", () => {
   it("ok for each available method", () => {
     expect(canSelectCourseMethod(course(), "token")).toEqual({ ok: true });
     expect(canSelectCourseMethod(course(), "bank")).toEqual({ ok: true });
     expect(canSelectCourseMethod(course(), "cash", flags({ cash_enabled: true }))).toEqual({ ok: true });
+    expect(canSelectCourseMethod(course(), "card", flags({ card_enabled: true }), { cardLiveEnv: true })).toEqual({ ok: true });
+  });
+
+  it("400 method_unavailable for card when the env kill-switch is off, even with card_enabled", () => {
+    expect(canSelectCourseMethod(course(), "card", flags({ card_enabled: true })))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+    expect(canSelectCourseMethod(course(), "card", flags({ card_enabled: true }), { cardLiveEnv: false }))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+  });
+
+  it("400 method_unavailable for card when the service toggle is off but env on", () => {
+    expect(canSelectCourseMethod(course(), "card", flags({ card_enabled: false }), { cardLiveEnv: true }))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
+  });
+
+  it("400 method_unavailable for card when the course has no COP price", () => {
+    expect(canSelectCourseMethod(course({ price_cop: null }), "card", flags({ card_enabled: true }), { cardLiveEnv: true }))
+      .toMatchObject({ ok: false, status: 400, reason: "method_unavailable" });
   });
 
   it("400 method_unavailable when cash is disabled in the service config (default)", () => {

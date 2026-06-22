@@ -30,15 +30,18 @@ interface Props {
   config:      PassConfig | null;
   benefits:    PassBenefit[];
   cashEnabled: boolean;
+  cardEnabled: boolean;
 }
 
-export function PassPurchasePanel({ config, benefits, cashEnabled }: Props) {
+export function PassPurchasePanel({ config, benefits, cashEnabled, cardEnabled }: Props) {
   const { getAccessToken, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
 
   const [buyOpen, setBuyOpen]         = useState(false);
   const [buyBankOpen, setBuyBankOpen] = useState(false);
   const [buyCashOpen, setBuyCashOpen] = useState(false);
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardError, setCardError]     = useState<string | null>(null);
   const [orders, setOrders]           = useState<PassOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -78,6 +81,30 @@ export function PassPurchasePanel({ config, benefits, cashEnabled }: Props) {
 
   function handleSuccess() {
     fetchOrders();
+  }
+
+  async function startCardCheckout() {
+    setCardError(null);
+    setCardLoading(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) { setCardError("Sesión expirada. Vuelve a entrar."); setCardLoading(false); return; }
+      const res = await fetch("/api/user/pass-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ paymentMethod: "card" }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.checkoutUrl) {
+        setCardError(body?.error ?? "No se pudo iniciar el pago con tarjeta.");
+        setCardLoading(false);
+        return;
+      }
+      window.location.href = body.checkoutUrl;
+    } catch {
+      setCardError("No se pudo iniciar el pago con tarjeta.");
+      setCardLoading(false);
+    }
   }
 
   const canBuy = config?.is_active && ready && authenticated;
@@ -178,6 +205,21 @@ export function PassPurchasePanel({ config, benefits, cashEnabled }: Props) {
                     <span className="material-symbols-outlined text-base">payments</span>
                     PAGAR EN EFECTIVO
                   </button>
+                )}
+                {cardEnabled && (
+                  <button
+                    onClick={startCardCheckout}
+                    disabled={cardLoading}
+                    className="bg-surface-container text-on-background border border-primary-container/30 px-6 py-3 font-headline font-black text-sm uppercase tracking-tighter hover:border-primary-container transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
+                  >
+                    <span className={`material-symbols-outlined text-base ${cardLoading ? "animate-spin" : ""}`}>
+                      {cardLoading ? "refresh" : "credit_card"}
+                    </span>
+                    {cardLoading ? "REDIRIGIENDO…" : "PAGAR CON TARJETA"}
+                  </button>
+                )}
+                {cardError && (
+                  <p className="font-body text-xs text-error max-w-[16rem]">{cardError}</p>
                 )}
               </>
             )}

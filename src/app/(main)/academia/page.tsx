@@ -35,10 +35,11 @@ export default async function AcademiaPage() {
     supabase.from("masters").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("courses").select("id, name, category, master_id").eq("is_active", true),
     // service_payment_methods is RLS deny-all — read it with the service-role client.
-    supabaseAdmin.from("service_payment_methods").select("cash_enabled").eq("service", "enrollment").maybeSingle(),
+    supabaseAdmin.from("service_payment_methods").select("cash_enabled, card_enabled").eq("service", "enrollment").maybeSingle(),
   ]);
 
   const cashEnabled = !!methodCfg?.cash_enabled;
+  const cardEnabled = !!methodCfg?.card_enabled && process.env.PAYMENTS_CARD_LIVE === "true";
 
   const masterList = (masters ?? []) as Master[];
   const masterMinis = masterList.map((m) => ({ id: m.id, name: m.name, photo_url: m.photo_url }));
@@ -54,7 +55,7 @@ export default async function AcademiaPage() {
   return (
     <>
       <HeroAcademia />
-      <CourseCatalog courses={allCourses ?? []} masters={masterMinis} cashEnabled={cashEnabled} />
+      <CourseCatalog courses={allCourses ?? []} masters={masterMinis} cashEnabled={cashEnabled} cardEnabled={cardEnabled} />
       <LearningPath imageUrl={siteImage?.image_url} updatedAt={siteImage?.updated_at} />
 
       {/* Masters heading */}

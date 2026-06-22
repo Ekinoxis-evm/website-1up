@@ -27,16 +27,17 @@ type BankAccount = {
   instructions: string | null;
 };
 
-type Method = "token" | "bank" | "cash";
+type Method = "token" | "bank" | "cash" | "card";
 type Phase = "method" | "token_pay" | "token_sending" | "token_confirming" | "token_registering" |
              "bank_select" | "bank_pay" | "bank_uploading" | "bank_submitting" |
-             "cash_confirm" | "cash_submitting" | "success" | "error";
+             "cash_confirm" | "cash_submitting" | "card_redirecting" | "success" | "error";
 
 interface Props {
   course:        Course;
   walletAddress: string | null;
   recipientAddress: string | null;
   cashEnabled?:  boolean;
+  cardEnabled?:  boolean;
   getAccessToken: () => Promise<string | null>;
   onClose:        () => void;
 }
@@ -44,7 +45,7 @@ interface Props {
 const BASESCAN = "https://basescan.org/tx/";
 
 export function CourseCheckoutWizard({
-  course, walletAddress, recipientAddress, cashEnabled = false, getAccessToken, onClose,
+  course, walletAddress, recipientAddress, cashEnabled = false, cardEnabled = false, getAccessToken, onClose,
 }: Props) {
   const { sendTransaction } = useSendTransaction();
 
@@ -271,10 +272,35 @@ export function CourseCheckoutWizard({
     setPhase("success");
   }
 
+  // ── CARD (Stripe Checkout) ────────────────────────────────────
+  // Create the pending enrollment + a hosted Checkout Session, then hand off to
+  // Stripe. The webhook flips the enrollment to approved on payment.
+  async function payWithCard() {
+    setPhase("card_redirecting"); setErrorMsg("");
+    try {
+      const res = await fetch("/api/user/course-orders", {
+        method:  "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ courseId: course.id, paymentMethod: "card" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        setErrorMsg(data.error ?? "No se pudo iniciar el pago con tarjeta.");
+        setPhase("error");
+        return;
+      }
+      window.location.href = data.checkoutUrl;
+    } catch {
+      setErrorMsg("No se pudo iniciar el pago con tarjeta. Intenta de nuevo.");
+      setPhase("error");
+    }
+  }
+
   // ── render ────────────────────────────────────────────────────
   const tokenAvailable  = !!(course.price_token && walletAddress && recipientAddress);
   const priceCop        = course.price_cop ?? 0;
   const cashAvailable   = cashEnabled && priceCop > 0;
+  const cardAvailable   = cardEnabled && priceCop > 0;
 
   // Close X disabled during processing
   const allowClose = ["method", "bank_select", "bank_pay", "cash_confirm", "success", "error"].includes(phase);
@@ -356,6 +382,33 @@ export function CourseCheckoutWizard({
                   </p>
                 </button>
               )}
+
+              {cardAvailable && (
+                <button
+                  onClick={() => { setMethod("card"); payWithCard(); }}
+                  className="w-full bg-surface-container-low p-5 text-left hover:bg-surface-container-high transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-headline font-black text-base uppercase flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary-container">credit_card</span>
+                      TARJETA / PAGO EN LÍNEA
+                    </span>
+                    <span className="font-headline font-black text-primary text-lg">{formatCop(priceCop)}</span>
+                  </div>
+                  <p className="font-body text-xs text-on-surface/50">
+                    Paga con tarjeta, Apple Pay o Google Pay — inscripción inmediata al confirmar el pago.
+                  </p>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* CARD redirecting */}
+          {phase === "card_redirecting" && (
+            <div className="flex flex-col items-center gap-4 py-12 text-center">
+              <span className="material-symbols-outlined text-tertiary text-5xl animate-spin">refresh</span>
+              <p className="font-headline font-black text-base uppercase tracking-tighter">Redirigiendo al pago…</p>
+              <p className="font-body text-sm text-on-surface/50">Te llevamos a la pasarela de pago segura.</p>
             </div>
           )}
 

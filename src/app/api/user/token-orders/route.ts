@@ -5,6 +5,7 @@ import { moveComprobanteToOrder } from "@/lib/blob";
 import { revalidatePath } from "next/cache";
 import { sendTokenOrderEmails } from "@/lib/email";
 import { getVerifiedWallet } from "@/lib/verifiedWallet";
+import { createCardCheckoutSession, isCardLive } from "@/lib/payments/stripe";
 import {
   canSelectTokenMethod,
   DEFAULT_TOKEN_PURCHASE_METHOD_FLAGS,
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     copAmount?: number;
     bankAccountId?: number;
     comprobantePath?: string;
-    paymentMethod?: "bank" | "cash";
+    paymentMethod?: "bank" | "cash" | "card";
     nombre?: string;
     celular?: string;
   };
@@ -76,12 +77,12 @@ export async function POST(req: NextRequest) {
   // (cash off) if the config row is somehow absent.
   const { data: cfgRow } = await supabaseAdmin
     .from("service_payment_methods")
-    .select("cash_enabled")
+    .select("cash_enabled, card_enabled")
     .eq("service", "token_purchase")
     .maybeSingle();
   const cfg: TokenPurchaseMethodFlags = cfgRow ?? DEFAULT_TOKEN_PURCHASE_METHOD_FLAGS;
 
-  const methodGate = canSelectTokenMethod(paymentMethod, cfg);
+  const methodGate = canSelectTokenMethod(paymentMethod, cfg, { cardLiveEnv: isCardLive() });
   if (!methodGate.ok)
     return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
 
@@ -181,6 +182,36 @@ export async function POST(req: NextRequest) {
         .update({ status: "cancelled" })
         .eq("id", order.id);
       return NextResponse.json({ error: "Error al guardar el comprobante. Intenta de nuevo." }, { status: 502 });
+    }
+  }
+
+  // Card (Stripe Checkout): the COP receipt is recorded by the webhook
+  // (apply_payment_event), but fulfillment is UNCHANGED — the order stays
+  // `pending` and an admin still sends the $1UP on-chain. We only need to hand
+  // back a hosted Checkout URL here. No comprobante, no awaiting-transfer email.
+  if (paymentMethod === "card") {
+    const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+    try {
+      const { url } = await createCardCheckoutSession({
+        orderKind:     "token_purchase",
+        orderId:       order.id,
+        amountCop:     copAmount,
+        productName:   "Compra de $1UP",
+        customerEmail: user.email,
+        successUrl:    `${BASE_URL}/app?pago=ok`,
+        cancelUrl:     `${BASE_URL}/app?pago=cancelado`,
+      });
+      revalidatePath("/admin/token-orders");
+      revalidatePath("/app");
+      return NextResponse.json({ id: order.id, checkoutUrl: url }, { status: 201 });
+    } catch (e) {
+      // Couldn't start the session — cancel the dangling order so it doesn't block retries.
+      console.error("[card] createCardCheckoutSession failed:", e instanceof Error ? e.message : e);
+      await supabaseAdmin
+        .from("token_purchase_orders")
+        .update({ status: "cancelled" })
+        .eq("id", order.id);
+      return NextResponse.json({ error: "No se pudo iniciar el pago con tarjeta. Intenta de nuevo." }, { status: 502 });
     }
   }
 

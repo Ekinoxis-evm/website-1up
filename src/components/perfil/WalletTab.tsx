@@ -38,7 +38,7 @@ function truncate(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
-export function WalletTab({ cashEnabled = false }: { cashEnabled?: boolean }) {
+export function WalletTab({ cashEnabled = false, cardEnabled = false }: { cashEnabled?: boolean; cardEnabled?: boolean }) {
   const { getAccessToken, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
@@ -570,6 +570,7 @@ export function WalletTab({ cashEnabled = false }: { cashEnabled?: boolean }) {
           onClose={() => setBuyOpen(false)}
           getAccessToken={getAccessToken}
           cashEnabled={cashEnabled}
+          cardEnabled={cardEnabled}
         />
       )}
 

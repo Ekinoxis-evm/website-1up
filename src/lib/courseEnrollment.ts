@@ -13,7 +13,7 @@ export type CourseFeeColumns = {
 // is the wire transfer (relabeled "Transferencia" in the UI). `cash` reuses the
 // manual-review path — selected by the user, attested/approved by an admin (no
 // comprobante). `mercadopago` exists historically but isn't user-selectable here.
-export type EnrollmentMethod = "token" | "bank" | "cash";
+export type EnrollmentMethod = "token" | "bank" | "cash" | "card";
 
 // Per-service toggles from service_payment_methods (service = 'enrollment').
 // Default = today's live behavior (token + wire on; cash/card off) so callers
@@ -32,13 +32,19 @@ export const DEFAULT_ENROLLMENT_METHOD_FLAGS: EnrollmentMethodFlags = {
   card_enabled:  false,
 };
 
+export type EnrollmentMethodOpts = {
+  // card (Stripe Checkout) only appears when its service toggle is on AND the
+  // PAYMENTS_CARD_LIVE kill-switch is on — design-only otherwise.
+  cardLiveEnv?: boolean;
+};
+
 // Which methods to OFFER for a course: a method needs BOTH its price unit set on
-// the course AND the service-level toggle on. token needs price_token; bank/cash
-// are COP and need price_cop. (card is excluded until the Stripe integration is
-// live.)
+// the course AND the service-level toggle on. token needs price_token; bank/cash/
+// card are COP and need price_cop. card additionally needs the env kill-switch.
 export function availableCourseMethods(
   course: CourseFeeColumns,
   cfg: EnrollmentMethodFlags = DEFAULT_ENROLLMENT_METHOD_FLAGS,
+  opts: EnrollmentMethodOpts = {},
 ): EnrollmentMethod[] {
   const hasToken = course.price_token != null && Number(course.price_token) > 0;
   const hasCop   = course.price_cop != null && Number(course.price_cop) > 0;
@@ -46,6 +52,7 @@ export function availableCourseMethods(
   if (hasToken && cfg.token_enabled) out.push("token");
   if (hasCop && cfg.wire_enabled)    out.push("bank");
   if (hasCop && cfg.cash_enabled)    out.push("cash");
+  if (hasCop && cfg.card_enabled && opts.cardLiveEnv) out.push("card");
   return out;
 }
 
@@ -59,6 +66,18 @@ export function courseCashAvailable(
   return availableCourseMethods(course, cfg).includes("cash");
 }
 
+// True iff the course can be paid by card right now: a COP price, the admin's
+// per-service card toggle on, AND the PAYMENTS_CARD_LIVE env kill-switch on. The
+// route enforces this server-side; the wizard mirrors it to show/hide the card
+// option.
+export function courseCardAvailable(
+  course: CourseFeeColumns,
+  cfg: EnrollmentMethodFlags = DEFAULT_ENROLLMENT_METHOD_FLAGS,
+  opts: EnrollmentMethodOpts = {},
+): boolean {
+  return availableCourseMethods(course, cfg, opts).includes("card");
+}
+
 export type EnrollmentMethodCheck =
   | { ok: true }
   | { ok: false; error: string; status: number; reason?: string };
@@ -68,6 +87,7 @@ function methodUnavailableMsg(method: EnrollmentMethod): string {
     case "token": return "Este curso no acepta pago con $1UP.";
     case "bank":  return "Este curso no acepta pago por transferencia bancaria.";
     case "cash":  return "Este curso no acepta pago en efectivo.";
+    case "card":  return "Este curso no acepta pago con tarjeta.";
   }
 }
 
@@ -78,8 +98,9 @@ export function canSelectCourseMethod(
   course: CourseFeeColumns,
   method: EnrollmentMethod,
   cfg: EnrollmentMethodFlags = DEFAULT_ENROLLMENT_METHOD_FLAGS,
+  opts: EnrollmentMethodOpts = {},
 ): EnrollmentMethodCheck {
-  if (!availableCourseMethods(course, cfg).includes(method)) {
+  if (!availableCourseMethods(course, cfg, opts).includes(method)) {
     return { ok: false, error: methodUnavailableMsg(method), status: 400, reason: "method_unavailable" };
   }
   return { ok: true };

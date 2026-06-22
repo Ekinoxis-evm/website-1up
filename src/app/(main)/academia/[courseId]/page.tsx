@@ -93,10 +93,11 @@ export default async function CoursePreviewPage({ params }: Props) {
   // service_payment_methods is RLS deny-all — read it with the service-role client.
   const { data: methodCfg } = await supabaseAdmin
     .from("service_payment_methods")
-    .select("cash_enabled")
+    .select("cash_enabled, card_enabled")
     .eq("service", "enrollment")
     .maybeSingle();
   const cashEnabled = !!methodCfg?.cash_enabled;
+  const cardEnabled = !!methodCfg?.card_enabled && process.env.PAYMENTS_CARD_LIVE === "true";
 
   return (
     <CoursePreview
@@ -106,6 +107,7 @@ export default async function CoursePreviewPage({ params }: Props) {
       masterName={masterName}
       masterPhoto={masterPhoto}
       cashEnabled={cashEnabled}
+      cardEnabled={cardEnabled}
     />
   );
 }
