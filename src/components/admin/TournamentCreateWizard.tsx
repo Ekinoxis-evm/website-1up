@@ -20,10 +20,12 @@ import { useAdminToast } from "@/components/admin/ui/Toast";
 import type { Game } from "@/types/database.types";
 
 type TreasuryWalletOption = { id: number; label: string; address: string };
+type BankAccountOption = { id: number; bank_name: string; account_number: string };
 
 interface Props {
   games:           Pick<Game, "id" | "name">[];
   treasuryWallets: TreasuryWalletOption[];
+  bankAccounts:    BankAccountOption[];
   defaultPassDays?: number;
   onClose:         () => void;
 }
@@ -36,7 +38,7 @@ const LOC_LABELS = { presencial: "Presencial", online: "Online", mixto: "Mixto" 
 
 const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
 
-export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays = 30, onClose }: Props) {
+export function TournamentCreateWizard({ games, treasuryWallets, bankAccounts, defaultPassDays = 30, onClose }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
   const { showError, showSuccess } = useAdminToast();
@@ -55,6 +57,7 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
   const [entryFeeTokens, setEntryFeeTokens]   = useState("");
   const [entryFeeCop, setEntryFeeCop]         = useState("");
   const [treasuryAddress, setTreasuryAddress] = useState("");
+  const [bankAccountId, setBankAccountId]     = useState("");
   const [isRegistrationOpen, setIsRegOpen]    = useState(false);
 
   // Step 3 — Premios
@@ -66,6 +69,8 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
   const [sponsorName, setSponsorName]         = useState("");
   const [sponsorWebsiteUrl, setSponsorWebUrl] = useState("");
   const [sponsorLogoUrl, setSponsorLogoUrl]   = useState("");
+  const [sponsorLogoMode, setSponsorLogoMode] = useState<"url" | "upload">("url");
+  const [sponsorLogoBg, setSponsorLogoBg]     = useState<"transparent" | "white" | "black">("transparent");
 
   const [creating, setCreating]   = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -114,11 +119,13 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
       sponsorName: sponsorName || null,
       sponsorWebsiteUrl: sponsorWebsiteUrl || null,
       sponsorLogoUrl: sponsorLogoUrl || null,
+      sponsorLogoBg,
       // Only send fee fields when the admin chose "de pago" — a free tournament
       // leaves them empty so parseEntryFeeInput treats it as gratis.
       entryFeeTokens: isPaid ? entryFeeTokens : "",
       entryFeeCop: isPaid ? entryFeeCop : "",
       treasuryAddress: isPaid ? treasuryAddress : "",
+      bankAccountId: isPaid && bankAccountId ? Number(bankAccountId) : null,
       prizes,
     };
   }
@@ -236,6 +243,17 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
                 <input type="number" min="0" value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} placeholder="Ej: 32" className={inputCls} />
               </div>
             </div>
+            <div>
+              <label className={labelCls}>Imagen</label>
+              <ImageUpload
+                currentUrl={imageUrl || null}
+                folder="tournaments"
+                entityId="pending"
+                onUploaded={(url) => setImageUrl(url)}
+                getAccessToken={getAccessToken}
+                aspectRatio="video"
+              />
+            </div>
           </div>
         )}
 
@@ -302,6 +320,19 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
                     )}
                   </div>
                 )}
+                <div>
+                  <label className={labelCls}>Cuenta para recibir (banco/efectivo)</label>
+                  <select
+                    value={bankAccountId}
+                    onChange={(e) => setBankAccountId(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">— Cuenta para recibir (banco/efectivo) —</option>
+                    {bankAccounts.map((b) => (
+                      <option key={b.id} value={b.id}>{b.bank_name} · {b.account_number}</option>
+                    ))}
+                  </select>
+                </div>
                 <p className="font-body text-[10px] text-outline leading-snug">
                   Los métodos de pago se controlan en Métodos de Pago. Equivalencia de referencia: 1 $1UP = 1.000 COP.
                 </p>
@@ -320,7 +351,7 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
           <div className="space-y-3">
             <p className="font-body text-sm text-outline">Define el podio. Puedes saltar este paso y configurarlo luego en el panel.</p>
             <div className="bg-surface-container-lowest p-4">
-              <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} />
+              <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} getAccessToken={getAccessToken} />
             </div>
           </div>
         )}
@@ -328,18 +359,7 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
         {/* ── Step 4 · Presentación ───────────────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
-            <p className="font-body text-sm text-outline">Imagen, descripción y patrocinador. Todo opcional — puedes completarlo luego.</p>
-            <div>
-              <label className={labelCls}>Imagen</label>
-              <ImageUpload
-                currentUrl={imageUrl || null}
-                folder="tournaments"
-                entityId="pending"
-                onUploaded={(url) => setImageUrl(url)}
-                getAccessToken={getAccessToken}
-                aspectRatio="video"
-              />
-            </div>
+            <p className="font-body text-sm text-outline">Descripción y patrocinador. Todo opcional — puedes completarlo luego.</p>
             <div>
               <label className={labelCls}>Descripción</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Detalles del torneo..." className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none resize-none" />
@@ -348,7 +368,58 @@ export function TournamentCreateWizard({ games, treasuryWallets, defaultPassDays
               <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline">Patrocinador (opcional)</label>
               <input value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} placeholder="Nombre del patrocinador" className={inputCls} />
               <input value={sponsorWebsiteUrl} onChange={(e) => setSponsorWebUrl(e.target.value)} placeholder="https://sitio-del-sponsor.com" className="w-full bg-surface-container text-on-background p-3 font-body text-sm border-none focus:outline-none" />
-              <input value={sponsorLogoUrl} onChange={(e) => setSponsorLogoUrl(e.target.value)} placeholder="URL del logo" className="w-full bg-surface-container text-on-background p-3 font-body text-sm border-none focus:outline-none" />
+
+              <div>
+                <label className={labelCls}>Logo del patrocinador</label>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setSponsorLogoMode("url")}
+                    className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoMode === "url" ? "bg-primary-container text-white" : "bg-surface-container text-outline"}`}
+                  >
+                    Pegar URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSponsorLogoMode("upload")}
+                    className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoMode === "upload" ? "bg-primary-container text-white" : "bg-surface-container text-outline"}`}
+                  >
+                    Subir imagen
+                  </button>
+                </div>
+                {sponsorLogoMode === "url" ? (
+                  <input value={sponsorLogoUrl} onChange={(e) => setSponsorLogoUrl(e.target.value)} placeholder="URL del logo" className="w-full bg-surface-container text-on-background p-3 font-body text-sm border-none focus:outline-none" />
+                ) : (
+                  <ImageUpload
+                    currentUrl={sponsorLogoUrl || null}
+                    folder="tournaments"
+                    entityId="pending"
+                    onUploaded={(url) => setSponsorLogoUrl(url)}
+                    getAccessToken={getAccessToken}
+                    aspectRatio="square"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className={labelCls}>Fondo del logo</label>
+                <div className="flex gap-2">
+                  {([
+                    { value: "transparent", label: "Transparente" },
+                    { value: "white",       label: "Blanco"       },
+                    { value: "black",       label: "Negro"        },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSponsorLogoBg(opt.value)}
+                      className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoBg === opt.value ? "bg-primary-container text-white" : "bg-surface-container text-outline"}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}

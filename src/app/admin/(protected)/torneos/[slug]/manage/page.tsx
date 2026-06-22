@@ -42,6 +42,7 @@ export default async function AdminTournamentManagePage({
     { data: passConfig },
     { data: entryOrders },
     { data: treasuryWallets },
+    { data: bankAccounts },
   ] = await Promise.all([
     supabaseAdmin
       .from("tournament_registrations")
@@ -75,6 +76,13 @@ export default async function AdminTournamentManagePage({
       .eq("is_active", true)
       .order("sort_order")
       .order("id"),
+    // Active bank accounts — the Info tab's per-tournament "cuenta para recibir" dropdown.
+    supabaseAdmin
+      .from("bank_accounts")
+      .select("id, bank_name, account_number")
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("id"),
   ]);
 
   // Comprobantes live in a private bucket — sign them for the admin preview.
@@ -94,6 +102,7 @@ export default async function AdminTournamentManagePage({
       defaultPassDays={passConfig?.duration_days ?? 30}
       entryOrders={entryOrdersSigned}
       treasuryWallets={treasuryWallets ?? []}
+      bankAccounts={bankAccounts ?? []}
     />
   );
 }

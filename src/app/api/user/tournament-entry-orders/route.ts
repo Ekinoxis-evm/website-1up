@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
   const { data: tournament } = await supabaseAdmin
     .from("tournaments")
-    .select("id, name, slug, date, location_type, description, status, is_active, is_registration_open, entry_fee_tokens, entry_fee_cop, treasury_address")
+    .select("id, name, slug, date, location_type, description, status, is_active, is_registration_open, entry_fee_tokens, entry_fee_cop, treasury_address, bank_account_id")
     .eq("id", tournamentId)
     .maybeSingle();
 
@@ -170,7 +170,9 @@ export async function POST(req: NextRequest) {
       tournamentName: tournament!.name,
       tournamentSlug: tournament!.slug ?? String(tournamentId),
       amountCop:     fee.cop!,
-      bankAccountId,
+      // The tournament's designated account wins when set; the body's
+      // bankAccountId is the fallback (and current behavior) only when none.
+      bankAccountId: tournament!.bank_account_id ?? bankAccountId,
       comprobantePath,
     });
   }

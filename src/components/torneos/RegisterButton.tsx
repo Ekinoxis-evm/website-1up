@@ -22,6 +22,9 @@ interface Props {
   // v2.44.x — card (Stripe Checkout) method, gated server-side. Defaults off;
   // only the detail page (which fetches the method config + live flag) turns it on.
   cardEnabled?:   boolean;
+  // v2.51.0 — when the tournament has a designated bank account, the entry
+  // wizard shows it instead of a picker (the server uses the tournament's).
+  designatedBank?: { id: number; bankName: string; accountNumberMasked: string | null } | null;
   compact?:       boolean;
   onRegistered?:  () => void;
 }
@@ -29,7 +32,7 @@ interface Props {
 const APP_URL  = process.env.NEXT_PUBLIC_APP_URL  ?? "https://app.1upesports.org";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://1upesports.org";
 
-export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, compact, onRegistered }: Props) {
+export function RegisterButton({ tournamentId, tournamentName, tournamentDate, locationType, isRegistered, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, designatedBank, compact, onRegistered }: Props) {
   const { authenticated, ready, user, getAccessToken } = usePrivy();
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -250,6 +253,7 @@ export function RegisterButton({ tournamentId, tournamentName, tournamentDate, l
           treasuryAddress={treasuryAddress ?? null}
           cashEnabled={cashEnabled ?? false}
           cardEnabled={cardEnabled ?? false}
+          designatedBank={designatedBank ?? null}
           walletAddress={user?.wallet?.address ?? null}
           getAccessToken={getAccessToken}
           onClose={() => setWizardOpen(false)}

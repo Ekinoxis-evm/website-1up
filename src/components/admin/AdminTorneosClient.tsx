@@ -23,11 +23,13 @@ type TournamentWithGame = Tournament & {
 };
 
 type TreasuryWalletOption = { id: number; label: string; address: string };
+type BankAccountOption = { id: number; bank_name: string; account_number: string };
 
 interface Props {
   tournaments:     TournamentWithGame[];
   games:           Pick<Game, "id" | "name">[];
   treasuryWallets: TreasuryWalletOption[];
+  bankAccounts:    BankAccountOption[];
   defaultPassDays: number;
 }
 
@@ -56,7 +58,7 @@ function firstPrizeSummary(prizes: TournamentPrize[]): string {
   return "—";
 }
 
-export function AdminTorneosClient({ tournaments, games, treasuryWallets, defaultPassDays }: Props) {
+export function AdminTorneosClient({ tournaments, games, treasuryWallets, bankAccounts, defaultPassDays }: Props) {
   const [qrTournament, setQrTournament] = useState<{ id: number; slug: string | null; name: string } | null>(null);
   const [createOpen, setCreateOpen]     = useState(false);
 
@@ -167,6 +169,7 @@ export function AdminTorneosClient({ tournaments, games, treasuryWallets, defaul
         <TournamentCreateWizard
           games={games}
           treasuryWallets={treasuryWallets}
+          bankAccounts={bankAccounts}
           defaultPassDays={defaultPassDays}
           onClose={() => setCreateOpen(false)}
         />
