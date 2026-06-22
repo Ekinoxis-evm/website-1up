@@ -34,14 +34,16 @@ export async function POST(req: NextRequest) {
 
   if (!body.label?.trim())
     return NextResponse.json({ error: "El nombre (label) es requerido" }, { status: 400 });
-  if (!isValidTreasuryAddress(body.address?.trim()))
+  // Strip any non-printable-ASCII chars a paste may carry (an EVM address is pure ASCII).
+  const address = (body.address ?? "").replace(/[^\x21-\x7E]/g, "");
+  if (!isValidTreasuryAddress(address))
     return NextResponse.json({ error: "La dirección debe ser una wallet EVM válida (0x seguido de 40 caracteres)" }, { status: 400 });
 
   const { data, error } = await supabaseAdmin
     .from("treasury_wallets")
     .insert({
       label:      body.label.trim(),
-      address:    body.address!.trim(),
+      address,
       chain_id:   body.chainId ?? 8453,
       is_active:  body.isActive ?? true,
       sort_order: body.sortOrder ?? 0,
@@ -66,14 +68,15 @@ export async function PUT(req: NextRequest) {
   if (!body.id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
   if (body.label !== undefined && !body.label.trim())
     return NextResponse.json({ error: "El nombre (label) es requerido" }, { status: 400 });
-  if (body.address !== undefined && !isValidTreasuryAddress(body.address.trim()))
+  const address = body.address !== undefined ? body.address.replace(/[^\x21-\x7E]/g, "") : undefined;
+  if (address !== undefined && !isValidTreasuryAddress(address))
     return NextResponse.json({ error: "La dirección debe ser una wallet EVM válida (0x seguido de 40 caracteres)" }, { status: 400 });
 
   const { data, error } = await supabaseAdmin
     .from("treasury_wallets")
     .update({
       label:      body.label?.trim(),
-      address:    body.address?.trim(),
+      address,
       chain_id:   body.chainId,
       is_active:  body.isActive,
       sort_order: body.sortOrder,
