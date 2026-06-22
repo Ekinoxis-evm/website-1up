@@ -7,10 +7,12 @@ import { usePrivy } from "@privy-io/react-auth";
 import { PrizeBadge } from "./PrizeBadge";
 import { RegisterButton } from "./RegisterButton";
 import { IntlTournamentCard } from "./IntlTournamentCard";
-import type { Tournament, TournamentPrize, Game, InternationalTournament } from "@/types/database.types";
+import type { Tournament, TournamentPrize, Game, GameCategory, InternationalTournament } from "@/types/database.types";
 
 export type TournamentFull = Tournament & {
-  games:             Pick<Game, "id" | "name"> | null;
+  games: (Pick<Game, "id" | "name" | "category_id"> & {
+    game_categories: Pick<GameCategory, "id" | "name" | "slug"> | null;
+  }) | null;
   tournament_prizes: TournamentPrize[];
 };
 
@@ -74,7 +76,14 @@ function TorneoCard({ t, isRegistered, onRegistered }: { t: TournamentFull; isRe
       {/* Content */}
       <div className="p-5 flex flex-col flex-1 gap-3">
         {t.games && (
-          <p className="font-headline font-bold text-xs uppercase tracking-widest text-secondary">{t.games.name}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-headline font-bold text-xs uppercase tracking-widest text-secondary">{t.games.name}</p>
+            {t.games.game_categories && (
+              <span className="font-headline font-bold text-xs uppercase tracking-widest px-2 py-0.5 bg-surface-container text-on-surface-variant">
+                {t.games.game_categories.name}
+              </span>
+            )}
+          </div>
         )}
         <Link href={`/torneos/${t.slug ?? t.id}`}>
           <h3 className="font-headline font-black text-xl uppercase tracking-tighter leading-tight text-on-surface hover:text-primary-container transition-colors">

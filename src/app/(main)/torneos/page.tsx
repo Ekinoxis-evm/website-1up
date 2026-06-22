@@ -34,7 +34,7 @@ export default async function TorneosPage() {
   ] = await Promise.all([
     supabase
       .from("tournaments")
-      .select("*, games(id, name), tournament_prizes(*)")
+      .select("*, games(id, name, category_id, game_categories(id, name, slug)), tournament_prizes(*)")
       .eq("is_active", true)
       .order("sort_order")
       .order("date", { ascending: true }),

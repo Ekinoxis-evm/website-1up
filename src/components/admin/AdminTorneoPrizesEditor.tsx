@@ -1,32 +1,39 @@
 "use client";
 
+import { ImageUpload } from "@/components/admin/ImageUpload";
+
 export type PrizeFormRow = {
-  position:     1 | 2 | 3;
-  prizeType:    "tokens" | "cop" | "both" | "pass";
-  amountTokens: string;
-  amountCop:    string;
-  includesPass: boolean;
-  passDays:     string;
+  position:       1 | 2 | 3;
+  prizeType:      "tokens" | "cop" | "both" | "pass";
+  amountTokens:   string;
+  amountCop:      string;
+  includesPass:   boolean;
+  passDays:       string;
+  rewardText:     string;
+  rewardImageUrl: string;
 };
 
 const EMPTY_ROW = (position: 1 | 2 | 3, defaultPassDays: number): PrizeFormRow => ({
   position,
-  prizeType:    "cop",
-  amountTokens: "",
-  amountCop:    "",
-  includesPass: false,
-  passDays:     String(defaultPassDays),
+  prizeType:      "cop",
+  amountTokens:   "",
+  amountCop:      "",
+  includesPass:   false,
+  passDays:       String(defaultPassDays),
+  rewardText:     "",
+  rewardImageUrl: "",
 });
 
 interface Props {
   value:           PrizeFormRow[];
   onChange:        (prizes: PrizeFormRow[]) => void;
   defaultPassDays: number;
+  getAccessToken:  () => Promise<string | null>;
 }
 
 const POSITION_LABELS: Record<number, string> = { 1: "1° Lugar", 2: "2° Lugar", 3: "3° Lugar" };
 
-export function AdminTorneoPrizesEditor({ value, onChange, defaultPassDays }: Props) {
+export function AdminTorneoPrizesEditor({ value, onChange, defaultPassDays, getAccessToken }: Props) {
   const usedPositions = value.map((r) => r.position);
   const nextPosition  = ([1, 2, 3] as const).find((p) => !usedPositions.includes(p));
 
@@ -161,6 +168,34 @@ export function AdminTorneoPrizesEditor({ value, onChange, defaultPassDays }: Pr
                   <span className="font-body text-xs text-outline">días</span>
                 </div>
               )}
+            </div>
+
+            <div className="bg-surface-container p-2 space-y-2">
+              <div>
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+                  Premio físico / extra (opcional)
+                </label>
+                <textarea
+                  value={row.rewardText}
+                  onChange={(e) => updateRow(i, { rewardText: e.target.value })}
+                  rows={2}
+                  placeholder="p. ej. Set de cartas Pokémon — se reclama en el evento"
+                  className="w-full bg-surface-container-lowest text-on-background p-2 font-body text-xs border-none focus:outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+                  Imagen del premio (opcional)
+                </label>
+                <ImageUpload
+                  currentUrl={row.rewardImageUrl || null}
+                  folder="tournament-prizes"
+                  entityId="pending"
+                  onUploaded={(url) => updateRow(i, { rewardImageUrl: url })}
+                  getAccessToken={getAccessToken}
+                  aspectRatio="square"
+                />
+              </div>
             </div>
           </div>
           );

@@ -5,6 +5,39 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.51.0] — 2026-06-21
+
+### Added — tournament features (bank account, category, prize rewards, sponsor, wizard)
+
+- **Per-tournament bank account** — pick which active account receives wire/cash entry fees
+  (`tournaments.bank_account_id`, dropdown mirroring the treasury-wallet selector in the wizard +
+  cockpit editor). The entry bank flow uses the tournament's account when set (the body's
+  `bankAccountId` is the fallback); the public detail page shows the designated account.
+- **Game category** — derived from the selected game (`games.category_id` → `game_categories`);
+  shown as a badge on the public tournament page + the directory cards. No new field.
+- **Physical prize rewards** — per podium place, an optional **description + image**
+  (`tournament_prizes.reward_text` + `reward_image_url`) for prizes a winner claims in person
+  (e.g. a card set). Shown under each place on the public podium.
+- **Sponsor logo** — URL **or** PNG upload, a **background** choice
+  (`tournaments.sponsor_logo_bg`: transparent/white/black), and a **rounded** display on the page.
+- **Wizard** — the tournament image upload moved to **step 1** (Básico, with name + date).
+- **Migration** `20260621000000_tournament_features.sql` (applied live).
+
+### QA
+- `npm run build` clean · **337 tests**.
+
+---
+
+## [2.50.1] — 2026-06-21
+
+### Fixed — pasted treasury wallet address rejected
+
+A pasted EVM address could carry an invisible character (zero-width / non-breaking space) that
+`.trim()` doesn't strip, so a valid address failed the regex. The admin form **and** the
+`/api/admin/treasury-wallets` route now strip all non-printable-ASCII before validating + storing.
+
+---
+
 ## [2.50.0] — 2026-06-21
 
 ### Added — tournament creation wizard + clearer directory (admin cleanup, phase 3 · final)

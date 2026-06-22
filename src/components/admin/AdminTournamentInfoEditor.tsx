@@ -21,12 +21,14 @@ type TournamentRich = Tournament & {
 };
 
 type TreasuryWalletOption = { id: number; label: string; address: string };
+type BankAccountOption = { id: number; bank_name: string; account_number: string };
 
 interface Props {
   tournament:      TournamentRich;
   games:           Pick<Game, "id" | "name">[];
   defaultPassDays: number;
   treasuryWallets: TreasuryWalletOption[];
+  bankAccounts:    BankAccountOption[];
   onSaved?:        () => void;
 }
 
@@ -51,13 +53,15 @@ function prizeToFormRow(p: TournamentPrize, fallbackPassDays: number): PrizeForm
     amountCop:    p.amount_cop    ? String(p.amount_cop)    : "",
     includesPass: !!p.includes_pass,
     passDays:     p.pass_days != null ? String(p.pass_days) : (p.includes_pass ? String(fallbackPassDays) : ""),
+    rewardText:     p.reward_text ?? "",
+    rewardImageUrl: p.reward_image_url ?? "",
   };
 }
 
 const STATUS_LABELS = { upcoming: "Próximo", live: "En vivo", completed: "Finalizado" } as const;
 const STATUS_COLORS = { upcoming: "text-secondary", live: "text-primary-container", completed: "text-outline" } as const;
 
-export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, treasuryWallets, onSaved }: Props) {
+export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, treasuryWallets, bankAccounts, onSaved }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
 
@@ -79,9 +83,14 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
   const [entryFeeTokens, setEntryFeeTokens]   = useState(tournament.entry_fee_tokens != null ? String(tournament.entry_fee_tokens) : "");
   const [entryFeeCop, setEntryFeeCop]         = useState(tournament.entry_fee_cop != null ? String(tournament.entry_fee_cop) : "");
   const [treasuryAddress, setTreasuryAddress] = useState(tournament.treasury_address ?? "");
+  const [bankAccountId, setBankAccountId]     = useState(tournament.bank_account_id != null ? String(tournament.bank_account_id) : "");
   const [sponsorName, setSponsorName]           = useState(tournament.sponsor_name ?? "");
   const [sponsorWebsiteUrl, setSponsorWebUrl]   = useState(tournament.sponsor_website_url ?? "");
   const [sponsorLogoUrl, setSponsorLogoUrl]     = useState(tournament.sponsor_logo_url ?? "");
+  const [sponsorLogoMode, setSponsorLogoMode]   = useState<"url" | "upload">("url");
+  const [sponsorLogoBg, setSponsorLogoBg]       = useState<"transparent" | "white" | "black">(
+    (tournament.sponsor_logo_bg as "transparent" | "white" | "black" | null) ?? "transparent",
+  );
 
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -131,9 +140,11 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
           sponsorName,
           sponsorWebsiteUrl,
           sponsorLogoUrl,
+          sponsorLogoBg,
           entryFeeTokens,
           entryFeeCop,
           treasuryAddress,
+          bankAccountId: bankAccountId ? Number(bankAccountId) : null,
           prizes,
         }),
       });
@@ -366,6 +377,21 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
               </p>
             )}
           </div>
+          <div>
+            <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">
+              Cuenta para recibir (banco/efectivo)
+            </label>
+            <select
+              value={bankAccountId}
+              onChange={(e) => setBankAccountId(e.target.value)}
+              className="w-full bg-surface-container-lowest text-on-background p-3 font-headline font-bold border-none focus:outline-none"
+            >
+              <option value="">— Cuenta para recibir (banco/efectivo) —</option>
+              {bankAccounts.map((b) => (
+                <option key={b.id} value={b.id}>{b.bank_name} · {b.account_number}</option>
+              ))}
+            </select>
+          </div>
           <p className="font-body text-[10px] text-outline leading-snug">
             El cupo se asigna solo al confirmarse el pago ($1UP verificado en cadena, o
             comprobante bancario aprobado en la pestaña Pagos). Equivalencia de referencia:
@@ -374,7 +400,7 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
         </div>
 
         <div className="bg-surface-container p-5">
-          <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} />
+          <AdminTorneoPrizesEditor value={prizes} onChange={setPrizes} defaultPassDays={defaultPassDays} getAccessToken={getAccessToken} />
         </div>
 
         <div className="bg-surface-container p-5 space-y-3">
@@ -393,12 +419,63 @@ export function AdminTournamentInfoEditor({ tournament, games, defaultPassDays, 
             placeholder="https://sitio-del-sponsor.com"
             className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none"
           />
-          <input
-            value={sponsorLogoUrl}
-            onChange={(e) => setSponsorLogoUrl(e.target.value)}
-            placeholder="URL del logo"
-            className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none"
-          />
+
+          <div>
+            <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Logo del patrocinador</label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setSponsorLogoMode("url")}
+                className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoMode === "url" ? "bg-primary-container text-white" : "bg-surface-container-lowest text-outline"}`}
+              >
+                Pegar URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setSponsorLogoMode("upload")}
+                className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoMode === "upload" ? "bg-primary-container text-white" : "bg-surface-container-lowest text-outline"}`}
+              >
+                Subir imagen
+              </button>
+            </div>
+            {sponsorLogoMode === "url" ? (
+              <input
+                value={sponsorLogoUrl}
+                onChange={(e) => setSponsorLogoUrl(e.target.value)}
+                placeholder="URL del logo"
+                className="w-full bg-surface-container-lowest text-on-background p-3 font-body text-sm border-none focus:outline-none"
+              />
+            ) : (
+              <ImageUpload
+                currentUrl={sponsorLogoUrl || null}
+                folder="tournaments"
+                entityId="pending"
+                onUploaded={(url) => setSponsorLogoUrl(url)}
+                getAccessToken={getAccessToken}
+                aspectRatio="square"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block font-headline font-bold text-[10px] uppercase tracking-widest text-outline mb-1">Fondo del logo</label>
+            <div className="flex gap-2">
+              {([
+                { value: "transparent", label: "Transparente" },
+                { value: "white",       label: "Blanco"       },
+                { value: "black",       label: "Negro"        },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSponsorLogoBg(opt.value)}
+                  className={`flex-1 p-2 font-headline font-bold text-[10px] uppercase tracking-widest transition-colors ${sponsorLogoBg === opt.value ? "bg-primary-container text-white" : "bg-surface-container-lowest text-outline"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Slug — informational only */}

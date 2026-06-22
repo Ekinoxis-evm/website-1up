@@ -5,10 +5,12 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { PrizePodium } from "@/components/torneos/PrizeBadge";
 import { RegisterButton } from "@/components/torneos/RegisterButton";
 import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
-import type { Tournament, TournamentPrize, Game, Bracket, BracketParticipant, BracketMatch } from "@/types/database.types";
+import type { Tournament, TournamentPrize, Game, GameCategory, Bracket, BracketParticipant, BracketMatch } from "@/types/database.types";
 
 type TournamentFull = Tournament & {
-  games:             Pick<Game, "id" | "name"> | null;
+  games: (Pick<Game, "id" | "name" | "category_id"> & {
+    game_categories: Pick<GameCategory, "id" | "name" | "slug"> | null;
+  }) | null;
   tournament_prizes: TournamentPrize[];
 };
 
@@ -33,7 +35,7 @@ const STATUS_BADGE: Record<Tournament["status"], string> = {
 async function fetchTournament(slug: string): Promise<TournamentFull | null> {
   const { data: bySlug } = await supabase
     .from("tournaments")
-    .select("*, games(id, name), tournament_prizes(*)")
+    .select("*, games(id, name, category_id, game_categories(id, name, slug)), tournament_prizes(*)")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -43,7 +45,7 @@ async function fetchTournament(slug: string): Promise<TournamentFull | null> {
   if (!Number.isFinite(numericId) || numericId <= 0) return null;
   const { data: byId } = await supabase
     .from("tournaments")
-    .select("*, games(id, name), tournament_prizes(*)")
+    .select("*, games(id, name, category_id, game_categories(id, name, slug)), tournament_prizes(*)")
     .eq("id", numericId)
     .eq("is_active", true)
     .maybeSingle();
@@ -145,6 +147,27 @@ export default async function TournamentDetailPage(
   // a POST would actually succeed.
   const cardEnabled = !!methodCfg?.card_enabled && (t.entry_fee_cop ?? 0) > 0 && process.env.PAYMENTS_CARD_LIVE === "true";
 
+  // When the tournament has a designated bank account, the entry server uses it
+  // (the body's bankAccountId is ignored). Resolve its public-safe details here
+  // so the wizard shows that account instead of a picker. Masked number only —
+  // the wizard fetches the full record on demand via /api/bank-accounts/[id].
+  let designatedBank: { id: number; bankName: string; accountNumberMasked: string | null } | null = null;
+  if (t.bank_account_id) {
+    const { data: bank } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("id, bank_name, account_number")
+      .eq("id", t.bank_account_id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (bank) {
+      designatedBank = {
+        id:                  bank.id,
+        bankName:            bank.bank_name,
+        accountNumberMasked: bank.account_number ? `••• ${bank.account_number.slice(-4)}` : null,
+      };
+    }
+  }
+
   const dateLong = t.date
     ? new Date(t.date).toLocaleDateString("es-CO", {
         weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota",
@@ -198,6 +221,11 @@ export default async function TournamentDetailPage(
                 {t.games.name}
               </span>
             )}
+            {t.games?.game_categories && (
+              <span className="font-headline font-black text-[10px] uppercase tracking-widest px-2 py-1 bg-surface-container text-on-surface-variant">
+                {t.games.game_categories.name}
+              </span>
+            )}
           </div>
 
           <div>
@@ -246,6 +274,7 @@ export default async function TournamentDetailPage(
                 treasuryAddress={t.treasury_address}
                 cashEnabled={cashEnabled}
                 cardEnabled={cardEnabled}
+                designatedBank={designatedBank}
               />
             )}
             {!t.is_registration_open && t.status !== "completed" && (
@@ -285,8 +314,14 @@ export default async function TournamentDetailPage(
         <section className="px-8 md:px-16 pt-10">
           <div className="bg-surface-container p-5 flex items-center gap-4 max-w-md">
             {t.sponsor_logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-10 w-auto object-contain shrink-0" />
+              <div className={`h-16 w-16 shrink-0 rounded-full overflow-hidden flex items-center justify-center ${
+                t.sponsor_logo_bg === "white" ? "bg-white"
+                  : t.sponsor_logo_bg === "black" ? "bg-black"
+                  : ""
+              }`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={t.sponsor_logo_url} alt={t.sponsor_name} className="h-full w-full object-contain p-2" />
+              </div>
             )}
             <div>
               <p className="font-headline text-[10px] uppercase tracking-widest text-outline mb-0.5">Patrocinador</p>

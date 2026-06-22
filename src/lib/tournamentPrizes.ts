@@ -3,12 +3,14 @@
 // client. Mirrors the `tournament_prizes` DB CHECK.
 
 export type PrizeRow = {
-  position:      number;
-  prizeType:     string;
-  amountTokens:  string;
-  amountCop:     string;
-  includesPass?: boolean;
-  passDays?:     string | number;
+  position:        number;
+  prizeType:       string;
+  amountTokens:    string;
+  amountCop:       string;
+  includesPass?:   boolean;
+  passDays?:       string | number;
+  rewardText?:     string;
+  rewardImageUrl?: string;
 };
 
 // Fail-fast guard run before any DB write — mirrors the DB CHECK that requires

@@ -1875,6 +1875,8 @@ export type Database = {
           pass_days: number | null
           position: number
           prize_type: string
+          reward_image_url: string | null
+          reward_text: string | null
           tournament_id: number
         }
         Insert: {
@@ -1886,6 +1888,8 @@ export type Database = {
           pass_days?: number | null
           position: number
           prize_type: string
+          reward_image_url?: string | null
+          reward_text?: string | null
           tournament_id: number
         }
         Update: {
@@ -1897,6 +1901,8 @@ export type Database = {
           pass_days?: number | null
           position?: number
           prize_type?: string
+          reward_image_url?: string | null
+          reward_text?: string | null
           tournament_id?: number
         }
         Relationships: [
@@ -2062,6 +2068,8 @@ export type Database = {
           prize_pool_cop: number | null
           slug: string | null
           sort_order: number
+          bank_account_id: number | null
+          sponsor_logo_bg: string | null
           sponsor_logo_url: string | null
           sponsor_name: string | null
           sponsor_website_url: string | null
@@ -2085,6 +2093,8 @@ export type Database = {
           prize_pool_cop?: number | null
           slug?: string | null
           sort_order?: number
+          bank_account_id?: number | null
+          sponsor_logo_bg?: string | null
           sponsor_logo_url?: string | null
           sponsor_name?: string | null
           sponsor_website_url?: string | null
@@ -2108,6 +2118,8 @@ export type Database = {
           prize_pool_cop?: number | null
           slug?: string | null
           sort_order?: number
+          bank_account_id?: number | null
+          sponsor_logo_bg?: string | null
           sponsor_logo_url?: string | null
           sponsor_name?: string | null
           sponsor_website_url?: string | null

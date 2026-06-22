@@ -44,6 +44,9 @@ interface Props {
   treasuryAddress: string | null;
   cashEnabled:     boolean;
   cardEnabled:     boolean;
+  // v2.51.0 — when set, the bank step shows this designated account (no picker)
+  // and submits without bankAccountId; the server uses the tournament's account.
+  designatedBank:  { id: number; bankName: string; accountNumberMasked: string | null } | null;
   walletAddress:   string | null;
   getAccessToken:  () => Promise<string | null>;
   onClose:         () => void;
@@ -60,7 +63,7 @@ function fmtCop(n: number): string {
 const TREASURY_RE = /^0x[a-fA-F0-9]{40}$/;
 
 export function TournamentEntryWizard({
-  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, walletAddress,
+  tournamentId, tournamentName, entryFeeTokens, entryFeeCop, treasuryAddress, cashEnabled, cardEnabled, designatedBank, walletAddress,
   getAccessToken, onClose, onRegistered, onPending,
 }: Props) {
   const { sendTransaction } = useSendTransaction();
@@ -191,6 +194,12 @@ export function TournamentEntryWizard({
 
   // ── Bank flow (mirrors BuyPassBankWizard) ───────────────────────────
   async function loadBanks() {
+    // Designated account: skip the list/picker and load just that account.
+    // The server uses the tournament's account regardless of what we submit.
+    if (designatedBank) {
+      await loadBankAccount(designatedBank.id);
+      return;
+    }
     const res = await fetch("/api/bank-accounts", { headers: await authHeader() });
     if (!res.ok) return;
     const data = await res.json() as BankListItem[];
@@ -199,7 +208,7 @@ export function TournamentEntryWizard({
   }
 
   useEffect(() => {
-    if (view === "bank_data" && bankAccounts.length === 0) loadBanks();
+    if (view === "bank_data" && !selectedBank) loadBanks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
@@ -268,7 +277,9 @@ export function TournamentEntryWizard({
       body: JSON.stringify({
         tournamentId,
         paymentMethod: "bank",
-        bankAccountId: selectedBank.id,
+        // Designated account: the server resolves the bank from the tournament,
+        // so we omit bankAccountId (anything we send is ignored).
+        ...(designatedBank ? {} : { bankAccountId: selectedBank.id }),
         comprobantePath,
       }),
     });

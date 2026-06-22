@@ -56,6 +56,8 @@ async function savePrizes(tournamentId: number, prizes: PrizeRow[]) {
           ? parseInt(p.amountCop) : null,
         includes_pass: includesPass,
         pass_days:     passDaysNum,
+        reward_text:      p.rewardText && p.rewardText.trim() ? p.rewardText.trim() : null,
+        reward_image_url: p.rewardImageUrl && p.rewardImageUrl.trim() ? p.rewardImageUrl.trim() : null,
       };
     })
   );
@@ -95,9 +97,11 @@ export async function POST(req: NextRequest) {
     sponsor_name:         body.sponsorName || null,
     sponsor_website_url:  body.sponsorWebsiteUrl || null,
     sponsor_logo_url:     body.sponsorLogoUrl || null,
+    sponsor_logo_bg:      body.sponsorLogoBg || null,
     entry_fee_tokens:     feeParse.tokens,
     entry_fee_cop:        feeParse.cop,
     treasury_address:     feeParse.treasury,
+    bank_account_id:      body.bankAccountId != null ? Number(body.bankAccountId) : null,
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (body.prizes?.length) await savePrizes(data.id, body.prizes);
@@ -169,6 +173,8 @@ export async function PUT(req: NextRequest) {
     sponsor_name:         body.sponsorName !== undefined ? (body.sponsorName || null) : undefined,
     sponsor_website_url:  body.sponsorWebsiteUrl !== undefined ? (body.sponsorWebsiteUrl || null) : undefined,
     sponsor_logo_url:     body.sponsorLogoUrl !== undefined ? (body.sponsorLogoUrl || null) : undefined,
+    sponsor_logo_bg:      body.sponsorLogoBg !== undefined ? (body.sponsorLogoBg || null) : undefined,
+    bank_account_id:      body.bankAccountId !== undefined ? (body.bankAccountId != null ? Number(body.bankAccountId) : null) : undefined,
     ...(!isCancelling && hasFeeInput && feeParse.ok
       ? { entry_fee_tokens: feeParse.tokens, entry_fee_cop: feeParse.cop, treasury_address: feeParse.treasury }
       : {}),
