@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { BracketViewport, type BracketViewportMode } from "@/components/torneos/BracketViewport";
 import type {
   MatchType,
   ParticipantType,
@@ -164,9 +164,19 @@ export function TournamentBracketView({
   :                     { style: { width: 240, boxHeight: 100, spaceBetweenColumns: 40, spaceBetweenRows: 16 } };
 
   // Force the bracket subtree to re-mount whenever a result changes, so the
-  // @g-loot library (pinned to React 18) reliably re-renders and ResponsiveScale
-  // re-measures. Without this a recorded winner can fail to reflect visually.
+  // @g-loot library (pinned to React 18) reliably re-renders and the
+  // BracketViewport re-runs its fit-on-mount effect. Without this a recorded
+  // winner can fail to reflect visually.
   const renderKey = matches.map(m => `${m.id}:${m.state}:${m.winner_id ?? ""}`).join("|");
+
+  // A pan/zoom canvas needs a bounded height. The viewport fills this box and
+  // fits the whole tree into it on load; tv inherits the parent's full height.
+  const heightClass =
+    scale === "tv"    ? "h-full"
+  : scale === "admin" ? "h-[65vh] min-h-[420px]"
+  :                     "h-[60vh] min-h-[340px]";
+
+  const mode: BracketViewportMode = scale === "tv" ? "display" : "interactive";
 
   if (bracket.format === "single_elimination") {
     const wRounds = bracket.rounds_winners;
@@ -175,13 +185,15 @@ export function TournamentBracketView({
       .map(m => buildMatchType(m, participantMap, winnersLabel(m.round, wRounds)));
 
     return (
-      <ResponsiveScale key={renderKey}>
-        <SingleEliminationBracket
-          matches={libraryMatches}
-          matchComponent={matchComponent}
-          options={options}
-        />
-      </ResponsiveScale>
+      <div className={heightClass}>
+        <BracketViewport key={renderKey} mode={mode}>
+          <SingleEliminationBracket
+            matches={libraryMatches}
+            matchComponent={matchComponent}
+            options={options}
+          />
+        </BracketViewport>
+      </div>
     );
   }
 
@@ -216,82 +228,14 @@ export function TournamentBracketView({
   void lRounds;
 
   return (
-    <ResponsiveScale key={renderKey}>
-      <DoubleEliminationBracket
-        matches={{ upper, lower }}
-        matchComponent={matchComponent}
-        options={options}
-      />
-    </ResponsiveScale>
-  );
-}
-
-// Wraps the bracket SVG in a container that measures its natural width and
-// CSS-scales it down via transform so it fits the parent container. Scale is
-// floored at MIN_SCALE — below that the bracket is unreadable, so we fall back
-// to horizontal scroll on the wrapper. Height is JS-tracked because a CSS
-// transform doesn't change the laid-out box; without this the wrapper would
-// reserve the full unscaled height and leave a huge whitespace gap below.
-//
-// Re-runs on container resize + content resize so the bracket re-fits on
-// window resize, devtools toggle, fullscreen open/close, etc.
-//
-// MIN_SCALE was 0.45 — too aggressive for wide double-elim brackets on
-// narrow viewports, which forced horizontal scrolling on phones / portrait
-// tablets. Lowered to 0.25 so the bracket always fits the container; text
-// gets smaller but users can pinch-zoom natively if they need detail. The
-// admin's Pantalla completa button (v2.36.7) gives a larger view on demand.
-const MIN_SCALE = 0.25;
-
-function ResponsiveScale({ children }: { children: React.ReactNode }) {
-  const wrapRef  = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale]   = useState(1);
-  const [boxHeight, setH]   = useState<number | null>(null);
-
-  useEffect(() => {
-    const wrap  = wrapRef.current;
-    const inner = innerRef.current;
-    if (!wrap || !inner) return;
-
-    function recompute() {
-      if (!wrap || !inner) return;
-      const cw = wrap.clientWidth;
-      const iw = inner.scrollWidth;
-      const ih = inner.scrollHeight;
-      if (cw === 0 || iw === 0) return;
-      const fit  = cw / iw;
-      const next = Math.max(MIN_SCALE, Math.min(1, fit));
-      setScale(next);
-      setH(ih * next);
-    }
-
-    recompute();
-    const ro = new ResizeObserver(recompute);
-    ro.observe(wrap);
-    ro.observe(inner);
-    // The lib renders SVG asynchronously after the first paint; one extra tick
-    // catches the actual content size once g-loot has measured matches.
-    const t = setTimeout(recompute, 60);
-    return () => { ro.disconnect(); clearTimeout(t); };
-  }, []);
-
-  return (
-    <div
-      ref={wrapRef}
-      className="w-full overflow-x-auto"
-      style={{ height: boxHeight ?? undefined }}
-    >
-      <div
-        ref={innerRef}
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          width: "max-content",
-        }}
-      >
-        {children}
-      </div>
+    <div className={heightClass}>
+      <BracketViewport key={renderKey} mode={mode}>
+        <DoubleEliminationBracket
+          matches={{ upper, lower }}
+          matchComponent={matchComponent}
+          options={options}
+        />
+      </BracketViewport>
     </div>
   );
 }

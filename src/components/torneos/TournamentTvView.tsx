@@ -98,9 +98,9 @@ export function TournamentTvView({ tournament }: Props) {
       </header>
 
       {/* ── Bracket (or holding screen) ────────────────────────────── */}
-      <main className="flex-1 px-12 pb-8 flex items-center justify-center">
+      <main className="flex-1 min-h-0 px-12 pb-8 flex items-center justify-center">
         {data ? (
-          <div className="w-full">
+          <div className="w-full h-full">
             <TournamentBracketView data={data} scale="tv" />
           </div>
         ) : errored ? (

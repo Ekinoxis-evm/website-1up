@@ -5,6 +5,30 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.53.0] — 2026-06-22
+
+### Added — pan/zoom bracket display (mobile · TV · admin)
+
+Replaced the bracket's shrink-to-fit + horizontal-scroll wrapper with a real **pan/zoom canvas**
+(`BracketViewport`, built on `react-zoom-pan-pinch`), so large brackets are navigable instead of
+forcing side-to-side scrolling. All three contexts share one renderer (`TournamentBracketView`),
+tuned per `scale`:
+
+- **Mobile / public** — pinch to zoom, drag to pan, double-tap; fits the whole bracket on load; a
+  subtle "Desliza · pellizca para zoom" hint.
+- **Admin cockpit** — grab-to-pan + wheel/pinch zoom + a floating control cluster (zoom −/+, **fit**,
+  reset) in both the inline panel and **Pantalla completa**; picking a winner still re-renders + re-fits.
+- **TV / venue** — gestures off; auto-fits the bracket to the screen and re-fits on each 15s poll.
+
+Fit-on-load + fit-on-resize via `zoomToElement`; the v2.52.1 re-mount-on-result-change is preserved
+(every recorded winner re-fits). No change to the match cards, seeding, or resolution logic.
+
+### QA
+- `npm run build` clean · **361 tests** · new dep `react-zoom-pan-pinch` (installs under the existing
+  `.npmrc legacy-peer-deps`).
+
+---
+
 ## [2.52.1] — 2026-06-22
 
 ### Fixed — tournament bracket resolution + display
