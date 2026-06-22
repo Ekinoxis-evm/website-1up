@@ -108,8 +108,12 @@ export function AdminBankAccountsClient({ accounts, wallets }: Props) {
 
   async function handleWalletSave() {
     if (!walletForm.label.trim()) { setWalletError("El nombre es requerido."); return; }
-    if (!EVM_RE.test(walletForm.address.trim())) {
-      setWalletError("La dirección debe ser una wallet EVM válida (0x + 40 caracteres).");
+    // Strip any non-printable-ASCII chars a paste may carry (zero-width spaces,
+    // non-breaking spaces, etc. that .trim() leaves behind) — an EVM address is
+    // pure ASCII, so this only removes invisible junk.
+    const address = walletForm.address.replace(/[^\x21-\x7E]/g, "");
+    if (!EVM_RE.test(address)) {
+      setWalletError("La dirección debe ser una wallet EVM válida (0x + 40 caracteres hex).");
       return;
     }
     setWalletLoading(true); setWalletError(null);
@@ -117,7 +121,7 @@ export function AdminBankAccountsClient({ accounts, wallets }: Props) {
     const body = {
       ...(walletEditing ? { id: walletEditing.id } : {}),
       label: walletForm.label.trim(),
-      address: walletForm.address.trim(),
+      address,
       isActive: walletForm.isActive,
       sortOrder: walletForm.sortOrder,
     };
