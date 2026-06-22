@@ -106,6 +106,39 @@ describe("derivePodium — double elimination", () => {
       { position: 2, userProfileId: 200 },
     ]);
   });
+
+  it("uses the grand final when the reset was skipped (real data: GF points at gf_reset)", () => {
+    // Real generated data: the grand_final always points at gf_reset, so we
+    // must NOT require next_match_id === null. WB champ (1) won the GF → reset
+    // skipped ('bye') → champion is the GF winner.
+    const matches = [
+      m({ id: 13, bracket_side: "losers", round: 3, winner_id: 2, loser_id: 3, next_match_id: 20, state: "completed" }),
+      m({ id: 20, bracket_side: "grand_final", round: 1, winner_id: 1, loser_id: 2, next_match_id: 21, state: "completed" }),
+      m({ id: 21, bracket_side: "gf_reset", round: 1, next_match_id: null, state: "bye" }),
+    ];
+    const podium = derivePodium("double_elimination", matches, [P(1), P(2), P(3)]);
+    expect(podium).toEqual([
+      { position: 1, userProfileId: 100 },
+      { position: 2, userProfileId: 200 },
+      { position: 3, userProfileId: 300 },
+    ]);
+  });
+
+  it("uses the reset (second grand final) as the decider when it was played", () => {
+    // LB champ won the first GF → reset played; the reset winner is champion,
+    // overriding the grand_final result.
+    const matches = [
+      m({ id: 13, bracket_side: "losers", round: 3, winner_id: 2, loser_id: 3, next_match_id: 20, state: "completed" }),
+      m({ id: 20, bracket_side: "grand_final", round: 1, winner_id: 2, loser_id: 1, next_match_id: 21, state: "completed" }),
+      m({ id: 21, bracket_side: "gf_reset", round: 1, winner_id: 1, loser_id: 2, next_match_id: null, state: "completed" }),
+    ];
+    const podium = derivePodium("double_elimination", matches, [P(1), P(2), P(3)]);
+    expect(podium).toEqual([
+      { position: 1, userProfileId: 100 },
+      { position: 2, userProfileId: 200 },
+      { position: 3, userProfileId: 300 },
+    ]);
+  });
 });
 
 describe("derivePodium — placeholder participants", () => {

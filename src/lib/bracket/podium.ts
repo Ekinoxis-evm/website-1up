@@ -58,16 +58,23 @@ export function derivePodium(
   // Only completed matches contribute to the podium.
   const done = matches.filter(m => m.state === "completed");
 
-  // The final-final match is the one with no downstream pointer ON the side
-  // that produces the champion:
-  //   single_elimination → winners side, highest round
-  //   double_elimination → grand_final side, highest round
-  const finalSide = format === "double_elimination" ? "grand_final" : "winners";
-  const finalCandidates = done
-    .filter(m => m.bracket_side === finalSide && m.next_match_id === null);
-  const final = finalCandidates.length > 0
-    ? finalCandidates.reduce((a, b) => (a.round >= b.round ? a : b))
-    : null;
+  // The decisive final produces the champion (winner) + runner-up (loser):
+  //   single_elimination → winners side, highest round, no downstream pointer
+  //   double_elimination → the reset (second grand final) when it was played,
+  //     otherwise the grand_final. We can't key on `next_match_id === null` for
+  //     double elim because the grand_final always points at gf_reset.
+  let final: PodiumMatch | null = null;
+  if (format === "double_elimination") {
+    const reset = done.find(m => m.bracket_side === "gf_reset");
+    const grand = done
+      .filter(m => m.bracket_side === "grand_final")
+      .reduce<PodiumMatch | null>((a, b) => (!a || b.round > a.round ? b : a), null);
+    final = reset ?? grand;
+  } else {
+    final = done
+      .filter(m => m.bracket_side === "winners" && m.next_match_id === null)
+      .reduce<PodiumMatch | null>((a, b) => (!a || b.round > a.round ? b : a), null);
+  }
 
   const result: PodiumEntry[] = [];
   if (final?.winner_id) {

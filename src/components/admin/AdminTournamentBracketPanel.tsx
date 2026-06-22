@@ -111,8 +111,8 @@ export function AdminTournamentBracketPanel({ tournament, onChange }: Props) {
     try {
       const headers = await authHeaders();
       const [bRes, rRes] = await Promise.all([
-        fetch(`/api/admin/brackets?tournamentId=${tournament.id}`, { headers }),
-        fetch(`/api/admin/tournament-registrations?tournamentId=${tournament.id}`, { headers }),
+        fetch(`/api/admin/brackets?tournamentId=${tournament.id}`, { headers, cache: "no-store" }),
+        fetch(`/api/admin/tournament-registrations?tournamentId=${tournament.id}`, { headers, cache: "no-store" }),
       ]);
       const bracket: BracketData = bRes.ok ? await bRes.json() : null;
       const regs: Array<{

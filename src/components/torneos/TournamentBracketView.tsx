@@ -163,6 +163,11 @@ export function TournamentBracketView({
   : scale === "admin" ? { style: { width: 320, boxHeight: 152, spaceBetweenColumns: 56, spaceBetweenRows: 24 } }
   :                     { style: { width: 240, boxHeight: 100, spaceBetweenColumns: 40, spaceBetweenRows: 16 } };
 
+  // Force the bracket subtree to re-mount whenever a result changes, so the
+  // @g-loot library (pinned to React 18) reliably re-renders and ResponsiveScale
+  // re-measures. Without this a recorded winner can fail to reflect visually.
+  const renderKey = matches.map(m => `${m.id}:${m.state}:${m.winner_id ?? ""}`).join("|");
+
   if (bracket.format === "single_elimination") {
     const wRounds = bracket.rounds_winners;
     const libraryMatches: MatchType[] = matches
@@ -170,7 +175,7 @@ export function TournamentBracketView({
       .map(m => buildMatchType(m, participantMap, winnersLabel(m.round, wRounds)));
 
     return (
-      <ResponsiveScale>
+      <ResponsiveScale key={renderKey}>
         <SingleEliminationBracket
           matches={libraryMatches}
           matchComponent={matchComponent}
@@ -195,6 +200,12 @@ export function TournamentBracketView({
     ...matches
       .filter(m => m.bracket_side === "grand_final")
       .map(m => buildMatchType(m, participantMap, "Gran Final")),
+    // The reset (second grand final) only exists when the LB champion beat the
+    // WB champion in the first grand final. Render it only once it's in play —
+    // a pending/skipped (bye) reset would show as a phantom empty match.
+    ...matches
+      .filter(m => m.bracket_side === "gf_reset" && m.state !== "pending" && m.state !== "bye")
+      .map(m => buildMatchType(m, participantMap, "Reset")),
   ];
 
   // The library requires at least one match in each side
@@ -205,7 +216,7 @@ export function TournamentBracketView({
   void lRounds;
 
   return (
-    <ResponsiveScale>
+    <ResponsiveScale key={renderKey}>
       <DoubleEliminationBracket
         matches={{ upper, lower }}
         matchComponent={matchComponent}
