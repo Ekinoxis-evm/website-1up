@@ -5,6 +5,33 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.52.0] — 2026-06-22
+
+### Added — card (Stripe Checkout) rolled out to Pass / courses / $1UP
+
+The `card` method (already live on tournament entry) now ships across all four paid services,
+reusing the proven `createCardCheckoutSession` + signature-verified webhook template.
+
+- **1UP Pass** — card branch in `/api/user/pass-orders`; webhook `fulfillPass` records the COP
+  receipt then **activates the pass** (same `computePassWindow` stacking as the bank approve).
+- **Academia courses** — card branch in `/api/user/course-orders`; webhook `fulfillEnrollment`
+  records the receipt then sets `payment_status='approved'` (grants access).
+- **$1UP purchases** — card branch in `/api/user/token-orders`; webhook `fulfillTokenPurchase`
+  records the COP receipt **only** and leaves the order `pending` with an `admin_notes` flag
+  *"Pagado con tarjeta — pendiente envío de $1UP"* — the admin still sends the tokens on-chain
+  (the existing `approved_tx_hash` step). Migration: `token_purchase_orders.payment_method` +`'card'`.
+- Per-service gating libs (`passPurchase`, `courseEnrollment`, `tokenPurchase`) gained a `card`
+  method shown only when the service's `card_enabled` (Métodos de Pago) **and** `PAYMENTS_CARD_LIVE`.
+- "Tarjeta / pago en línea" option added to the Pass / course / $1UP wizards (redirect to Checkout).
+- On-chain verifiers, `apply_payment_event`, and the tournament card flow untouched.
+
+### QA
+- `npm run build` clean · **359 tests** (per-service card-gating cases added).
+
+> Activation: enable `card` per service in **Métodos de Pago** when ready (gated off by default).
+
+---
+
 ## [2.51.0] — 2026-06-21
 
 ### Added — tournament features (bank account, category, prize rewards, sponsor, wizard)

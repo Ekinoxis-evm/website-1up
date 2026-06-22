@@ -31,6 +31,7 @@ interface Props {
   masterName: string | null;
   masterPhoto: string | null;
   cashEnabled?: boolean;
+  cardEnabled?: boolean;
 }
 
 const CAT_STYLE: Record<string, { badge: string; accent: string }> = {
@@ -95,7 +96,7 @@ function IntroPlayer({ courseId }: { courseId: number }) {
   );
 }
 
-export function CoursePreview({ course, modules, sessions, masterName, masterPhoto, cashEnabled = false }: Props) {
+export function CoursePreview({ course, modules, sessions, masterName, masterPhoto, cashEnabled = false, cardEnabled = false }: Props) {
   const { ready, authenticated, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [checkout, setCheckout] = useState(false);
@@ -369,6 +370,7 @@ export function CoursePreview({ course, modules, sessions, masterName, masterPho
           walletAddress={walletAddress}
           recipientAddress={recipientAddress}
           cashEnabled={cashEnabled}
+          cardEnabled={cardEnabled}
           getAccessToken={getAccessToken}
           onClose={() => setCheckout(false)}
         />

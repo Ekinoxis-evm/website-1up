@@ -27,6 +27,7 @@ import {
   DEFAULT_ENROLLMENT_METHOD_FLAGS,
   type EnrollmentMethodFlags,
 } from "@/lib/courseEnrollment";
+import { createCardCheckoutSession, isCardLive } from "@/lib/payments/stripe";
 
 async function getOrCreateProfile(privyUserId: string, email: string | undefined) {
   const { data: existing } = await supabaseAdmin
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json() as {
     courseId?:        number;
-    paymentMethod?:   "token" | "bank" | "cash";
+    paymentMethod?:   "token" | "bank" | "cash" | "card";
     txHash?:          string;
     walletAddress?:   string;
     bankAccountId?:   number;
@@ -85,8 +86,8 @@ export async function POST(req: NextRequest) {
   if (!courseId || typeof courseId !== "number")
     return NextResponse.json({ error: "courseId requerido" }, { status: 400 });
 
-  if (paymentMethod !== "token" && paymentMethod !== "bank" && paymentMethod !== "cash")
-    return NextResponse.json({ error: "paymentMethod debe ser token, bank o cash" }, { status: 400 });
+  if (paymentMethod !== "token" && paymentMethod !== "bank" && paymentMethod !== "cash" && paymentMethod !== "card")
+    return NextResponse.json({ error: "paymentMethod debe ser token, bank, cash o card" }, { status: 400 });
 
   const { data: course } = await supabaseAdmin
     .from("courses")
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const cfg: EnrollmentMethodFlags = cfgRow ?? DEFAULT_ENROLLMENT_METHOD_FLAGS;
 
-  const methodGate = canSelectCourseMethod(course, paymentMethod, cfg);
+  const methodGate = canSelectCourseMethod(course, paymentMethod, cfg, { cardLiveEnv: isCardLive() });
   if (!methodGate.ok)
     return NextResponse.json({ error: methodGate.error, reason: methodGate.reason }, { status: methodGate.status });
 
@@ -176,6 +177,60 @@ export async function POST(req: NextRequest) {
       status:        "pending",
       paymentMethod: "cash",
     }, { status: 201 });
+  }
+
+  // ── CARD PATH (Stripe Checkout) ───────────────────────────────
+  // Create the enrollment `pending`, then a hosted Checkout Session. The Stripe
+  // webhook (handled separately) is the source of truth — it flips the
+  // enrollment to `approved` on payment. We return the URL to redirect to.
+  if (paymentMethod === "card") {
+    const { data: enrollment, error: insertErr } = await supabaseAdmin
+      .from("enrollments")
+      .insert({
+        user_profile_id:      profile.id,
+        product_type:         "course",
+        course_id:            courseId,
+        original_price_cop:   originalPrice,
+        discount_rule_id:     ruleId,
+        discount_pct_applied: discountPct,
+        final_price_cop:      finalPrice,
+        payment_method:       "card",
+        payment_status:       "pending",
+      })
+      .select()
+      .single();
+
+    if (insertErr || !enrollment)
+      return NextResponse.json({ error: insertErr?.message ?? "Error creando inscripción" }, { status: 500 });
+
+    const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.1upesports.org";
+    try {
+      const { url } = await createCardCheckoutSession({
+        orderKind:     "enrollment",
+        orderId:       enrollment.id,
+        amountCop:     finalPrice,
+        productName:   course.name,
+        customerEmail: email,
+        successUrl:    `${BASE_URL}/app/academia?pago=ok`,
+        cancelUrl:     `${BASE_URL}/academia/${courseId}?pago=cancelado`,
+      });
+
+      revalidatePath("/academia");
+      revalidatePath("/admin/enrollments");
+      revalidatePath("/app/academia");
+
+      return NextResponse.json({
+        enrollmentId:  enrollment.id,
+        checkoutUrl:   url,
+        status:        "pending",
+        paymentMethod: "card",
+      }, { status: 201 });
+    } catch (e) {
+      // Couldn't start the session — cancel the dangling enrollment so it doesn't block retries.
+      console.error("[card] createCardCheckoutSession failed:", e instanceof Error ? e.message : e);
+      await supabaseAdmin.from("enrollments").update({ payment_status: "cancelled" }).eq("id", enrollment.id);
+      return NextResponse.json({ error: "No se pudo iniciar el pago con tarjeta. Intenta de nuevo." }, { status: 502 });
+    }
   }
 
   // ── TOKEN PATH ────────────────────────────────────────────────

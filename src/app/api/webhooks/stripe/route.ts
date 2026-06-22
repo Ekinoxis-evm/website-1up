@@ -49,14 +49,52 @@ export async function POST(req: NextRequest) {
 }
 
 async function recordAndFulfill(orderKind: OrderKind, orderId: number, piId: string) {
-  // Only tournament_entry is card-enabled in v2.47.0; other kinds are added as
-  // card rolls out to them. Unknown kinds are recorded as paid but left for an
-  // admin (never silently dropped).
-  if (orderKind === "tournament_entry") {
-    await fulfillTournamentEntry(orderId, piId);
-    return;
+  // Card is live across all four paid services. Each fulfiller records the COP
+  // receipt via apply_payment_event (idempotent) and then performs the
+  // service-specific side-effect — except token_purchase, which deliberately
+  // leaves delivery to the admin's on-chain $1UP send.
+  switch (orderKind) {
+    case "tournament_entry": await fulfillTournamentEntry(orderId, piId); return;
+    case "pass":             await fulfillPass(orderId, piId);            return;
+    case "enrollment":       await fulfillEnrollment(orderId, piId);      return;
+    case "token_purchase":   await fulfillTokenPurchase(orderId, piId);   return;
+    default:
+      console.error("stripe webhook: card fulfillment not implemented for", orderKind, orderId);
   }
-  console.error("stripe webhook: card fulfillment not implemented for", orderKind, orderId);
+}
+
+// Records the COP receipt and persists the PaymentIntent id on the resulting
+// event. Returns whether THIS call flipped the order to paid (true for exactly
+// one caller — handles Stripe's at-least-once delivery; the
+// stripe_payment_intent_id UNIQUE index is the second guard). null on a hard
+// failure that should abort fulfillment.
+async function recordCardPayment(
+  orderKind: OrderKind,
+  orderId: number,
+  piId: string,
+  amountCop: number | null | undefined,
+  reason: string,
+): Promise<boolean | null> {
+  const { data: evt, error } = await supabaseAdmin.rpc("apply_payment_event", {
+    p_order_kind: orderKind,
+    p_order_id: orderId,
+    p_method: "card",
+    p_amount_cop: amountCop ?? undefined,
+    p_idempotency_key: piId,
+    p_reason: reason,
+  });
+  if (error) {
+    console.error("stripe webhook: apply_payment_event failed", orderKind, orderId, error.message);
+    return null;
+  }
+  const res = evt as { ok: boolean; became_paid: boolean; event_id?: number };
+  if (res.event_id) {
+    await supabaseAdmin
+      .from("payment_events")
+      .update({ stripe_payment_intent_id: piId })
+      .eq("id", res.event_id);
+  }
+  return res.became_paid;
 }
 
 async function fulfillTournamentEntry(orderId: number, piId: string) {
@@ -70,31 +108,8 @@ async function fulfillTournamentEntry(orderId: number, piId: string) {
     return;
   }
 
-  // Record the card payment. became_paid is true for exactly one caller (handles
-  // Stripe's at-least-once delivery); a duplicate stripe_payment_intent_id is also
-  // blocked by the UNIQUE index.
-  const { data: evt, error: evtErr } = await supabaseAdmin.rpc("apply_payment_event", {
-    p_order_kind: "tournament_entry",
-    p_order_id: orderId,
-    p_method: "card",
-    p_amount_cop: order.amount_cop ?? undefined,
-    p_idempotency_key: piId,
-    p_reason: "Pago con tarjeta (Stripe)",
-  });
-  // The reserved stripe_payment_intent_id column isn't a direct RPC param; persist
-  // it on the event for traceability + the unique replay guard.
-  if (evtErr) {
-    console.error("stripe webhook: apply_payment_event failed", orderId, evtErr.message);
-    return;
-  }
-  const res = evt as { ok: boolean; became_paid: boolean; event_id?: number };
-  if (res.event_id) {
-    await supabaseAdmin
-      .from("payment_events")
-      .update({ stripe_payment_intent_id: piId })
-      .eq("id", res.event_id);
-  }
-  if (!res.became_paid) return; // already paid/handled
+  const becamePaid = await recordCardPayment("tournament_entry", orderId, piId, order.amount_cop, "Pago con tarjeta (Stripe)");
+  if (becamePaid !== true) return; // failed, or already paid/handled
 
   // Fulfillment: take the slot. If the tournament filled after a captured card
   // payment, keep the order confirmed (registration_id null) as the manual-refund
@@ -126,4 +141,109 @@ async function fulfillTournamentEntry(orderId: number, piId: string) {
   revalidatePath("/torneos");
   revalidatePath("/torneos/[slug]", "page");
   revalidatePath("/admin/torneos/[slug]/manage", "page");
+}
+
+// 1UP Pass: record the COP receipt, then activate the pass EXACTLY like the
+// admin bank-approve does (computePassWindow stacking + status='confirmed' +
+// started_at/expires_at). The `passes` trigger mirrors the confirmed order.
+async function fulfillPass(orderId: number, piId: string) {
+  const { data: order } = await supabaseAdmin
+    .from("pass_orders")
+    .select("id, user_profile_id, duration_days, token_amount_paid, status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) {
+    console.error("stripe webhook: pass order not found", orderId);
+    return;
+  }
+
+  // COP for a pass = token_amount_paid × 1.000 (1 $1UP = 1.000 COP).
+  const amountCop = Math.round(Number(order.token_amount_paid) * 1000);
+  const becamePaid = await recordCardPayment("pass", orderId, piId, amountCop, "Pago con tarjeta (Stripe)");
+  if (becamePaid !== true) return;
+
+  // Stacking: if the user already has an active confirmed pass, extend from its
+  // expiry; otherwise start now. Mirrors the admin approve path.
+  const now = new Date();
+  const { data: activeOrder } = await supabaseAdmin
+    .from("pass_orders")
+    .select("expires_at")
+    .eq("user_profile_id", order.user_profile_id)
+    .eq("status", "confirmed")
+    .gt("expires_at", now.toISOString())
+    .order("expires_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const baseDate = activeOrder?.expires_at ? new Date(activeOrder.expires_at) : now;
+  const expiresAt = new Date(baseDate.getTime() + order.duration_days * 24 * 60 * 60 * 1000);
+
+  await supabaseAdmin
+    .from("pass_orders")
+    .update({
+      status:     "confirmed",
+      paid_at:    now.toISOString(),
+      started_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+    })
+    .eq("id", orderId);
+
+  revalidatePath("/app/pass");
+  revalidatePath("/admin/pass-orders");
+}
+
+// Academia course: record the COP receipt, then grant access — set
+// payment_status='approved' + paid_at, identical to the admin approve.
+async function fulfillEnrollment(orderId: number, piId: string) {
+  const { data: order } = await supabaseAdmin
+    .from("enrollments")
+    .select("id, final_price_cop, payment_status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) {
+    console.error("stripe webhook: enrollment not found", orderId);
+    return;
+  }
+
+  const becamePaid = await recordCardPayment("enrollment", orderId, piId, order.final_price_cop, "Pago con tarjeta (Stripe)");
+  if (becamePaid !== true) return;
+
+  await supabaseAdmin
+    .from("enrollments")
+    .update({ payment_status: "approved", paid_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  revalidatePath("/academia");
+  revalidatePath("/admin/enrollments");
+  revalidatePath("/app/academia");
+}
+
+// $1UP purchase — the NUANCE: record the COP receipt ONLY. Do NOT auto-approve.
+// The admin must still send the $1UP on-chain (verifyTokenTransfer +
+// approved_tx_hash). The order stays `pending`; we flag it so the admin panel
+// shows it as paid-but-awaiting-delivery.
+async function fulfillTokenPurchase(orderId: number, piId: string) {
+  const { data: order } = await supabaseAdmin
+    .from("token_purchase_orders")
+    .select("id, cop_amount, status, admin_notes")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) {
+    console.error("stripe webhook: token_purchase order not found", orderId);
+    return;
+  }
+
+  const becamePaid = await recordCardPayment("token_purchase", orderId, piId, order.cop_amount, "Pago con tarjeta (Stripe)");
+  if (becamePaid !== true) return;
+
+  // Surface the paid-but-undelivered state to the admin without changing status.
+  const flag = "Pagado con tarjeta — pendiente envío de $1UP";
+  const notes = order.admin_notes ? `${order.admin_notes}\n${flag}` : flag;
+  await supabaseAdmin
+    .from("token_purchase_orders")
+    .update({ admin_notes: notes, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  revalidatePath("/admin/token-orders");
+  revalidatePath("/app");
 }

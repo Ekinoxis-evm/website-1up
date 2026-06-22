@@ -27,6 +27,7 @@ interface Props {
   onClose: () => void;
   getAccessToken: () => Promise<string | null>;
   cashEnabled?: boolean;
+  cardEnabled?: boolean;
 }
 
 function formatCop(n: number) {
@@ -35,9 +36,9 @@ function formatCop(n: number) {
 
 const RATE = 1000;
 
-export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEnabled = false }: Props) {
+export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEnabled = false, cardEnabled = false }: Props) {
   const [step, setStep]             = useState(1);
-  const [method, setMethod]         = useState<"bank" | "cash">("bank");
+  const [method, setMethod]         = useState<"bank" | "cash" | "card">("bank");
   const [copAmount, setCopAmount]   = useState("");
   const [bankAccounts, setBankAccounts]   = useState<BankListItem[]>([]);
   const [selectedBank, setSelectedBank]   = useState<BankAccount | null>(null);
@@ -180,6 +181,38 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEn
     setStep(4);
   }
 
+  // Card → Stripe Checkout. The order is created pending; the COP receipt is
+  // recorded by the webhook, but the $1UP is still sent by an admin on-chain.
+  // We redirect to the hosted Checkout URL and never reach step 4 here.
+  async function handleSubmitCard() {
+    setSubmitLoading(true); setSubmitError(null);
+
+    const token = await getAccessToken();
+    const res = await fetch("/api/user/token-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        walletAddress,
+        copAmount: copInt,
+        paymentMethod: "card",
+      }),
+    });
+
+    if (!res.ok) {
+      setSubmitLoading(false);
+      const d = await res.json().catch(() => ({}));
+      setSubmitError(d.error ?? "Error al crear la orden");
+      return;
+    }
+    const data = await res.json() as { checkoutUrl?: string };
+    if (!data.checkoutUrl) {
+      setSubmitLoading(false);
+      setSubmitError("No se pudo iniciar el pago con tarjeta. Intenta de nuevo.");
+      return;
+    }
+    window.location.href = data.checkoutUrl;
+  }
+
   function handleClose() {
     setStep(1); setMethod("bank"); setCopAmount(""); setSelectedBank(null); setBankAccounts([]);
     setComprobantePath(null); setComprobantePreview(null);
@@ -239,12 +272,12 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEn
                 </span>
               </div>
 
-              {cashEnabled && (
+              {(cashEnabled || cardEnabled) && (
                 <div className="mb-6">
                   <label className="block font-headline text-xs uppercase tracking-widest text-outline mb-2">
                     Método de pago
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className={`grid gap-2 ${cashEnabled && cardEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
                     <button
                       onClick={() => setMethod("bank")}
                       className={`flex items-center gap-2 p-3 text-left transition-colors ${
@@ -256,21 +289,41 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEn
                       <span className="material-symbols-outlined text-tertiary">account_balance</span>
                       <span className="font-headline font-bold text-xs uppercase text-on-surface">Transferencia</span>
                     </button>
-                    <button
-                      onClick={() => setMethod("cash")}
-                      className={`flex items-center gap-2 p-3 text-left transition-colors ${
-                        method === "cash"
-                          ? "bg-tertiary/10 border-2 border-tertiary"
-                          : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-tertiary">payments</span>
-                      <span className="font-headline font-bold text-xs uppercase text-on-surface">Efectivo</span>
-                    </button>
+                    {cashEnabled && (
+                      <button
+                        onClick={() => setMethod("cash")}
+                        className={`flex items-center gap-2 p-3 text-left transition-colors ${
+                          method === "cash"
+                            ? "bg-tertiary/10 border-2 border-tertiary"
+                            : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-tertiary">payments</span>
+                        <span className="font-headline font-bold text-xs uppercase text-on-surface">Efectivo</span>
+                      </button>
+                    )}
+                    {cardEnabled && (
+                      <button
+                        onClick={() => setMethod("card")}
+                        className={`flex items-center gap-2 p-3 text-left transition-colors ${
+                          method === "card"
+                            ? "bg-tertiary/10 border-2 border-tertiary"
+                            : "bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant/30"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-tertiary">credit_card</span>
+                        <span className="font-headline font-bold text-xs uppercase text-on-surface">Tarjeta</span>
+                      </button>
+                    )}
                   </div>
                   {method === "cash" && (
                     <p className="font-body text-[10px] text-on-surface/40 mt-2">
                       Paga en efectivo de forma presencial en 1UP Gaming Tower. El equipo confirmará tu pago y te enviará tus $1UP.
+                    </p>
+                  )}
+                  {method === "card" && (
+                    <p className="font-body text-[10px] text-on-surface/40 mt-2">
+                      Paga con tarjeta de forma segura. El equipo de 1UP enviará tus $1UP a tu wallet una vez confirmado el pago.
                     </p>
                   )}
                 </div>
@@ -280,7 +333,7 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEn
                 Tasa fija: 1 $1UP = {formatCop(RATE)}
               </p>
 
-              {submitError && method === "cash" && (
+              {submitError && (method === "cash" || method === "card") && (
                 <div className="mb-4 p-3 bg-error/10">
                   <p className="font-body text-sm text-error">{submitError}</p>
                 </div>
@@ -288,11 +341,17 @@ export function BuyTokensWizard({ walletAddress, onClose, getAccessToken, cashEn
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => (method === "cash" ? handleSubmitCash() : goToStep2())}
-                  disabled={!copValid || (method === "cash" && submitLoading)}
+                  onClick={() =>
+                    method === "cash" ? handleSubmitCash()
+                    : method === "card" ? handleSubmitCard()
+                    : goToStep2()
+                  }
+                  disabled={!copValid || ((method === "cash" || method === "card") && submitLoading)}
                   className="flex-1 bg-tertiary text-background font-headline font-black py-3 uppercase disabled:opacity-40 transition-opacity"
                 >
-                  {method === "cash" ? (submitLoading ? "ENVIANDO..." : "PAGAR EN EFECTIVO") : "CONTINUAR"}
+                  {method === "cash" ? (submitLoading ? "ENVIANDO..." : "PAGAR EN EFECTIVO")
+                    : method === "card" ? (submitLoading ? "REDIRIGIENDO..." : "PAGAR CON TARJETA")
+                    : "CONTINUAR"}
                 </button>
                 <button onClick={handleClose} className="flex-1 bg-surface-container-highest font-headline font-black py-3">
                   CANCELAR
