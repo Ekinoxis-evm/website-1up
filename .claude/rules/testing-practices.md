@@ -1,6 +1,6 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.50.0):** 28 Vitest files, **337 tests passing**, <1s wall time.
+> **Current state (v2.52.0):** 28 Vitest files, **359 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
@@ -76,9 +76,9 @@ Test files live under `src/__tests__/lib/` (the unified payment-layer tests unde
 | `payments/paymentEvents.test.ts` | `validateEventAmount` + `validateCashEvent` (mirror the DB CHECKs — COP xor tokens, cash requires `recorded_by_admin`+`reason`), `canTransition` (append-only event state machine) |
 | `payments/orderKind.test.ts` | `order_kind` → table + Spanish label + revalidate paths; `isOrderKind` guard |
 | `payments/stripeWebhookDecision.test.ts` | Card path (v2.47.0) — decides fulfillment from a `checkout.session.completed` + `paid` event; rejects bad/unknown metadata |
-| `courseEnrollment.test.ts` | Cash on academia courses (v2.44.0) — `availableCourseMethods()` (gates by course price unit AND `service_payment_methods`), `canSelectCourseMethod`, `canReviewEnrollment` (only `pending`, allows cash, idempotent 409s) |
-| `tokenPurchase.test.ts` | Cash on $1UP purchases (v2.45.0) — `tokenPurchaseCashAvailable` / `canSelectTokenMethod` gating by the `service_payment_methods` (`token_purchase`) toggle |
-| `passPurchase.test.ts` | Cash on 1UP Pass (v2.46.0) — `passCashAvailable` / `canSelectPassMethod` gating by the `service_payment_methods` (`pass`) toggle |
+| `courseEnrollment.test.ts` | Cash + card on academia courses (v2.44.0; card v2.52.0) — `availableCourseMethods()` (gates by course price unit AND `service_payment_methods`; card additionally needs `PAYMENTS_CARD_LIVE`), `canSelectCourseMethod`, `canReviewEnrollment` (only `pending`, allows cash, idempotent 409s) |
+| `tokenPurchase.test.ts` | Cash + card on $1UP purchases (v2.45.0; card v2.52.0) — `tokenPurchaseCashAvailable` / `canSelectTokenMethod` gating by the `service_payment_methods` (`token_purchase`) toggle; card additionally gated by `PAYMENTS_CARD_LIVE` |
+| `passPurchase.test.ts` | Cash + card on 1UP Pass (v2.46.0; card v2.52.0) — `passCashAvailable` / `canSelectPassMethod` gating by the `service_payment_methods` (`pass`) toggle; card additionally gated by `PAYMENTS_CARD_LIVE` |
 | `utils.test.ts` | Misc shared utilities |
 
 ---
