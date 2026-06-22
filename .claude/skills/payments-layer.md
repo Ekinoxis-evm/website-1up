@@ -13,7 +13,7 @@ tournaments, $1UP purchases, academia courses; marketplace later). The four meth
 | `token` | $1UP | user | on-chain, `verifyPassTransfer` exact-match + ≥3 confs + pinned sender |
 | `wire` | COP | user → admin approves | the legacy **`'bank'`** flow, relabeled. DB value stays `'bank'` — bridged by `normalizeMethod`/`toLegacyMethod` |
 | `cash` | COP | **admin records** | in-person/venue payment, no user upload. Admin-attested: mandatory `recorded_by_admin` + `reason` |
-| `card` | COP | user (Stripe) | **design-only** — hidden unless `PAYMENTS_CARD_LIVE`; no webhook route until live |
+| `card` | COP | user (Stripe) | Stripe Checkout across **all four services** (v2.52.0); hidden unless the service's `card_enabled` **and** `PAYMENTS_CARD_LIVE`; off by default |
 
 ## Architecture — a shared layer, not a table merge
 
@@ -89,8 +89,20 @@ tables exposed to the anon key.
   **tournament entry** first; gated by `PAYMENTS_CARD_LIVE`. Four catalog Products built in Stripe
   via the MCP (IDs in CLAUDE.md / `STRIPE_PRODUCT_*`). COP charged at ×100 (two-decimal). Account:
   Ekinoxis Labs, LLC (`acct_1TgnjyBYH4gcyfom`). Stripe ops are done **via the Stripe MCP**.
-- **next** — flip card live (keys + Dashboard webhook + enable in Métodos de Pago + test), then
-  replicate `card` to pass / courses / $1UP; then the deferred **deposits** feature.
+- **v2.52.0** (shipped) — **`card` rolled out to all four services** (was tournament-entry only):
+  1UP Pass, academia courses, $1UP purchases. Each user wizard gained a "Tarjeta / pago en línea"
+  option (redirect to Checkout), gated per service by the service's `card_enabled` (Métodos de
+  Pago) **and** `PAYMENTS_CARD_LIVE` — off by default. The webhook `/api/webhooks/stripe`
+  `recordAndFulfill` dispatches by `order_kind`: **tournament_entry** (register), **pass**
+  (`fulfillPass` → record COP + activate via `computePassWindow` stacking), **enrollment**
+  (`fulfillEnrollment` → record + `payment_status='approved'`), **token_purchase**
+  (`fulfillTokenPurchase` → records the COP receipt **only**; the order stays `pending` with an
+  `admin_notes` flag *"Pagado con tarjeta — pendiente envío de $1UP"* — the admin still sends the
+  tokens on-chain via the existing `approved_tx_hash` step). Per-service gating libs
+  (`passPurchase`, `courseEnrollment`, `tokenPurchase`) each gained a `card` method. Migration:
+  `token_purchase_orders.payment_method` now allows `'card'`. On-chain verifiers,
+  `apply_payment_event`, and the tournament card flow untouched.
+- **next** — the deferred **deposits** feature.
 - token_purchase fulfillment nuance: approval still requires an admin on-chain $1UP send
   (`verifyTokenTransfer` + `approved_tx_hash`), so cash there records the COP receipt but does
   **not** auto-deliver tokens.
