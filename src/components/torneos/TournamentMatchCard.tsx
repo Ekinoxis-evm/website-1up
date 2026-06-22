@@ -79,7 +79,7 @@ function buildCard(scale: Scale, admin?: AdminCallbacks): Factory {
     if (isBye) {
       const advancer = top.name && top.name !== "TBD" ? top : bottom;
       return (
-        <div className="w-full h-full bg-surface-container/60 border border-surface-container-high flex flex-col justify-center">
+        <div data-match-id={matchId} className="w-full h-full bg-surface-container/60 border border-surface-container-high flex flex-col justify-center">
           <Slot
             party={advancer}
             completed={false}
@@ -99,7 +99,7 @@ function buildCard(scale: Scale, admin?: AdminCallbacks): Factory {
     }
 
     return (
-      <div className={`w-full h-full bg-surface-container border border-surface-container-high flex flex-col justify-center ${
+      <div data-match-id={matchId} className={`w-full h-full bg-surface-container border border-surface-container-high flex flex-col justify-center ${
         interactable ? "cursor-pointer" : ""
       }`}>
         <Slot
