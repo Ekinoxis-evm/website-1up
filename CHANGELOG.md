@@ -5,6 +5,20 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.54.1] — 2026-06-23
+
+### Fixed — registration capacity race (concurrent-signup safety)
+
+`register_for_tournament` read `COUNT(*)` of registrations, checked it against
+`max_participants`, then inserted — a non-atomic read-then-write. Under a burst of concurrent
+registrations for the last spots, callers could all read the same pre-insert count, pass the
+check, and **over-fill** the tournament. Added `SELECT … FOR UPDATE` on the tournament row so
+concurrent registrations for the same tournament serialize through the capacity check
+(different tournaments don't contend). Covers both free registration and paid entry (both call
+this RPC). Migration `20260623000000_register_capacity_race_fix.sql` (applied live).
+
+---
+
 ## [2.54.0] — 2026-06-22
 
 ### Added — TV screen follows the live match
