@@ -6,10 +6,10 @@
 | | |
 |---|---|
 | **Documento** | Ficha Técnica de Plataforma Tecnológica |
-| **Versión** | 2.28 |
+| **Versión** | 2.29 |
 | **Fecha de emisión** | Mayo de 2026 |
-| **Última actualización** | 21 de junio de 2026 |
-| **Versión en producción** | v2.50.0 |
+| **Última actualización** | 23 de junio de 2026 |
+| **Versión en producción** | v2.54.1 |
 | **Clasificación** | Público / Para presentación institucional |
 | **Elaborado por** | Ekinoxis |
 | **Revisado por** | Equipo técnico 1UP Gaming Tower |
@@ -23,6 +23,8 @@
 La plataforma comprende tres frentes de cara al usuario — portal público, panel de usuario y consola de administración — todos servidos desde una única base de código en **Next.js 16** sobre infraestructura serverless de **Vercel**. La persistencia de datos corre en **Supabase (PostgreSQL)** con Row-Level Security habilitado y el **esquema completo versionado en el repositorio** (migración baseline de 1097 líneas idempotente + 3 migraciones incrementales). La autenticación es gestionada por **Privy** con verificación de `appId` y JWT firmado server-side. Los pagos se procesan a través de **MercadoPago** con verificación HMAC-SHA256 canónica (`id;request-id;ts`) + ventana ±10 min de freshness + idempotencia por `mp_payment_id`. Los endpoints abusables están protegidos por **Upstash Ratelimit** (live en producción desde 23/05/2026, verificado con smoke test 429). El streaming de video usa **Cloudflare Stream** con tokens RS256 atados al IP del caller via `accessRules`.
 
 A partir de la **v2.31.0** (mayo 24, 2026) se completó la **suite de gestión de torneos**: avatares de usuario en todas las superficies (Hall of Fame, brackets, admin), **cockpit unificado** (`/admin/torneos/[slug]/manage`) que reemplaza tres páginas admin separadas, **vista TV de pantalla completa** (`/torneos/[slug]/tv`) con polling de 15s para casting en pantalla del venue, **entrega on-chain de premios** vía Privy gas-sponsored desde el panel, **algoritmo de seeding correcto** (mirror-recursive doubling), **round play-in** para single-elim con conteos no-pow2, y **bye-cascading** en double-elim que evita slots fantasma atorados en losers.
+
+Entre **mayo y junio de 2026** (v2.41.0 → v2.54.1) se sumaron: **inscripción paga a torneos** ($1UP on-chain o transferencia bancaria), la **capa de pagos unificada** (token · transferencia · efectivo · tarjeta) operando idéntica sobre los cuatro servicios, con **tarjeta/Stripe desplegada en 1UP Pass, cursos, compra de $1UP e inscripción a torneos** (v2.52.0, detrás del flag `PAYMENTS_CARD_LIVE`), el **wizard de creación de torneos** de 5 pasos, **premios físicos + sponsor + categoría + cuenta bancaria** por torneo (v2.51.0), **pan/zoom del bracket** en móvil/TV/admin (v2.53.0), la **vista TV que sigue automáticamente el match en vivo** (v2.54.0) y un **fix de carrera de concurrencia en el cupo de inscripción** (v2.54.1). La suite de tests creció a **359 tests**.
 
 Adicionalmente, la plataforma cuenta con una **capa blockchain construida y lista para integración**: contratos Solidity en Base (L2), Foundry, suite de tests completa. La capa no está activa en producción a la fecha por decisión presupuestal — representa capacidad técnica instalada disponible para activación.
 
@@ -127,7 +129,7 @@ Contratos Solidity en Base (L2 sobre Ethereum) que habilitarán: identidad on-ch
 | 7 | ¿APIs propias o de terceros? | **Ambas.** Next.js API Routes interna + integraciones: Privy, Supabase, MercadoPago, Resend, Blockscout v2, Base L2 RPC, **Cloudflare Stream**, **Upstash Redis**. |
 | 8 | ¿Usa autenticación? ¿Cómo? | **Sí — Privy como IdP.** JWT Bearer verificado server-side. Email + Google. Tres niveles: público / usuario registrado / administrador. Adicionalmente se valida el claim `appId` para prevenir tokens cross-tenant. |
 | 9 | ¿Es responsive? | **Sí — mobile-first.** Tailwind CSS v3 con breakpoints estándar. Bottom nav móvil; top bar / sidebar desktop. |
-| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 194 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime**). Smart contracts: **suite completa con Foundry**. |
+| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 359 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime**). Smart contracts: **suite completa con Foundry**. |
 | 11 | ¿Schema versionado en el repo? | **Sí.** `supabase/migrations/00000000000000_baseline.sql` (1097 líneas, idempotente) + 3 migraciones incrementales (avatar_url, hall_of_fame view, audit closure) — toda la DB reproducible desde el código. |
 | 12 | ¿Rate limiting? | **Sí — live en producción.** Upstash Ratelimit + sliding window. 5 endpoints protegidos (recruitment, course-intro-token, referral-validate, pass-orders, course-orders). Verificado con smoke test 429 el 23/05/2026. |
 
@@ -418,7 +420,7 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | Tarjeta / Apple Pay (`card`) | Stripe Checkout (hosted) | Webhook `checkout.session.completed` con verificación de firma; idempotente (`stripe_payment_intent_id` UNIQUE). Construido (v2.47.0), **gated por `PAYMENTS_CARD_LIVE`** |
 | Tarjeta débito / crédito | MercadoPago | SDK presente pero **inactivo** — webhook canónico `id;request-id;ts` HMAC-SHA256 + ventana ±10 min + dedupe `mp_payment_id` |
 
-### 11.1.1 Capa de pagos unificada (v2.42.0 → v2.50.0)
+### 11.1.1 Capa de pagos unificada (v2.42.0 → v2.52.0)
 
 A partir de la **v2.42.0** la plataforma cuenta con una **capa de pagos unificada**: un único conjunto de métodos seleccionable por el admin — **`token` (·$1UP on-chain) · `wire` (transferencia) · `cash` (efectivo) · `card` (Stripe)** — que opera de forma idéntica sobre **los cuatro servicios de pago** (inscripción a torneo, cursos de academia, compra de $1UP y 1UP Pass).
 
@@ -431,7 +433,7 @@ A partir de la **v2.42.0** la plataforma cuenta con una **capa de pagos unificad
 | **Flujo tarjeta (Stripe)** | Construido end-to-end (`/api/webhooks/stripe`, firma verificada primero); 4 Productos de catálogo creados en la cuenta Stripe. Inerte hasta fijar las claves + `PAYMENTS_CARD_LIVE`. |
 | **Endurecimiento RLS** | Se habilitó RLS (deny-all) sobre 4 tablas expuestas — `payment_events`, `service_payment_methods`, `tournament_entry_orders` y `passes` — aplicado en vivo (v2.43.0). Ninguna tabla del schema público queda con RLS deshabilitado. |
 
-### 11.1.2 Reorganización del panel admin (v2.48.0 → v2.50.0)
+### 11.1.2 Reorganización del panel admin (v2.48.0 → v2.51.0)
 
 - **Cuentas y Tesorerías** — nueva tabla `treasury_wallets` (wallets de destino on-chain administradas: label, address EVM, chain_id default 8453/Base, is_active; RLS deny-all). La página de cuentas bancarias se relabeló y movió al grupo **Sistema**, y aloja tanto las cuentas bancarias como las wallets de tesorería. La tesorería por torneo y la del Pass son ahora **dropdowns** que eligen de esa lista (sin pegar direcciones).
 - **1UP Pass** — `/admin/1pass` = Configuración + tabla de pases activos; `/admin/pass-orders` = sólo órdenes; **Beneficios Pass** movido al grupo **Sitio Web**.
@@ -466,7 +468,7 @@ A partir de la **v2.42.0** la plataforma cuenta con una **capa de pagos unificad
 
 ### 12.1 Estado actual
 
-Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidity, desarrollados con Foundry, cubiertos por suite de tests completa.
+Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidity, desarrollados con Foundry, cubiertos por suite de tests completa. Las tres *factories* (`IdentityNFTFactory`, `VaultFactory`, `CourseFactory`) están **desplegadas y verificables en Base Mainnet** desde febrero de 2026 — direcciones en `deployments/addresses.json` del repo. La **app on-chain nativa** (`gaming-tower-fe`) ya las integra; el website de producción aún no (decisión presupuestal).
 
 **Su integración con el sitio web no está activa en producción a la fecha por decisión presupuestal.** Capacidad técnica instalada — activación requiere implementación del frontend (esfuerzo bajo dado que `viem` ya está presente).
 
@@ -533,7 +535,7 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 | Tipado estático | TypeScript 5 (strict) | Activo — cero errores requerido |
 | Linting | ESLint | Activo |
 | Build verification | `next build` | Antes de cada entrega |
-| Tests unitarios / integración | **Vitest — 194 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime** |
+| Tests unitarios / integración | **Vitest — 359 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime** |
 | Tests E2E | Playwright | Pendiente |
 | QA manual | Checklist por release | Activo |
 
@@ -549,7 +551,7 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 ### 14.3 Flujo de QA pre-release
 
 ```
-[ ] npm run test:run      — cero tests fallidos (194 tests)
+[ ] npm run test:run      — cero tests fallidos (359 tests)
 [ ] npm run build         — cero errores
 [ ] npx tsc --noEmit      — cero errores TypeScript
 [ ] npm run lint          — cero advertencias
@@ -701,7 +703,7 @@ Todas las credenciales gestionadas en **Vercel Env Vars** (producción, preview,
 
 | Mejora | Estado |
 |--------|--------|
-| Suite de tests automatizados (Vitest) | **Implementado — 194 tests** |
+| Suite de tests automatizados (Vitest) | **Implementado — 359 tests** |
 | Tests E2E (Playwright) | Pendiente |
 | Auditoría externa de smart contracts | Pendiente |
 | Battle test con Family & Friends | Pendiente — coordinación 1UP |
@@ -752,8 +754,8 @@ Todas las credenciales gestionadas en **Vercel Env Vars** (producción, preview,
 
 ---
 
-*Documento generado para presentación institucional. La información técnica refleja el estado de la plataforma a la fecha de la última actualización indicada (24 de mayo de 2026, versión 2.36.15 en producción). Cualquier modificación sustancial de arquitectura o stack deberá ser reflejada en una nueva versión del documento.*
+*Documento generado para presentación institucional. La información técnica refleja el estado de la plataforma a la fecha de la última actualización indicada (23 de junio de 2026, versión 2.54.1 en producción). Cualquier modificación sustancial de arquitectura o stack deberá ser reflejada en una nueva versión del documento.*
 
 ---
 
-**Versión 2.11 — Mayo 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
+**Versión 2.29 — Junio 2026 — Elaborado por Ekinoxis para 1UP Gaming Tower**
