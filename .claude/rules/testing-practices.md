@@ -1,6 +1,6 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.54.1):** 28 Vitest files, **361 tests passing**, <1s wall time.
+> **Current state (v2.54.2):** 28 Vitest files, **361 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
