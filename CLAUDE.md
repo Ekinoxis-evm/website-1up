@@ -183,6 +183,22 @@ npm run lint       # ESLint
 
 ---
 
+## Product Tracking & Ship Workflow — the funnel
+
+Every feature **and** bug fix runs the same clean loop, tracked end-to-end in the **Master Dashboard** (Notion → "Gaming Tower app" hub → Product Backlog DB). The workflow status **is** the pipeline: `Idea → Backlog → Planned → In Progress → QA / En pruebas → Shipped`.
+
+1. **Check Notion** — open the Master Dashboard (Flujo/Kanban + Roadmap views); see what's in flight.
+2. **Describe the issue/feature** — create a row: `Name` + `Módulo` (Torneos · 1UP Pass · Academia · 1UP Token & Wallet · Marketplace · Pagos · Onboarding & Identidad · Plataforma · Gaming Tower) + `Superficie` (Público/Usuario/Admin/Transversal) + `Why`. Status `Backlog`/`Planned`.
+3. **Plan** — analyze the approach (plan mode for non-trivial); Status → `In Progress`; branch off `main`.
+4. **Build** — implement on the feature branch.
+5. **Test** — `npm run build` + `npm run test:run` + `npm run lint` (all green); Status → `QA / En pruebas`.
+6. **Push & merge** — open a PR, merge to `main` (Vercel auto-deploys); Status → `Shipped` + `Release` (version) + PR link in `Links`.
+7. **Docs** — update `CHANGELOG.md` / `README.md` / `FICHA-TECNICA.md` per Rule 8.
+
+A piece of work isn't "done" until its dashboard row is `Shipped` with a `Release`. Full protocol, Notion page IDs, and the two-product-surface context live in `.claude/rules/product-management.md`.
+
+---
+
 ## Environment Variables
 
 | Variable | Source |
