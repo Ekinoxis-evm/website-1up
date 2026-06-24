@@ -1,29 +1,49 @@
 # Product Management — Notion (keep it in sync)
 
-The product backlog and the official docs live in **Notion** and must be kept current as work
+The product tracker and the official docs live in **Notion** and must be kept current as work
 ships. Use the Notion MCP (`mcp__claude_ai_Notion__*`) — it's connected.
 
 ## Where things live
 
+The single hub is **"Gaming Tower app — Ekinoxis × 1UP"** (`311999f7-988e-8049-89a4-d1a1b2f54b45`).
+It's flat — every section is one child page:
+
 | Thing | Notion |
 |---|---|
-| **Product Hub** ("1UP — Producción · Producto & Documentos") | page `371999f7-988e-81b7-9ce5-e2e4e2153cb2` |
-| **Product Backlog** (database) | `8760290195374baa92c85f64f20e1159` · data source `collection://7018397b-7474-4e5a-9610-5b3090d01e6b` |
-| Doc summary pages (under the hub) | Ficha Técnica v2.15 · Estado de Entrega EKX-2026-006 · Cuenta de Cobro EKX-2026-005 · Audit |
+| **Hub (entry point)** | page `311999f7-988e-8049-89a4-d1a1b2f54b45` |
+| **Master Dashboard** (= Product Backlog DB) | `8760290195374baa92c85f64f20e1159` · data source `collection://7018397b-7474-4e5a-9610-5b3090d01e6b` |
+| **Documentación funcionalidad-por-funcionalidad** | `388999f7-988e-81a9-886a-ccbabbf88e65` |
+| **Referencia técnica** (Ficha Técnica · Auditoría) | container `388999f7-988e-81c1-a101-da4cd6937840` |
+| **Trabajo on-chain** (Capa Blockchain · Platform Tracker) | container `388999f7-988e-813b-b8de-ec6563f36c39` |
+| **Propuesta comercial & roadmap** (panorama + 6 docs) | container `388999f7-988e-8128-b9c1-eec8ca5b5dc6` |
+| **Documentos privados** (Estado de Entrega · Cuenta de Cobro) | container `388999f7-988e-8150-ac22-ed6ca01be7a5` |
 
-Backlog schema: `Name` (title) · `Status` (Idea/Backlog/Planned/In Progress/Shipped) ·
-`Area` (Tournaments/Pass/Payments/Academia/Platform/Admin) · `Priority` (P0/P1/P2) ·
-`Effort` (S/M/L) · `Why` · `Release` · `Links`.
+> The old "1UP — Producción · Producto & Documentos" sub-hub was dissolved — its pages were
+> promoted to the flat hub above. Don't recreate it.
 
-## The rule
+**Master Dashboard schema:** `Name` (title) · `Status` (Idea → Backlog → Planned → In Progress →
+QA / En pruebas → Shipped) · `Módulo` (Torneos · 1UP Pass · Academia · 1UP Token & Wallet ·
+Marketplace · Pagos · Onboarding & Identidad · Plataforma · Gaming Tower) · `Superficie`
+(Público / Usuario / Admin / Transversal) · `Priority` (P0/P1/P2) · `Effort` (S/M/L) · `Why` ·
+`Release` · `Links`. Saved views: **Flujo (Kanban)** · **Por Módulo** · **Por Superficie** ·
+**Roadmap (pendiente)**.
 
-- **When you ship a feature:** find its backlog row and set `Status = Shipped` + the `Release`
-  version + a PR link in `Links` (use `notion-update-page`). If no row exists, create one.
-- **When you plan or discover work** (a new feature, an audit-deferred item, a fast-follow):
-  add a backlog row with at least Name + Status + Area + Why (use `notion-create-pages` with
-  `parent: { data_source_id }`).
-- **When a release changes the Ficha Técnica / Estado de Entrega:** update the version line on
-  the matching doc summary page so Notion doesn't drift from the repo.
+## The ship funnel (the workflow — every feature and fix)
+
+Each piece of work runs the same clean loop, tracked end-to-end in the **Master Dashboard**.
+This is the funnel — describe → plan → build → test → ship → record:
+
+1. **Check Notion** — open the Master Dashboard (Flujo/Kanban + Roadmap views). See what's in flight; avoid duplicates.
+2. **Describe the issue / feature** — create a row: `Name` + `Módulo` + `Superficie` + `Why`, Status `Backlog` or `Planned`. Use `notion-create-pages` with `parent: { data_source_id: '7018397b-7474-4e5a-9610-5b3090d01e6b' }`. **Bugs are rows too.**
+3. **Plan** — analyze the approach (plan mode / `code-architect` for non-trivial). Move Status → `In Progress`. Branch off `main`.
+4. **Build** — implement on the feature branch.
+5. **Test** — `npm run build` + `npm run test:run` + `npm run lint`, all green. Move Status → `QA / En pruebas`.
+6. **Push & merge** — open a PR, merge to `main` (Vercel auto-deploys). Move Status → `Shipped`, set `Release` (version), and put the PR link in `Links` (use `notion-update-page`).
+7. **Docs** — bump `CHANGELOG.md` / `README.md` / `FICHA-TECNICA.md` per CLAUDE.md Rule 8 (see also `.claude/skills/release-management.md`).
+
+**Keep the dashboard in sync** — a feature isn't "done" until its row is `Shipped` with a Release.
+When a release changes the Ficha Técnica / Estado de Entrega, update the matching Notion page so it
+doesn't drift from the repo.
 
 ## Source of truth
 
@@ -41,9 +61,25 @@ Notion holds summary cards + (optionally) the full body via native **Markdown im
 (`··· → Import → Markdown`) — do NOT hand-transcribe long docs through the API; it's lossy on
 tables and wasteful. Keep the summary versions current.
 
-## Drift warning
+## Two product surfaces (this is real, not drift)
 
-The older Notion "Platform Tracker" (Feb 2026) and the previous "FICHA TÉCNICA" page (under
-*Ekinoxis Labs › Servicios › 1up*) describe a **different smart-contract architecture**
-(IdentityNFT/ChallengeVault/CourseNFT) — that is NOT the production product. The live product
-is the Next.js + Supabase platform. Don't trust those for current state.
+There are **two real product surfaces**, both built by Ekinoxis:
+
+- **Website** — `1upesports.org` (Next.js + Supabase). The **live product**; contracted, **billed in
+  COP** (Cuenta de Cobro EKX-2026-005, Estado de Entrega EKX-2026-006), evolving continuously.
+- **On-chain-native app** — `gaming-tower-fe` + `gaming-tower-scs`. Built and **deployed on Base
+  Mainnet** (factories, Feb 2026), **reserved for scale**, valued in **USD** (≈$42k, unbilled).
+
+The Notion "Platform Tracker" documents the on-chain surface (it is **not** stale), and the
+"Propuesta comercial" pages value it in USD — both now carry a "Panorama / Contexto" header that
+reconciles them with the live website + COP billing. The "Capa Blockchain" page holds the deployed
+factory addresses. Background: memory `project_two_surfaces_blockchain`. The older "FICHA TÉCNICA"
+page under *Ekinoxis Labs › Servicios › 1up* predates all this — don't trust it for current state.
+
+## Notion-editing gotcha
+
+`notion-create-pages` handles `\n` in `content` correctly, but `notion-update-page`
+(`insert_content` / `update_content`) treats literal `\n` as an escaped "n" and can drop trailing
+blocks (e.g. tables). For update-page, use **real newlines** in the string, or single-line
+`update_content` replacements. `replace_content` refuses unless every existing child `<page>` /
+`<database>` is re-listed.
