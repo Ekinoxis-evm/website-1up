@@ -5,6 +5,21 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.54.2] — 2026-06-24
+
+### Fixed — baseline migration couldn't replay on a fresh database
+
+Standing up a Supabase **branch** (for safe load testing) revealed the baseline migration aborts
+on a fresh DB: its first statements `CREATE EXTENSION "pg_cron"` / `"supabase_vault"` are
+platform-managed and error when not pre-provisioned, so **0 of 24 migrations applied** and the
+branch came up empty. This silently broke branches, staging, disaster recovery, and local stacks
+(H-7 claimed the baseline reproduced live state on a fresh DB — it didn't). Guarded the three
+platform-managed extensions (`pg_cron`, `pg_stat_statements`, `supabase_vault`) in
+`DO … EXCEPTION` blocks so the baseline stays a no-op on prod **and** replays cleanly on a fresh
+DB. Nothing in the schema references `cron.*` / `vault.*`, so skipping them on a fresh DB is safe.
+
+---
+
 ## [2.54.1] — 2026-06-23
 
 ### Fixed — registration capacity race (concurrent-signup safety)

@@ -15,10 +15,18 @@
 -- =====================================================================
 -- EXTENSIONS
 -- =====================================================================
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+-- pg_cron / pg_stat_statements / supabase_vault are PLATFORM-managed (they need
+-- shared_preload_libraries or Vault provisioning). On the live DB they already
+-- exist, so CREATE EXTENSION is a no-op; but on a FRESH database (a Supabase
+-- branch, a staging project, disaster recovery, a local stack) `CREATE EXTENSION`
+-- errors and aborts the WHOLE baseline — which is why a fresh replay produced 0
+-- tables. Guarded so the baseline is idempotent on prod AND replays cleanly on a
+-- fresh DB. Nothing in this schema references cron.* / vault.*, so skipping them
+-- on a fresh DB is safe (the platform re-adds them where supported).
+DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS "pg_cron";            EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'pg_cron platform-managed; skipped on fresh DB'; END $$;
+DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS "pg_stat_statements"; EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'pg_stat_statements platform-managed; skipped on fresh DB'; END $$;
+DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS "supabase_vault";     EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'supabase_vault platform-managed; skipped on fresh DB'; END $$;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "supabase_vault";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 
