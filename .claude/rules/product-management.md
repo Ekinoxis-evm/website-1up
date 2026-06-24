@@ -45,6 +45,13 @@ This is the funnel — describe → plan → build → test → ship → record:
 When a release changes the Ficha Técnica / Estado de Entrega, update the matching Notion page so it
 doesn't drift from the repo.
 
+**Always keep a dated current-state version.** Every shipped change bumps the **"última
+actualización" date to the current day** AND the prod-version line on the master docs it touches
+(Ficha Técnica, the QA "Pruebas & Auditorías" page `389999f7-988e-8194-a0af-e304b8cb1ce5`, and the
+relevant feature doc) — so the hub always shows a today-dated snapshot that matches `main`. Verify
+versions/dates aren't stale when you touch a master page; the sweep on 2026-06-24 caught a Ficha that
+still said prod v2.40.0 + two false claims.
+
 ## Source of truth
 
 The repo is **PUBLIC**. Two classes of doc:
