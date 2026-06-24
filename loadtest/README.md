@@ -80,3 +80,29 @@ Project" — auto-adds the env vars, **no redeploy** needed; the next request ac
 limiting). Then mind one thing for venue WiFi: `anonStrict` is **5/min per IP**, so many
 people behind one NAT could hit it on *anon* endpoints — but registration is **per-user**
 (`authMutate` 20/min), which is plenty for a real signup, so the signup path is unaffected.
+
+---
+
+## 4. Dependency-free branch DB test (the one we actually ran)
+
+No k6 install needed — two Node drivers hit a **Supabase branch's** REST API directly (the DB
+layer is the real bottleneck under a burst; Vercel functions autoscale):
+
+- **`run-burst.mjs`** — read burst (`GET /rest/v1/tournaments`) at ramping concurrency.
+- **`run-capacity.mjs`** — fires N concurrent `register_for_tournament` RPC calls at a
+  capacity-limited tournament and asserts **exactly `max_participants` succeed** (proves the
+  v2.54.1 `FOR UPDATE` capacity fix under real concurrency).
+
+```bash
+# Create a branch (mcp/dashboard), apply a minimal schema + seed, then:
+SUPABASE_URL="https://<branch-ref>.supabase.co" SUPABASE_ANON_KEY="<branch anon key>" \
+  node loadtest/run-burst.mjs        # reads: WAVES="100,500,1000"
+SUPABASE_URL=... SUPABASE_ANON_KEY=... TOUR_ID=1 N=500 CAP=100 \
+  node loadtest/run-capacity.mjs     # writes: capacity race
+```
+
+**Results (2026-06-24, on a small branch instance → conservative floor):** read burst held
+**0% errors at 1000 concurrent** (p95 ~2.9s); capacity burst = **exactly 100/500 succeeded
+(PASS, no over-fill)**. Full numbers + verdict on the Notion **Pruebas & Auditorías (QA)** page.
+Branch deleted after the run. Caveat: tests the DB layer, not the full Vercel→app path (that
+needs a preview pointed at the branch — §1).
