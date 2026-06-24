@@ -76,6 +76,17 @@ reconciles them with the live website + COP billing. The "Capa Blockchain" page 
 factory addresses. Background: memory `project_two_surfaces_blockchain`. The older "FICHA TÉCNICA"
 page under *Ekinoxis Labs › Servicios › 1up* predates all this — don't trust it for current state.
 
+## Link repo files in Notion (don't write bare paths)
+
+When a Notion page references a file/doc that lives in a repo, **link to GitHub** instead of writing
+a bare path like "`AUDIT.md` en el repo". Both repos are **public**, so plain blob/tree links work
+for everyone:
+- Website: `https://github.com/Ekinoxis-evm/website-1up/blob/main/<path>` (tree for folders).
+- Smart contracts: `https://github.com/Ekinoxis-evm/gaming-tower/blob/main/<path>`.
+
+No GitHub MCP / auth is needed (and the GitHub MCP doesn't work with Claude Code anyway — use `gh`).
+Apply this to every Notion page, new and existing.
+
 ## Notion-editing gotcha
 
 `notion-create-pages` handles `\n` in `content` correctly, but `notion-update-page`
