@@ -1,9 +1,26 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.52.0):** 28 Vitest files, **359 tests passing**, <1s wall time.
+> **Current state (v2.54.1):** 28 Vitest files, **361 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
+
+## Keep the Notion "Pruebas & Auditorías (QA)" page current — every time
+
+Whenever you **add or remove tests, run a test pass, or run/close an audit**, update the Notion
+**Pruebas & Auditorías (QA)** page — `389999f7-988e-8194-a0af-e304b8cb1ce5` (under *Referencia
+técnica* in the "Gaming Tower app" hub). Keep its counts, coverage-by-area, audit scoreboard,
+integrity guards, and "Pendiente / próximo" in sync with reality. It is the single shareable
+QA-evidence surface — treat it like a CHANGELOG for tests/audits. Use **real newlines** with
+`notion-update-page` (the `\n`-escape mangles tables — see the Notion gotcha in
+`product-management.md`).
+
+### Two test surfaces — keep BOTH reflected on the QA page
+- **Website** (this repo) — **Vitest, 361 tests / 28 files** (Tier 2 below). The live COP product.
+- **On-chain** (`gaming-tower-scs`, sibling repo) — **Foundry, ~144 tests / 4 files**
+  (`IdentityNFT` 57 · `ChallengeVault` 41 · `CourseNFT` 39 · `IdentityNFTFactory` 7) covering the
+  Base-deployed contracts (`forge test`). Not externally audited. Documented on the "Capa
+  Blockchain" Notion page; background in memory `project_two_surfaces_blockchain`.
 
 ---
 
