@@ -273,7 +273,9 @@ function PlayerDetailModal({
               <Field label="Teléfono">
                 {profile.phone_number ? `${profile.phone_country ?? ""} ${profile.phone_number}` : "—"}
               </Field>
-              <Field label="Barrio">{profile.barrio ?? "—"}</Field>
+              <Field label="Ubicación">
+                {[profile.city, profile.state, profile.country].filter(Boolean).join(", ") || "—"}
+              </Field>
               <Field label="Nacimiento">{fmtDate(profile.birth_date)}</Field>
               <Field label="Juegos">{games.length ? games.join(", ") : "—"}</Field>
               <Field label="Código de referido">{profile.referred_by_code ?? "—"}</Field>

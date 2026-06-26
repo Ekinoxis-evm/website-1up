@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
     phoneNumber?: string;
     tipoDocumento?: string;
     numeroDocumento?: string;
-    barrio?: string;
+    country?: string;
+    state?: string;
+    city?: string;
     birthDate?: string;
     gameIds?: number[];
     referralCode?: string;
@@ -47,13 +49,13 @@ export async function POST(req: NextRequest) {
 
   const nombre       = body.nombre?.trim() ?? "";
   const apellidos    = body.apellidos?.trim() ?? "";
-  const barrio       = body.barrio?.trim() ?? "";
+  const country      = body.country?.trim() ?? "";
   const birthDate    = body.birthDate?.trim() ?? "";
   const referralCode = body.referralCode?.trim().toUpperCase() ?? "";
 
   if (!nombre)    return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
   if (!apellidos) return NextResponse.json({ error: "Los apellidos son requeridos." }, { status: 400 });
-  if (!barrio)    return NextResponse.json({ error: "El barrio es requerido." }, { status: 400 });
+  if (!country)   return NextResponse.json({ error: "El país es requerido." }, { status: 400 });
   if (!birthDate) return NextResponse.json({ error: "La fecha de nacimiento es requerida." }, { status: 400 });
 
   const birthDateError = parseBirthDate(birthDate);
@@ -89,7 +91,9 @@ export async function POST(req: NextRequest) {
     email:                   email ?? null,
     nombre:                  nombre.slice(0, 100),
     apellidos:               apellidos.slice(0, 100),
-    barrio:                  barrio.slice(0, 100),
+    country:                 country.slice(0, 100),
+    state:                   body.state?.trim().slice(0, 100) || null,
+    city:                    body.city?.trim().slice(0, 100) || null,
     birth_date:              birthDate,
     onboarding_completed_at: new Date().toISOString(),
     updated_at:              new Date().toISOString(),

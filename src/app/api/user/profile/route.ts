@@ -71,7 +71,9 @@ export async function PUT(req: NextRequest) {
     phoneCountry?: string;
     phoneNumber?: string;
     gameIds?: number[];
-    barrio?: string;
+    country?: string;
+    state?: string;
+    city?: string;
     birthDate?: string;
     referralCode?: string;
   };
@@ -115,8 +117,14 @@ export async function PUT(req: NextRequest) {
     }
     patch.game_ids = body.gameIds.slice(0, 20);
   }
-  if (body.barrio !== undefined) {
-    patch.barrio = body.barrio?.trim().slice(0, 100) || null;
+  if (body.country !== undefined) {
+    patch.country = body.country?.trim().slice(0, 100) || null;
+  }
+  if (body.state !== undefined) {
+    patch.state = body.state?.trim().slice(0, 100) || null;
+  }
+  if (body.city !== undefined) {
+    patch.city = body.city?.trim().slice(0, 100) || null;
   }
   if (body.birthDate !== undefined) {
     if (body.birthDate) {

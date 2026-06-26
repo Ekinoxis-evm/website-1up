@@ -5,6 +5,32 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.55.0] — 2026-06-26
+
+### Added — onboarding location: Country → State/Department → City (replaces Barrio)
+
+The onboarding wizard's free-text **Barrio** field is replaced by a structured, cascading
+**País → Estado/Departamento → Ciudad** selector, with global coverage. State options depend on
+the chosen country, and City options depend on the chosen state.
+
+- **New columns** `country` / `state` / `city` on `user_profiles` (migration
+  `20260625120000_user_profiles_location_columns.sql`). They store the display names; the old
+  `barrio` column is kept (nullable) for backwards-compatibility and is no longer collected.
+- **`LocationFields`** (`src/components/perfil/LocationFields.tsx`) — a reusable, on-brand
+  (0px-radius) searchable combobox set. The `country-state-city` dataset (~8 MB of cities) is
+  pulled with a **dynamic `import()`** so it lands in its own chunk and never bloats the
+  onboarding bundle — it loads only when the fields first mount. Used by both the onboarding
+  wizard (step 3) and the **Identidad** settings tab.
+- **Validation** lives in a pure, tested helper `isLocationValid()` (`src/lib/location.ts`):
+  country is always required; state/city are required only when the chosen country/state actually
+  has options for them (many countries have no states, many states no cities).
+- Updated: `OnboardingWizard` step 3, `IdentidadTab` ("Ubicación y edad"), `/api/user/onboarding`
+  + `/api/user/profile` (accept `country`/`state`/`city`, require `country`), admin user-profiles
+  view ("Ubicación"), and the privacy policy.
+- **Tests:** +6 (`src/__tests__/lib/location.test.ts`) → 367 passing.
+
+---
+
 ## [2.54.2] — 2026-06-24
 
 ### Fixed — baseline migration couldn't replay on a fresh database
