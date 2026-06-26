@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
+import { LocationFields, type LocationValue } from "@/components/perfil/LocationFields";
 
 type Game = { id: number; name: string };
 
@@ -79,7 +80,8 @@ export function OnboardingWizard({ games }: Props) {
   // Step 3
   const [tipoDoc, setTipoDoc] = useState("CC");
   const [numDoc, setNumDoc]   = useState("");
-  const [barrio, setBarrio]   = useState("");
+  const [location, setLocation] = useState<LocationValue>({ country: "", state: "", city: "" });
+  const [locationValid, setLocationValid] = useState(false);
   const [birthDay, setBirthDay]     = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthYear, setBirthYear]   = useState("");
@@ -160,7 +162,7 @@ export function OnboardingWizard({ games }: Props) {
 
   const step1Valid = nombre.trim().length > 0 && apellidos.trim().length > 0;
   const step2Valid = !usernameError;
-  const step3Valid = barrio.trim().length > 0 && birthDateComplete && !birthDateError && numDoc.trim().length > 0;
+  const step3Valid = locationValid && birthDateComplete && !birthDateError && numDoc.trim().length > 0;
   // Referral is optional — block only if code typed but invalid or still checking
   const step5Valid = codeStatus !== "invalid" && codeStatus !== "checking";
   const step6Valid = privacyConsent;
@@ -205,7 +207,9 @@ export function OnboardingWizard({ games }: Props) {
           phoneNumber:     phoneNumber.trim() || undefined,
           tipoDocumento:   tipoDoc,
           numeroDocumento: numDoc.trim(),
-          barrio:          barrio.trim(),
+          country:         location.country,
+          state:           location.state || undefined,
+          city:            location.city || undefined,
           birthDate:       birthDateStr,
           gameIds:         gameIds.length > 0 ? gameIds : undefined,
           referralCode:    codeStatus === "valid" ? referralCode.trim().toUpperCase() : undefined,
@@ -376,22 +380,18 @@ export function OnboardingWizard({ games }: Props) {
       {step === 3 && (
         <div>
           <h1 className="font-headline font-black text-4xl uppercase tracking-tighter mb-1">
-            Tu barrio<br /><span className="text-primary-container">e identidad</span>
+            Tu ubicación<br /><span className="text-primary-container">e identidad</span>
           </h1>
           <div className="h-1 w-16 bg-primary-container mb-8" />
 
           <div className="space-y-4">
-            <div>
-              <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Barrio *</label>
-              <input
-                autoFocus
-                value={barrio}
-                onChange={(e) => setBarrio(e.target.value)}
-                placeholder="Ej: El Poblado, Ciudad Jardín…"
-                maxLength={100}
-                className="w-full bg-surface-container text-on-background p-4 font-headline font-black text-xl border-none focus:outline-none placeholder:text-outline/30"
-              />
-            </div>
+            <LocationFields
+              value={location}
+              onChange={setLocation}
+              onValidityChange={setLocationValid}
+              size="lg"
+              tone="container"
+            />
 
             <div>
               <label className="block font-headline font-bold text-xs uppercase tracking-widest text-outline mb-1">Fecha de nacimiento *</label>

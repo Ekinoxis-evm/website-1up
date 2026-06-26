@@ -30,7 +30,10 @@ Every new user must complete the onboarding wizard before accessing any protecte
 | `username` | TEXT (unique, nullable) | No | Step 2 — `^[a-z0-9_]{3,20}$` |
 | `phone_country` | TEXT | No | Step 2 |
 | `phone_number` | TEXT | No | Step 2 |
-| `barrio` | TEXT | Yes | Step 3 |
+| `country` | TEXT | Yes | Step 3 — cascading select (stores display name) |
+| `state` | TEXT | No | Step 3 — required only if the country has states |
+| `city` | TEXT | No | Step 3 — required only if the state has cities |
+| `barrio` | TEXT | — | **Legacy** — kept nullable for back-compat; no longer collected |
 | `birth_year` | INT | Yes | Step 3 — 1930 to currentYear-5 |
 | `tipo_documento` | ENUM | No | Step 3 (optional, collapsible) |
 | `numero_documento` | TEXT | No | Step 3 (optional) |
@@ -64,7 +67,7 @@ updated_at   TIMESTAMPTZ
 Auth: Privy Bearer token required.
 
 Validates:
-- `nombre`, `apellidos`, `barrio` — required, non-empty
+- `nombre`, `apellidos`, `country` — required, non-empty (`state`/`city` optional, depend on the cascade)
 - `birthYear` — integer in range [1930, currentYear-5]
 - `referralCode` — required; checked against `referral_codes` for active + within use limit
 - `username` — optional; regex `^[a-z0-9_]{3,20}$` if provided
@@ -98,7 +101,7 @@ Auth: isAdmin.
 |---|-------|--------|---------------------|
 | 1 | Datos personales | `nombre`, `apellidos` | Both non-empty |
 | 2 | Contacto | `username` (optional), `phoneCountry` + `phoneNumber` (optional) | Always (fields optional) |
-| 3 | Ubicación e identidad | `barrio`*, `birthYear`* (shows age preview), collapsible document section (optional) | `barrio` + valid `birthYear` |
+| 3 | Ubicación e identidad | `LocationFields` (País→Estado→Ciudad cascade, lazy `country-state-city`)*, `birthDate`* (shows age preview), document section | valid location (`isLocationValid`) + valid `birthDate` + `numero_documento` |
 | 4 | Juegos favoritos | Multi-select game tiles | Always skippable |
 | 5 | Código de referido | `referralCode` (auto-uppercase), live validation via GET endpoint | Valid code required |
 

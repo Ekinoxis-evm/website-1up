@@ -62,7 +62,7 @@ export default function PrivacidadPage() {
               <li>Nombres y apellidos.</li>
               <li>Dirección de correo electrónico.</li>
               <li>Tipo y número de documento de identidad (CC, CE, TI, PP, NIT).</li>
-              <li>Fecha de nacimiento y barrio de residencia.</li>
+              <li>Fecha de nacimiento y ubicación de residencia (país, estado/departamento y ciudad).</li>
               <li>Número de teléfono y código de país.</li>
               <li>Nombre de usuario (@username) elegido por el titular.</li>
             </ul>

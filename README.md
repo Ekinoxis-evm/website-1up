@@ -201,6 +201,7 @@ All migrations have been applied to the live Supabase project. For a fresh datab
 27. `20260531140045_tournament_results_pass_id.sql` — adds `tournament_results.pass_id` (FK → `passes`, ON DELETE SET NULL) + partial UNIQUE index; the link for claim-later prize delivery (v2.39.0, Pass redesign Phase 2)
 28. `20260531182031_paid_tournament_entry.sql` — adds `tournaments.entry_fee_tokens`/`entry_fee_cop`, the `tournament_entry_orders` table + `tournament_entry_status` enum, the one-in-flight partial UNIQUE and `lower(tx_hash)` UNIQUE (v2.41.0, paid tournament entry data layer)
 29. `20260612000000_tournament_treasury_address.sql` — adds `tournaments.treasury_address` (nullable text, EVM address) — per-tournament $1UP entry-fee treasury; never reuses `pass_config`, required when `entry_fee_tokens > 0` (v2.41.0)
+30. `20260625120000_user_profiles_location_columns.sql` — adds `country` / `state` / `city` (text) to `user_profiles` for the cascading onboarding location selector; `barrio` kept nullable for back-compat, no longer collected (v2.55.0)
 
 ### 4. Start the dev server
 
@@ -252,7 +253,7 @@ npm run dev
 | `/app` | Wallet — $1UP balance, send (min 1 $1UP, max = live balance, QR scanner), receive (QR code), purchase orders, Blockscout tx history (paginated 10/page, Colombia timezone) |
 | `/app/mis-torneos` | My tournament registrations — card list with status badges (INSCRITO/ASISTIÓ/CANCELADO/NO ASISTIÓ), links to tournament detail pages |
 | `/app/beneficios` | Aliado verification — unlock discounts (Comfenalco, Comfandi, universities, etc.) |
-| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, barrio, birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
+| `/app/onboarding` | Mandatory first-time wizard — nombre, contacto, ubicación (país/estado/ciudad cascading select), birth_date (day/month/year picker, min age 14), documento de identidad (required), juegos, referral code (optional), privacy consent (required, Ley 1581) |
 | `/app/pass` | 1UP Pass status + purchase — payment methods governed by Métodos de Pago: $1UP tokens (on-chain, instant), bank transfer (manual admin approval, max 24h), and cash (in-person, admin-approved with a note — v2.46.0) |
 | `/app/academia` | My enrolled courses — course cards with "Ver curriculum" link |
 | `/app/academia/[courseId]` | Per-course curriculum — intro video, module tabs, session accordion (lazy video player + signed doc downloads) — enrollment required |
@@ -325,7 +326,7 @@ npm run dev
 | `pass_benefits` | 1UP Pass perks |
 | `floor_info` | Gaming Tower 6-floor breakdown |
 | `recruitment_submissions` | Form submissions from Home + Team pages |
-| `user_profiles` | Extended user data — nombre, apellidos, username, phone, barrio, birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired), **avatar_url** (Supabase Storage URL, v2.31.0; null → UI shows initials gradient) |
+| `user_profiles` | Extended user data — nombre, apellidos, username, phone, **country/state/city** (cascading onboarding location, v2.55.0; `barrio` legacy/nullable), birth_date (DATE), game_ids[], document, Comfenalco status, verified_aliados[], onboarding_completed_at, referred_by_code, pass_status (never/active/expired), **avatar_url** (Supabase Storage URL, v2.31.0; null → UI shows initials gradient) |
 | `aliados` | Partner organizations AND banner sponsors — name, NIT, email, api_url, api_key, logo_url, website_url, sort_order, show_in_banner, is_active. `show_in_banner = true` → appears in home marquee. Replaces the former `brand_logos` table. |
 | `discount_rules` | Discount engine — trigger type + applies_to + aliado_id FK |
 | `enrollments` | Payment records — user → course/pass, MP lifecycle |

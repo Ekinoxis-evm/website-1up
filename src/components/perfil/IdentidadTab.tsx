@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Avatar } from "@/components/ui/Avatar";
+import { LocationFields, type LocationValue } from "@/components/perfil/LocationFields";
 
 type Game = { id: number; name: string };
 
@@ -15,7 +16,9 @@ interface UserProfile {
   game_ids: number[];
   tipo_documento: string | null;
   numero_documento: string | null;
-  barrio: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
   birth_date: string | null;
   referred_by_code: string | null;
   avatar_url: string | null;
@@ -131,7 +134,7 @@ export function IdentidadTab({ games = [] }: Props) {
   const phoneSave = useSectionSave(getAccessToken);
 
   // Section state — location / age
-  const [barrio, setBarrio]         = useState("");
+  const [location, setLocation]     = useState<LocationValue>({ country: "", state: "", city: "" });
   const [birthDay, setBirthDay]     = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthYear, setBirthYear]   = useState("");
@@ -169,7 +172,7 @@ export function IdentidadTab({ games = [] }: Props) {
         setPhoneCountry(data.phone_country ?? "+57");
         setPhoneNumber(data.phone_number ?? "");
         setSelectedGames(data.game_ids ?? []);
-        setBarrio(data.barrio ?? "");
+        setLocation({ country: data.country ?? "", state: data.state ?? "", city: data.city ?? "" });
         if (data.birth_date) {
           const parts = data.birth_date.split("-");
           setBirthYear(parts[0] ?? "");
@@ -436,22 +439,18 @@ export function IdentidadTab({ games = [] }: Props) {
       {/* ── Barrio y edad ───────────────────────────────────────── */}
       <div className="bg-surface-container p-6">
         <h2 className="font-headline font-black text-lg uppercase tracking-tighter mb-1">
-          BARRIO Y EDAD
+          UBICACIÓN Y EDAD
         </h2>
         <div className="h-0.5 w-12 bg-primary-container mb-5" />
 
         <div className="space-y-3">
-          <div>
-            <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">Barrio</label>
-            <input
-              value={barrio}
-              onChange={(e) => setBarrio(e.target.value)}
-              placeholder="Ej: El Poblado, Ciudad Jardín…"
-              maxLength={100}
-              disabled={locationSave.status === "saving"}
-              className="w-full bg-surface-container-lowest text-on-background p-3 border-none font-headline font-bold placeholder:text-outline/40"
-            />
-          </div>
+          <LocationFields
+            value={location}
+            onChange={setLocation}
+            size="md"
+            tone="lowest"
+            disabled={locationSave.status === "saving"}
+          />
           <div>
             <label className="font-headline font-bold text-xs uppercase tracking-widest text-outline block mb-1">
               Fecha de nacimiento
@@ -499,12 +498,17 @@ export function IdentidadTab({ games = [] }: Props) {
               const bd = birthDay && birthMonth && birthYear.length === 4
                 ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
                 : undefined;
-              await locationSave.save({ barrio: barrio || undefined, birthDate: bd });
+              await locationSave.save({
+                country: location.country || undefined,
+                state: location.state || undefined,
+                city: location.city || undefined,
+                birthDate: bd,
+              });
             }}
             disabled={locationSave.status === "saving"}
             className="w-full bg-surface-container-highest text-on-background font-headline font-black py-3 uppercase tracking-tighter disabled:opacity-50 hover:bg-surface-container-high transition-colors"
           >
-            {locationSave.status === "saving" ? "GUARDANDO…" : "GUARDAR BARRIO Y EDAD"}
+            {locationSave.status === "saving" ? "GUARDANDO…" : "GUARDAR UBICACIÓN Y EDAD"}
           </button>
           <SectionFeedback status={locationSave.status} message={locationSave.message} />
         </div>

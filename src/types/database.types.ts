@@ -2143,8 +2143,10 @@ export type Database = {
           avatar_url: string | null
           barrio: string | null
           birth_date: string | null
+          city: string | null
           comfenalco_afiliado: boolean | null
           comfenalco_verified_at: string | null
+          country: string | null
           created_at: string | null
           email: string | null
           game_ids: number[]
@@ -2160,6 +2162,7 @@ export type Database = {
           privy_created_at: string | null
           privy_user_id: string
           referred_by_code: string | null
+          state: string | null
           tipo_documento: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at: string | null
           username: string | null
@@ -2172,8 +2175,10 @@ export type Database = {
           avatar_url?: string | null
           barrio?: string | null
           birth_date?: string | null
+          city?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
+          country?: string | null
           created_at?: string | null
           email?: string | null
           game_ids?: number[]
@@ -2189,6 +2194,7 @@ export type Database = {
           privy_created_at?: string | null
           privy_user_id: string
           referred_by_code?: string | null
+          state?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at?: string | null
           username?: string | null
@@ -2201,8 +2207,10 @@ export type Database = {
           avatar_url?: string | null
           barrio?: string | null
           birth_date?: string | null
+          city?: string | null
           comfenalco_afiliado?: boolean | null
           comfenalco_verified_at?: string | null
+          country?: string | null
           created_at?: string | null
           email?: string | null
           game_ids?: number[]
@@ -2218,6 +2226,7 @@ export type Database = {
           privy_created_at?: string | null
           privy_user_id?: string
           referred_by_code?: string | null
+          state?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento"] | null
           updated_at?: string | null
           username?: string | null
