@@ -11,6 +11,7 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { TournamentTvView } from "@/components/torneos/TournamentTvView";
+import { TournamentTvStandings } from "@/components/torneos/TournamentTvStandings";
 
 export default async function TournamentTvPage({
   params,
@@ -21,12 +22,14 @@ export default async function TournamentTvPage({
 
   const { data: tournament } = await supabaseAdmin
     .from("tournaments")
-    .select("id, name, slug, image_url, sponsor_name, sponsor_website_url, sponsor_logo_url, games(name)")
+    .select("id, name, slug, image_url, sponsor_name, sponsor_website_url, sponsor_logo_url, competition_format, games(name)")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
 
   if (!tournament) notFound();
 
-  return <TournamentTvView tournament={tournament} />;
+  return tournament.competition_format === "league"
+    ? <TournamentTvStandings tournament={tournament} />
+    : <TournamentTvView tournament={tournament} />;
 }
