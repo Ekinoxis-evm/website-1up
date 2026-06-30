@@ -5,6 +5,38 @@ Format follows `.claude/skills/release-management.md`.
 
 ---
 
+## [2.56.0] — 2026-06-30
+
+### Added — League (round-robin) tournament format, alongside Copa (bracket)
+
+Tournaments can now run as a **Liga** (single round-robin, everyone plays everyone once,
+live standings with a leader) in addition to the existing **Copa** (bracket). The league mirrors
+the bracket system end-to-end — same lifecycle (`Inscripciones → Borrador → En curso →
+Finalizado`), and it reuses registrations, entry-fee payments, prizes, and the
+`tournament_results` prize-delivery path **unchanged**.
+
+- **New discriminator** `tournaments.competition_format` = `cup | league` (default `cup`, so every
+  existing tournament is a "Copa"). Named to avoid collision with `brackets.format`.
+- **New tables** `leagues` (1:1 with a tournament — status, points 3/1/0, tiebreaker order),
+  `league_participants`, `league_matches` (migrations `20260630194158`, `20260630194212`).
+  **Standings are derived on read, never stored.**
+- **Pure, tested engine** `src/lib/league/` — `schedule.ts` (circle-method round-robin),
+  `standings.ts` (points + head-to-head → wins → goal-diff → goals-for tiebreakers, podium
+  derivation), `result.ts` (score validation + outcome). +38 tests → **405 passing**.
+- **Admin API** `/api/admin/leagues` (GET/POST seed-calendar/PATCH start·result·undo/DELETE),
+  mirroring `/api/admin/brackets`; on completion it auto-writes the top-3 to `tournament_results`
+  with the same manual-override-preserving contract.
+- **Cockpit** is format-aware: the competition tab swaps **Bracket ↔ Liga** (Calendario + Tabla),
+  the 4-step phase stepper reads `league.status`, and a new `AdminTournamentLeaguePanel` handles
+  roster → generate calendar → start → inline score entry → live standings.
+- **Public + TV** — public `/api/tournaments/[slug]/standings`, a standings table on
+  `/torneos/[slug]`, and a TV standings view (`/torneos/[slug]/tv`) that polls every 15s. New
+  shared presentational `StandingsTable` (admin + public + TV).
+- The sibling "player match visuals" (Mi partido / Ronda / Completo) remain a separate,
+  later feature.
+
+---
+
 ## [2.55.0] — 2026-06-26
 
 ### Added — onboarding location: Country → State/Department → City (replaces Barrio)
