@@ -2050,8 +2050,178 @@ export type Database = {
           },
         ]
       }
+      league_matches: {
+        Row: {
+          created_at: string
+          id: number
+          is_draw: boolean
+          league_id: number
+          match_number: number
+          p1_id: number | null
+          p1_score: number | null
+          p2_id: number | null
+          p2_score: number | null
+          round: number
+          state: Database["public"]["Enums"]["match_state"]
+          updated_at: string
+          winner_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_draw?: boolean
+          league_id: number
+          match_number: number
+          p1_id?: number | null
+          p1_score?: number | null
+          p2_id?: number | null
+          p2_score?: number | null
+          round: number
+          state?: Database["public"]["Enums"]["match_state"]
+          updated_at?: string
+          winner_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_draw?: boolean
+          league_id?: number
+          match_number?: number
+          p1_id?: number | null
+          p1_score?: number | null
+          p2_id?: number | null
+          p2_score?: number | null
+          round?: number
+          state?: Database["public"]["Enums"]["match_state"]
+          updated_at?: string
+          winner_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_matches_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_matches_p1_id_fkey"
+            columns: ["p1_id"]
+            isOneToOne: false
+            referencedRelation: "league_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_matches_p2_id_fkey"
+            columns: ["p2_id"]
+            isOneToOne: false
+            referencedRelation: "league_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_matches_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "league_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_participants: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: number
+          league_id: number
+          seed: number
+          user_profile_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: number
+          league_id: number
+          seed: number
+          user_profile_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: number
+          league_id?: number
+          seed?: number
+          user_profile_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_participants_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_participants_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          created_at: string
+          id: number
+          participant_count: number
+          points_draw: number
+          points_loss: number
+          points_win: number
+          rounds: number
+          status: Database["public"]["Enums"]["league_status"]
+          tiebreaker_order: string[]
+          tournament_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          participant_count?: number
+          points_draw?: number
+          points_loss?: number
+          points_win?: number
+          rounds?: number
+          status?: Database["public"]["Enums"]["league_status"]
+          tiebreaker_order?: string[]
+          tournament_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          participant_count?: number
+          points_draw?: number
+          points_loss?: number
+          points_win?: number
+          rounds?: number
+          status?: Database["public"]["Enums"]["league_status"]
+          tiebreaker_order?: string[]
+          tournament_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
+          competition_format: Database["public"]["Enums"]["competition_format"]
           created_at: string
           date: string | null
           description: string | null
@@ -2077,6 +2247,7 @@ export type Database = {
           treasury_address: string | null
         }
         Insert: {
+          competition_format?: Database["public"]["Enums"]["competition_format"]
           created_at?: string
           date?: string | null
           description?: string | null
@@ -2102,6 +2273,7 @@ export type Database = {
           treasury_address?: string | null
         }
         Update: {
+          competition_format?: Database["public"]["Enums"]["competition_format"]
           created_at?: string
           date?: string | null
           description?: string | null
@@ -2283,8 +2455,10 @@ export type Database = {
     Enums: {
       bracket_format: "single_elimination" | "double_elimination"
       bracket_status: "draft" | "published" | "in_progress" | "completed"
+      competition_format: "cup" | "league"
       discount_applies_to: "courses" | "pass" | "all"
       discount_trigger: "comfenalco" | "promo_code" | "manual" | "auto"
+      league_status: "draft" | "in_progress" | "completed"
       match_state: "pending" | "ready" | "in_progress" | "completed" | "bye"
       order_kind: "pass" | "tournament_entry" | "token_purchase" | "enrollment"
       payment_event_status: "pending" | "confirmed" | "rejected" | "cancelled"
@@ -2436,8 +2610,10 @@ export const Constants = {
     Enums: {
       bracket_format: ["single_elimination", "double_elimination"],
       bracket_status: ["draft", "published", "in_progress", "completed"],
+      competition_format: ["cup", "league"],
       discount_applies_to: ["courses", "pass", "all"],
       discount_trigger: ["comfenalco", "promo_code", "manual", "auto"],
+      league_status: ["draft", "in_progress", "completed"],
       match_state: ["pending", "ready", "in_progress", "completed", "bye"],
       pass_order_status: [
         "pending_tx",
@@ -2503,6 +2679,13 @@ export type BracketFormat       = Database["public"]["Enums"]["bracket_format"];
 export type BracketStatus       = Database["public"]["Enums"]["bracket_status"];
 export type MatchState          = Database["public"]["Enums"]["match_state"];
 export type SlotSource          = Database["public"]["Enums"]["slot_source"];
+
+// League (round-robin) aliases — mirror of brackets
+export type CompetitionFormat   = Database["public"]["Enums"]["competition_format"];
+export type LeagueStatus        = Database["public"]["Enums"]["league_status"];
+export type League              = Database["public"]["Tables"]["leagues"]["Row"];
+export type LeagueParticipant  = Database["public"]["Tables"]["league_participants"]["Row"];
+export type LeagueMatch        = Database["public"]["Tables"]["league_matches"]["Row"];
 
 // New course hierarchy aliases
 export type CourseModule          = Database["public"]["Tables"]["course_modules"]["Row"];

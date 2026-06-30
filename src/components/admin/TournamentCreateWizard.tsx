@@ -47,6 +47,7 @@ export function TournamentCreateWizard({ games, treasuryWallets, bankAccounts, d
 
   // Step 1 — Básico
   const [name, setName]                       = useState("");
+  const [competitionFormat, setCompetitionFormat] = useState<"cup" | "league">("cup");
   const [gameId, setGameId]                   = useState("");
   const [date, setDate]                       = useState("");
   const [locationType, setLocationType]       = useState<"presencial" | "online" | "mixto">("presencial");
@@ -109,6 +110,7 @@ export function TournamentCreateWizard({ games, treasuryWallets, bankAccounts, d
   function buildBody() {
     return {
       name: name.trim(),
+      competitionFormat,
       gameId: gameId || null,
       date: date ? `${date}:00-05:00` : null,
       maxParticipants: maxParticipants || null,
@@ -215,6 +217,29 @@ export function TournamentCreateWizard({ games, treasuryWallets, bankAccounts, d
                 autoFocus
                 className={inputCls}
               />
+            </div>
+            <div>
+              <label className={labelCls}>Formato de competencia</label>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { value: "cup" as const,    title: "Copa",  sub: "Eliminación (bracket)" },
+                  { value: "league" as const, title: "Liga",  sub: "Todos contra todos" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCompetitionFormat(opt.value)}
+                    className={`p-3 text-left font-headline border-2 ${
+                      competitionFormat === opt.value
+                        ? "border-primary-container bg-primary-container/10 text-on-background"
+                        : "border-outline/30 bg-surface-container-lowest text-on-surface-variant"
+                    }`}
+                  >
+                    <span className="block font-black uppercase tracking-tighter">{opt.title}</span>
+                    <span className="block text-[10px] uppercase tracking-widest text-outline mt-0.5">{opt.sub}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

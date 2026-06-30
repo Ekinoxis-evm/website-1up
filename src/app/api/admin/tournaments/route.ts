@@ -80,9 +80,12 @@ export async function POST(req: NextRequest) {
   // Status is derived from the bracket lifecycle — every new tournament starts
   // as `upcoming` and only transitions via the bracket: `Iniciar Torneo` → live,
   // last winner → completed. The editor never sets status directly.
+  const competitionFormat = body.competitionFormat === "league" ? "league" : "cup";
+
   const { data, error } = await supabaseAdmin.from("tournaments").insert({
     name:                 body.name,
     slug,
+    competition_format:   competitionFormat,
     game_id:              body.gameId || null,
     date:                 body.date || null,
     prize_pool_cop:       null,
@@ -175,6 +178,11 @@ export async function PUT(req: NextRequest) {
     sponsor_logo_url:     body.sponsorLogoUrl !== undefined ? (body.sponsorLogoUrl || null) : undefined,
     sponsor_logo_bg:      body.sponsorLogoBg !== undefined ? (body.sponsorLogoBg || null) : undefined,
     bank_account_id:      body.bankAccountId !== undefined ? (body.bankAccountId != null ? Number(body.bankAccountId) : null) : undefined,
+    // Competition format (Copa vs Liga) can only change while still `upcoming` —
+    // once a bracket/league is seeded the structure is locked.
+    ...(!isCancelling && body.competitionFormat !== undefined && currentStatus === "upcoming"
+      ? { competition_format: body.competitionFormat === "league" ? "league" as const : "cup" as const }
+      : {}),
     ...(!isCancelling && hasFeeInput && feeParse.ok
       ? { entry_fee_tokens: feeParse.tokens, entry_fee_cop: feeParse.cop, treasury_address: feeParse.treasury }
       : {}),
