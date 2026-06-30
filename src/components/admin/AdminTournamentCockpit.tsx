@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import QRCode from "react-qr-code";
 import { AdminTournamentBracketPanel } from "@/components/admin/AdminTournamentBracketPanel";
+import { AdminTournamentLeaguePanel } from "@/components/admin/AdminTournamentLeaguePanel";
 import {
   AdminTournamentRegistrationsPanel,
   type CockpitRegistration,
@@ -48,6 +49,7 @@ interface Props {
   tournament:      TournamentRich;
   registrations:   CockpitRegistration[];
   bracket:         { id: number; status: string; format: string; participant_count: number } | null;
+  league:          { id: number; status: string; participant_count: number; rounds: number } | null;
   results:         ResultRow[];
   games:           Pick<Game, "id" | "name">[];
   defaultPassDays: number;
@@ -91,17 +93,24 @@ function fmtDate(d: string | null): string {
 }
 
 type TabId = "info" | "inscripciones" | "pagos" | "bracket" | "premios";
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "info",          label: "Información",   icon: "info"          },
-  { id: "inscripciones", label: "Inscripciones", icon: "groups"        },
-  { id: "pagos",         label: "Pagos",         icon: "payments"      },
-  { id: "bracket",       label: "Bracket",       icon: "account_tree"  },
-  { id: "premios",       label: "Premios",       icon: "emoji_events"  },
-];
+// The competition tab keeps the id "bracket" for both formats so the URL hash
+// stays stable; its label/icon/panel swap by competition_format.
+function buildTabs(isLeague: boolean): { id: TabId; label: string; icon: string }[] {
+  return [
+    { id: "info",          label: "Información",   icon: "info"          },
+    { id: "inscripciones", label: "Inscripciones", icon: "groups"        },
+    { id: "pagos",         label: "Pagos",         icon: "payments"      },
+    { id: "bracket",       label: isLeague ? "Liga" : "Bracket", icon: isLeague ? "table_rows" : "account_tree" },
+    { id: "premios",       label: "Premios",       icon: "emoji_events"  },
+  ];
+}
 
-export function AdminTournamentCockpit({ tournament, registrations, bracket, results, games, defaultPassDays, entryOrders, treasuryWallets, bankAccounts }: Props) {
+export function AdminTournamentCockpit({ tournament, registrations, bracket, league, results, games, defaultPassDays, entryOrders, treasuryWallets, bankAccounts }: Props) {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
+
+  const isLeague = tournament.competition_format === "league";
+  const TABS = buildTabs(isLeague);
 
   // Active tab persisted in the URL hash so refresh / back-button / share-link work.
   const [activeTab, setActiveTab] = useState<TabId>("info");
@@ -137,14 +146,16 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
     cancelled:  registrations.filter(r => r.status === "cancelled").length,
   };
 
-  // Lifecycle stage — same as the bracket admin
+  // Lifecycle stage — driven by the bracket OR league lifecycle depending on
+  // the competition format. Both share the 4-step shape.
+  const competitionStatus = isLeague ? league?.status : bracket?.status;
   const stage: 1 | 2 | 3 | 4 =
     tournament.status === "completed" ? 4 :
-    bracket?.status === "in_progress" ? 3 :
-    bracket?.status === "draft"        ? 2 : 1;
+    competitionStatus === "in_progress" ? 3 :
+    competitionStatus === "draft"        ? 2 : 1;
   const stageLabel: Record<1 | 2 | 3 | 4, string> = {
     1: "Inscripciones abiertas",
-    2: "Borrador del bracket",
+    2: isLeague ? "Borrador de la liga" : "Borrador del bracket",
     3: "Torneo en curso",
     4: "Torneo finalizado",
   };
@@ -520,10 +531,17 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           />
         )}
         {activeTab === "bracket" && (
-          <AdminTournamentBracketPanel
-            tournament={tournamentForBracket}
-            onChange={() => router.refresh()}
-          />
+          isLeague ? (
+            <AdminTournamentLeaguePanel
+              tournament={{ id: tournament.id, name: tournament.name, status: tournament.status }}
+              onChange={() => router.refresh()}
+            />
+          ) : (
+            <AdminTournamentBracketPanel
+              tournament={tournamentForBracket}
+              onChange={() => router.refresh()}
+            />
+          )
         )}
         {activeTab === "premios" && (
           <AdminTournamentResultsPanel
@@ -637,7 +655,9 @@ export function AdminTournamentCockpit({ tournament, registrations, bracket, res
           </p>
           <ul className="font-body text-sm text-on-surface/80 list-disc pl-5 mb-4 space-y-1">
             <li>{counts.total} inscripción{counts.total === 1 ? "" : "es"}</li>
-            <li>Bracket {bracket ? `(${bracket.status})` : "(no hay)"}</li>
+            {isLeague
+              ? <li>Liga {league ? `(${league.status})` : "(no hay)"}</li>
+              : <li>Bracket {bracket ? `(${bracket.status})` : "(no hay)"}</li>}
             <li>{sortedPrizes.length} premio{sortedPrizes.length === 1 ? "" : "s"} configurado{sortedPrizes.length === 1 ? "" : "s"}</li>
             <li>{results.length} resultado{results.length === 1 ? "" : "s"} del podio</li>
           </ul>

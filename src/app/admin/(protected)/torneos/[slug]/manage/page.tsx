@@ -37,6 +37,7 @@ export default async function AdminTournamentManagePage({
   const [
     { data: registrations },
     { data: bracket },
+    { data: league },
     { data: results },
     { data: games },
     { data: passConfig },
@@ -52,6 +53,11 @@ export default async function AdminTournamentManagePage({
     supabaseAdmin
       .from("brackets")
       .select("id, status, format, participant_count")
+      .eq("tournament_id", tournament.id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("leagues")
+      .select("id, status, participant_count, rounds")
       .eq("tournament_id", tournament.id)
       .maybeSingle(),
     supabaseAdmin
@@ -97,6 +103,7 @@ export default async function AdminTournamentManagePage({
       tournament={tournament}
       registrations={registrations ?? []}
       bracket={bracket ?? null}
+      league={league ?? null}
       results={results ?? []}
       games={games ?? []}
       defaultPassDays={passConfig?.duration_days ?? 30}
