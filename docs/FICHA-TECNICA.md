@@ -58,7 +58,7 @@ Todas las páginas públicas usan **ISR (`revalidate`)** para servir desde edge 
 Espacio personal para miembros registrados: gestión de identidad digital, wallet de tokens $1UP, inscripción y seguimiento de torneos, adquisición del **1UP Pass** (membresía), historial de compras y ajustes de cuenta. Requiere autenticación Privy (email o Google).
 
 ### 2.3 Panel administrativo (`admin.1upesports.org`)
-Consola de gestión interna: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido, brackets, logos de marca. Incluye el **editor de cursos por módulos y sesiones** (wizard de dos pestañas: Información + Contenido) con DnD para reordenar módulos y sesiones, upload directo a Cloudflare Stream y bucket privado para documentos. Incluye el **motor de brackets** completo (single + double elimination) con generación automática, registro de resultados y visualización en tiempo real. Sistema de notificaciones unificado vía `AdminToastProvider` (sin más `alert()` ni fallos silenciosos). Requiere Privy JWT + rol admin verificado.
+Consola de gestión interna: control de contenido, usuarios, inscripciones, pagos, órdenes OTC, gestión de torneos y resultados, configuración de pass, códigos de referido, brackets, logos de marca. Incluye el **editor de cursos por módulos y sesiones** (wizard de dos pestañas: Información + Contenido) con DnD para reordenar módulos y sesiones, upload directo a Cloudflare Stream y bucket privado para documentos. Incluye el **motor de brackets** completo (single + double elimination) con generación automática, registro de resultados y visualización en tiempo real, además del **formato Liga (round-robin)** con calendario, captura de resultados por partido y tabla de posiciones en vivo (v2.56.0). Sistema de notificaciones unificado vía `AdminToastProvider` (sin más `alert()` ni fallos silenciosos). Requiere Privy JWT + rol admin verificado.
 
 ### 2.4 Capa blockchain (`gaming-tower-scs` — construida, pendiente de integración)
 Contratos Solidity en Base (L2 sobre Ethereum) que habilitarán: identidad on-chain renovable, retos competitivos con escrow tokenizado y certificación de cursos como NFT. La integración con el sitio web es **hoja de ruta técnica** — capa construida y testeada, activación bajo decisión de negocio.
@@ -129,7 +129,7 @@ Contratos Solidity en Base (L2 sobre Ethereum) que habilitarán: identidad on-ch
 | 7 | ¿APIs propias o de terceros? | **Ambas.** Next.js API Routes interna + integraciones: Privy, Supabase, MercadoPago, Resend, Blockscout v2, Base L2 RPC, **Cloudflare Stream**, **Upstash Redis**. |
 | 8 | ¿Usa autenticación? ¿Cómo? | **Sí — Privy como IdP.** JWT Bearer verificado server-side. Email + Google. Tres niveles: público / usuario registrado / administrador. Adicionalmente se valida el claim `appId` para prevenir tokens cross-tenant. |
 | 9 | ¿Es responsive? | **Sí — mobile-first.** Tailwind CSS v3 con breakpoints estándar. Bottom nav móvil; top bar / sidebar desktop. |
-| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 359 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime**). Smart contracts: **suite completa con Foundry**. |
+| 10 | ¿Hay tests automatizados? | App web: **Vitest activo — 405 tests** en `src/__tests__/lib/` (utils, discount, admin, privy, mercadopago, comfenalco, torneos, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime, league/schedule, league/standings, league/result**). Smart contracts: **suite completa con Foundry (~144)**. |
 | 11 | ¿Schema versionado en el repo? | **Sí.** `supabase/migrations/00000000000000_baseline.sql` (1097 líneas, idempotente) + 3 migraciones incrementales (avatar_url, hall_of_fame view, audit closure) — toda la DB reproducible desde el código. |
 | 12 | ¿Rate limiting? | **Sí — live en producción.** Upstash Ratelimit + sliding window. 5 endpoints protegidos (recruitment, course-intro-token, referral-validate, pass-orders, course-orders). Verificado con smoke test 429 el 23/05/2026. |
 
@@ -343,7 +343,9 @@ Las rutas `/api/user/*` solo ejecutan el paso 1.
 | `/api/user/passes` | GET | Lista los pases del usuario (objeto `passes`) con estado |
 | `/api/user/passes/activate` | POST | El usuario activa su pase `issued` (claim-later); la duración cuenta desde la activación |
 | `/api/admin/passes/revoke` | POST | Admin revoca un pase entregado (v2.40.0) — `state='revoked'` + desvincula para re-entrega |
-| `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets — generación, start, result, undo |
+| `/api/admin/brackets` | GET, POST, PATCH, DELETE | Brackets (Copa) — generación, start, result, undo |
+| `/api/admin/leagues` | GET, POST, PATCH, DELETE | Ligas (round-robin) — genera calendario, start, resultado por partido, undo (v2.56.0) |
+| `/api/tournaments/[slug]/standings` | GET (público) | Tabla de posiciones de la liga — sólo `in_progress`/`completed`, calculada al leer (v2.56.0) |
 | `/api/admin/international-tournaments` | GET, POST, PUT, DELETE | CRUD de torneos internacionales |
 
 ### 8.4 Webhooks entrantes
@@ -369,7 +371,7 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `course_session_documents` | Docs descargables — `storage_path` en bucket privado, magic-byte sniffed — CASCADE |
 | `masters` | Instructores con redes (8 plataformas) |
 | `enrollments` | Inscripciones — partial UNIQUE en `lower(tx_hash)` (no duplicación de transferencias on-chain) |
-| `tournaments` | Torneos — status derivado del bracket (no editable directamente) + `entry_fee_tokens`/`entry_fee_cop` (null = gratuito, v2.41.0) + `treasury_address` (wallet EVM propia del torneo para el pago en $1UP — obligatoria si hay fee en $1UP, nunca reutiliza la tesorería del Pass, v2.41.0) |
+| `tournaments` | Torneos — status derivado del bracket/liga (no editable directamente) + `competition_format` (`cup`/`league`, default `cup` — v2.56.0) + `entry_fee_tokens`/`entry_fee_cop` (null = gratuito, v2.41.0) + `treasury_address` (wallet EVM propia del torneo para el pago en $1UP — obligatoria si hay fee en $1UP, nunca reutiliza la tesorería del Pass, v2.41.0) |
 | `tournament_entry_orders` | Pago de inscripción a torneo (v2.41.0, espejo de `pass_orders`) — partial UNIQUE en `lower(tx_hash)` + 1 orden en curso por usuario+torneo; `registration_id` se vincula al asignar el cupo; orden confirmada sin cupo = reembolso manual |
 | `tournament_prizes` | Premios por posición 1-3 con CHECK de consistencia type/amount — soporta tokens/COP/ambos/**Pase 1UP** (`includes_pass` + `pass_days`, add-on o premio único) |
 | `tournament_registrations` | Inscripciones — UNIQUE (tournament_id, user_profile_id), RPC `register_for_tournament` con check `status = 'upcoming'` |
@@ -377,6 +379,9 @@ Base de datos PostgreSQL en Supabase. Tipado completo en `src/types/database.typ
 | `brackets` | Bracket por torneo (UNIQUE per tournament): formato (single/double_elimination), status, conteos |
 | `bracket_participants` | Participantes — UNIQUE (bracket, seed) + UNIQUE (bracket, user_profile_id) |
 | `bracket_matches` | Matches — punteros next_match_id / next_loser_match_id (DE), source pointers |
+| `leagues` | Liga por torneo (UNIQUE per tournament, v2.56.0): status, puntos 3/1/0, orden de desempates, conteos. Tabla de posiciones derivada al leer, nunca almacenada |
+| `league_participants` | Participantes de liga — display_name, seed, user_profile_id (v2.56.0) |
+| `league_matches` | Partidos de liga (round-robin) — round, marcadores, winner_id, is_draw, state (v2.56.0) |
 | `hall_of_fame` (view) | SECURITY INVOKER — ranking por puntos |
 | `pass_config` | Singleton (id=1) con CHECK |
 | `pass_orders` | Órdenes de pass — partial UNIQUE en `lower(tx_hash)` + 1 pending por usuario + sponsor del admin grant |
@@ -535,7 +540,7 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 | Tipado estático | TypeScript 5 (strict) | Activo — cero errores requerido |
 | Linting | ESLint | Activo |
 | Build verification | `next build` | Antes de cada entrega |
-| Tests unitarios / integración | **Vitest — 359 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime** |
+| Tests unitarios / integración | **Vitest — 405 tests** | utils, tournamentPoints, discount, admin, mercadopago, comfenalco, privy, verifiedWallet, mpWebhookDecision, rateLimit, passVerifier, tokenTransferVerifier, **bracketSeeding, playInSeeding, podium, sniffAvatarMime, league/schedule, league/standings, league/result** |
 | Tests E2E | Playwright | Pendiente |
 | QA manual | Checklist por release | Activo |
 
