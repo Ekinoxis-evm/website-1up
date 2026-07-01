@@ -20,7 +20,7 @@
 
 **1UP Gaming Tower** es la plataforma tecnológica que soporta la operación del primer hub profesional de esports en Colombia. El sistema fue construido íntegramente por **Ekinoxis** como software a medida (sin CMS ni plantillas) y se encuentra en producción activa en `1upesports.org`.
 
-La plataforma comprende tres frentes de cara al usuario — portal público, panel de usuario y consola de administración — todos servidos desde una única base de código en **Next.js 16** sobre infraestructura serverless de **Vercel**. La persistencia de datos corre en **Supabase (PostgreSQL)** con Row-Level Security habilitado y el **esquema completo versionado en el repositorio** (migración baseline + 24 migraciones incrementales; el baseline reconstruye una base de datos fresca correctamente desde la v2.54.2). La autenticación es gestionada por **Privy** con verificación de `appId` y JWT firmado server-side. Los pagos se procesan a través de **MercadoPago** con verificación HMAC-SHA256 canónica (`id;request-id;ts`) + ventana ±10 min de freshness + idempotencia por `mp_payment_id`. El rate limiting (**Upstash Ratelimit**, sliding-window, safe-by-default) está implementado en los endpoints abusables; **Upstash queda pendiente de aprovisionar en producción** — hasta entonces los limiters operan en modo pass-through. El streaming de video usa **Cloudflare Stream** con tokens RS256 atados al IP del caller via `accessRules`.
+La plataforma comprende tres frentes de cara al usuario — portal público, panel de usuario y consola de administración — todos servidos desde una única base de código en **Next.js 16** sobre infraestructura serverless de **Vercel**. La persistencia de datos corre en **Supabase (PostgreSQL)** con Row-Level Security habilitado y el **esquema completo versionado en el repositorio** (migración baseline + 26 migraciones incrementales; el baseline reconstruye una base de datos fresca correctamente desde la v2.54.2). La autenticación es gestionada por **Privy** con verificación de `appId` y JWT firmado server-side. Los pagos se procesan a través de **MercadoPago** con verificación HMAC-SHA256 canónica (`id;request-id;ts`) + ventana ±10 min de freshness + idempotencia por `mp_payment_id`. El rate limiting (**Upstash Ratelimit**, sliding-window, safe-by-default) está implementado en los endpoints abusables; **Upstash queda pendiente de aprovisionar en producción** — hasta entonces los limiters operan en modo pass-through. El streaming de video usa **Cloudflare Stream** con tokens RS256 atados al IP del caller via `accessRules`.
 
 A partir de la **v2.31.0** (mayo 24, 2026) se completó la **suite de gestión de torneos**: avatares de usuario en todas las superficies (Hall of Fame, brackets, admin), **cockpit unificado** (`/admin/torneos/[slug]/manage`) que reemplaza tres páginas admin separadas, **vista TV de pantalla completa** (`/torneos/[slug]/tv`) con polling de 15s para casting en pantalla del venue, **entrega on-chain de premios** vía Privy gas-sponsored desde el panel, **algoritmo de seeding correcto** (mirror-recursive doubling), **round play-in** para single-elim con conteos no-pow2, y **bye-cascading** en double-elim que evita slots fantasma atorados en losers.
 
@@ -556,7 +556,7 @@ Los contratos residen en `gaming-tower-scs` (repo separado). Escritos en Solidit
 ### 14.3 Flujo de QA pre-release
 
 ```
-[ ] npm run test:run      — cero tests fallidos (359 tests)
+[ ] npm run test:run      — cero tests fallidos (405 tests)
 [ ] npm run build         — cero errores
 [ ] npx tsc --noEmit      — cero errores TypeScript
 [ ] npm run lint          — cero advertencias
@@ -708,7 +708,7 @@ Todas las credenciales gestionadas en **Vercel Env Vars** (producción, preview,
 
 | Mejora | Estado |
 |--------|--------|
-| Suite de tests automatizados (Vitest) | **Implementado — 359 tests** |
+| Suite de tests automatizados (Vitest) | **Implementado — 405 tests** |
 | Tests E2E (Playwright) | Pendiente |
 | Auditoría externa de smart contracts | Pendiente |
 | Battle test con Family & Friends | Pendiente — coordinación 1UP |
