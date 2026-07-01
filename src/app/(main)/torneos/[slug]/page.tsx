@@ -6,6 +6,7 @@ import { PrizePodium } from "@/components/torneos/PrizeBadge";
 import { RegisterButton } from "@/components/torneos/RegisterButton";
 import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
 import { StandingsTable, type StandingsParticipant } from "@/components/tournaments/StandingsTable";
+import { PlayerViewSwitcher, type SwitcherParticipant, type SwitcherMatch } from "@/components/tournaments/PlayerViewSwitcher";
 import { computeStandings, type LeagueConfig, type StandingRow } from "@/lib/league/standings";
 import type { Tournament, TournamentPrize, Game, GameCategory, Bracket, BracketParticipant, BracketMatch } from "@/types/database.types";
 
@@ -124,6 +125,8 @@ async function fetchStandings(tournamentId: number): Promise<{
   status: string;
   standings: StandingRow[];
   participants: StandingsParticipant[];
+  playerParticipants: SwitcherParticipant[];
+  playerMatches: SwitcherMatch[];
 } | null> {
   // Drafts stay private — only show standings once the league has started.
   const { data: league } = await supabase
@@ -154,13 +157,20 @@ async function fetchStandings(tournamentId: number): Promise<{
     })),
     cfg,
   );
+  const avatarOf = (p: unknown) =>
+    (p as { user_profiles?: { avatar_url: string | null } | null }).user_profiles?.avatar_url ?? null;
+
   return {
     status: league.status,
     standings,
-    participants: (participants ?? []).map(p => ({
-      id: p.id,
-      display_name: p.display_name,
-      avatar_url: (p as unknown as { user_profiles?: { avatar_url: string | null } | null }).user_profiles?.avatar_url ?? null,
+    participants: (participants ?? []).map(p => ({ id: p.id, display_name: p.display_name, avatar_url: avatarOf(p) })),
+    playerParticipants: (participants ?? []).map(p => ({
+      id: p.id, displayName: p.display_name, avatarUrl: avatarOf(p), userProfileId: p.user_profile_id,
+    })),
+    playerMatches: (matches ?? []).map(m => ({
+      id: m.id, round: m.round, matchNumber: m.match_number,
+      p1Id: m.p1_id, p2Id: m.p2_id, p1Score: m.p1_score, p2Score: m.p2_score,
+      winnerId: m.winner_id, state: m.state,
     })),
   };
 }
@@ -180,6 +190,15 @@ export default async function TournamentDetailPage(
   const isLeague = t.competition_format === "league";
   const bracketData   = isLeague ? null : await fetchBracket(t.id);
   const standingsData = isLeague ? await fetchStandings(t.id) : null;
+
+  // Normalized player-view data (Mi partido / Ronda) — Copa from the bracket, Liga from standings.
+  const bracketPlayers: SwitcherParticipant[] = (bracketData?.participants ?? []).map(p => ({
+    id: p.id, displayName: p.display_name, avatarUrl: p.user_profiles?.avatar_url ?? null, userProfileId: p.user_profile_id,
+  }));
+  const bracketPlayerMatches: SwitcherMatch[] = (bracketData?.matches ?? []).map(m => ({
+    id: m.id, round: m.round, matchNumber: m.match_number, p1Id: m.p1_id, p2Id: m.p2_id,
+    p1Score: m.p1_score, p2Score: m.p2_score, winnerId: m.winner_id, state: m.state,
+  }));
 
   // Cash entry is offered only when the admin enabled it for tournament entry
   // AND the tournament has a COP fee (cash is collected in pesos at the venue).
@@ -400,12 +419,14 @@ export default async function TournamentDetailPage(
               {bracketData.bracket.status === "completed" ? "Finalizado" : "En vivo"}
             </span>
           </div>
-          <div className="bg-surface-container p-4 md:p-6">
-            <TournamentBracketView data={bracketData} />
-          </div>
-          <p className="font-body text-xs text-outline mt-2">
-            Desliza para mover · pellizca para hacer zoom
-          </p>
+          <PlayerViewSwitcher participants={bracketPlayers} matches={bracketPlayerMatches}>
+            <div className="bg-surface-container p-4 md:p-6">
+              <TournamentBracketView data={bracketData} />
+            </div>
+            <p className="font-body text-xs text-outline mt-2">
+              Desliza para mover · pellizca para hacer zoom
+            </p>
+          </PlayerViewSwitcher>
         </section>
       )}
 
@@ -422,9 +443,11 @@ export default async function TournamentDetailPage(
               {standingsData.status === "completed" ? "Finalizada" : "En vivo"}
             </span>
           </div>
-          <div className="bg-surface-container p-4 md:p-6">
-            <StandingsTable standings={standingsData.standings} participants={standingsData.participants} />
-          </div>
+          <PlayerViewSwitcher participants={standingsData.playerParticipants} matches={standingsData.playerMatches}>
+            <div className="bg-surface-container p-4 md:p-6">
+              <StandingsTable standings={standingsData.standings} participants={standingsData.participants} />
+            </div>
+          </PlayerViewSwitcher>
         </section>
       )}
     </div>

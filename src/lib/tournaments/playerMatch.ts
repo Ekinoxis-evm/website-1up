@@ -39,10 +39,10 @@ function orderKey(m: PlayerMatch): number {
 //   2. else their next playable match (ready → pending) by (round, matchNumber)
 //   3. else their most recent completed match (season/run is over for them)
 // Returns null if the player has no matches at all.
-export function resolveMyMatch(
-  matches: PlayerMatch[],
+export function resolveMyMatch<T extends PlayerMatch>(
+  matches: T[],
   myParticipantId: number | null,
-): PlayerMatch | null {
+): T | null {
   if (myParticipantId == null) return null;
   const mine = matches.filter(m => m.p1Id === myParticipantId || m.p2Id === myParticipantId);
   if (mine.length === 0) return null;
@@ -71,7 +71,7 @@ export function currentRound(matches: PlayerMatch[]): number {
   return Math.max(...matches.map(m => m.round));
 }
 
-export function matchesForRound(matches: PlayerMatch[], round: number): PlayerMatch[] {
+export function matchesForRound<T extends PlayerMatch>(matches: T[], round: number): T[] {
   return matches
     .filter(m => m.round === round)
     .sort((a, b) => a.matchNumber - b.matchNumber);
