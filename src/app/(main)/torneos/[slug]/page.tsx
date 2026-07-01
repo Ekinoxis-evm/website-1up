@@ -5,6 +5,8 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { PrizePodium } from "@/components/torneos/PrizeBadge";
 import { RegisterButton } from "@/components/torneos/RegisterButton";
 import { TournamentBracketView } from "@/components/torneos/TournamentBracketView";
+import { StandingsTable, type StandingsParticipant } from "@/components/tournaments/StandingsTable";
+import { computeStandings, type LeagueConfig, type StandingRow } from "@/lib/league/standings";
 import type { Tournament, TournamentPrize, Game, GameCategory, Bracket, BracketParticipant, BracketMatch } from "@/types/database.types";
 
 type TournamentFull = Tournament & {
@@ -118,6 +120,51 @@ async function fetchBracket(tournamentId: number): Promise<{
   };
 }
 
+async function fetchStandings(tournamentId: number): Promise<{
+  status: string;
+  standings: StandingRow[];
+  participants: StandingsParticipant[];
+} | null> {
+  // Drafts stay private — only show standings once the league has started.
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .in("status", ["in_progress", "completed"])
+    .maybeSingle();
+  if (!league) return null;
+
+  const [{ data: participants }, { data: matches }] = await Promise.all([
+    supabase.from("league_participants")
+      .select("*, user_profiles(avatar_url, username, nombre, apellidos)")
+      .eq("league_id", league.id).order("seed"),
+    supabase.from("league_matches").select("*").eq("league_id", league.id)
+      .order("round").order("match_number"),
+  ]);
+
+  const cfg: LeagueConfig = {
+    pointsWin: league.points_win, pointsDraw: league.points_draw, pointsLoss: league.points_loss,
+    tiebreakerOrder: league.tiebreaker_order,
+  };
+  const standings = computeStandings(
+    (participants ?? []).map(p => p.id),
+    (matches ?? []).map(m => ({
+      p1Id: m.p1_id, p2Id: m.p2_id, p1Score: m.p1_score, p2Score: m.p2_score,
+      winnerId: m.winner_id, isDraw: m.is_draw, state: m.state,
+    })),
+    cfg,
+  );
+  return {
+    status: league.status,
+    standings,
+    participants: (participants ?? []).map(p => ({
+      id: p.id,
+      display_name: p.display_name,
+      avatar_url: (p as unknown as { user_profiles?: { avatar_url: string | null } | null }).user_profiles?.avatar_url ?? null,
+    })),
+  };
+}
+
 // ISR: bracket state + registration counts. Admin bracket-action mutations
 // call `revalidatePath("/torneos/[slug]", "page")`, so 60s is just a floor.
 export const revalidate = 60;
@@ -130,7 +177,9 @@ export default async function TournamentDetailPage(
   if (!t) notFound();
 
   const prizes = [...(t.tournament_prizes ?? [])].sort((a, b) => a.position - b.position);
-  const bracketData = await fetchBracket(t.id);
+  const isLeague = t.competition_format === "league";
+  const bracketData   = isLeague ? null : await fetchBracket(t.id);
+  const standingsData = isLeague ? await fetchStandings(t.id) : null;
 
   // Cash entry is offered only when the admin enabled it for tournament entry
   // AND the tournament has a COP fee (cash is collected in pesos at the venue).
@@ -357,6 +406,25 @@ export default async function TournamentDetailPage(
           <p className="font-body text-xs text-outline mt-2">
             Desliza para mover · pellizca para hacer zoom
           </p>
+        </section>
+      )}
+
+      {/* League standings */}
+      {standingsData && (
+        <section className="px-8 md:px-16 pt-12">
+          <div className="flex items-center gap-3 mb-4">
+            <p className="font-headline font-bold text-xs uppercase tracking-widest text-outline">Tabla de posiciones</p>
+            <span className={`font-headline font-black text-[10px] uppercase tracking-widest px-2 py-0.5 ${
+              standingsData.status === "completed"
+                ? "bg-surface-container-high text-outline"
+                : "bg-primary text-background animate-pulse"
+            }`}>
+              {standingsData.status === "completed" ? "Finalizada" : "En vivo"}
+            </span>
+          </div>
+          <div className="bg-surface-container p-4 md:p-6">
+            <StandingsTable standings={standingsData.standings} participants={standingsData.participants} />
+          </div>
         </section>
       )}
     </div>

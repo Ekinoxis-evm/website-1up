@@ -1,6 +1,6 @@
 # Testing Practices — 1UP Gaming Tower
 
-> **Current state (v2.54.2):** 28 Vitest files, **361 tests passing**, <1s wall time.
+> **Current state (v2.56.0):** 32 Vitest files, **405 tests passing**, <1s wall time.
 > All ship through `npm run test:run`; see `vitest.config.ts`. The suite grew incrementally
 > around real bugs and the 2026-05-22 security audit (audit closures shipped 21 of these
 > tests).
@@ -16,7 +16,7 @@ QA-evidence surface — treat it like a CHANGELOG for tests/audits. Use **real n
 `product-management.md`).
 
 ### Two test surfaces — keep BOTH reflected on the QA page
-- **Website** (this repo) — **Vitest, 361 tests / 28 files** (Tier 2 below). The live COP product.
+- **Website** (this repo) — **Vitest, 405 tests / 32 files** (Tier 2 below). The live COP product.
 - **On-chain** (`gaming-tower-scs`, sibling repo) — **Foundry, ~144 tests / 4 files**
   (`IdentityNFT` 57 · `ChallengeVault` 41 · `CourseNFT` 39 · `IdentityNFTFactory` 7) covering the
   Base-deployed contracts (`forge test`). Not externally audited. Documented on the "Capa
@@ -96,6 +96,9 @@ Test files live under `src/__tests__/lib/` (the unified payment-layer tests unde
 | `courseEnrollment.test.ts` | Cash + card on academia courses (v2.44.0; card v2.52.0) — `availableCourseMethods()` (gates by course price unit AND `service_payment_methods`; card additionally needs `PAYMENTS_CARD_LIVE`), `canSelectCourseMethod`, `canReviewEnrollment` (only `pending`, allows cash, idempotent 409s) |
 | `tokenPurchase.test.ts` | Cash + card on $1UP purchases (v2.45.0; card v2.52.0) — `tokenPurchaseCashAvailable` / `canSelectTokenMethod` gating by the `service_payment_methods` (`token_purchase`) toggle; card additionally gated by `PAYMENTS_CARD_LIVE` |
 | `passPurchase.test.ts` | Cash + card on 1UP Pass (v2.46.0; card v2.52.0) — `passCashAvailable` / `canSelectPassMethod` gating by the `service_payment_methods` (`pass`) toggle; card additionally gated by `PAYMENTS_CARD_LIVE` |
+| `league/schedule.test.ts` | `generateRoundRobin()` (circle method) — every pair meets once, correct round count, odd-N rest handling (v2.56.0) |
+| `league/standings.test.ts` | `computeStandings()` — derived 3/1/0 points, draws, goalsFor/diff, tiebreaker chain (head_to_head → wins → goal_diff → goals_for), `isLeagueComplete`, `deriveLeaguePodium` (v2.56.0) |
+| `league/result.test.ts` | `validateLeagueScores()` + `deriveMatchOutcome()` — score validation and winner/draw derivation (v2.56.0) |
 | `utils.test.ts` | Misc shared utilities |
 
 ---
